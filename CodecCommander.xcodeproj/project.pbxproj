@@ -1,0 +1,296 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0C4B238814598AD20080D960 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0C4B238614598AD20080D960 /* InfoPlist.strings */; };
+		849921901600F4FC00CCDF3B /* CodecCommander.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8499218E1600F4FC00CCDF3B /* CodecCommander.cpp */; };
+		849921911600F4FC00CCDF3B /* CodecCommander.h in Headers */ = {isa = PBXBuildFile; fileRef = 8499218F1600F4FC00CCDF3B /* CodecCommander.h */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0C4B237E14598AD20080D960 /* CodecCommander.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodecCommander.kext; sourceTree = BUILT_PRODUCTS_DIR; };
+		0C4B238214598AD20080D960 /* Kernel.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Kernel.framework; path = System/Library/Frameworks/Kernel.framework; sourceTree = SDKROOT; };
+		0C4B238514598AD20080D960 /* CodecCommander-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "CodecCommander-Info.plist"; sourceTree = "<group>"; };
+		0C4B238714598AD20080D960 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		0C4B238D14598AD20080D960 /* CodecCommander-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = "CodecCommander-Prefix.pch"; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
+		8499218E1600F4FC00CCDF3B /* CodecCommander.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = CodecCommander.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		8499218F1600F4FC00CCDF3B /* CodecCommander.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = CodecCommander.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		0C4B237914598AD20080D960 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0C4B237114598AD10080D960 = {
+			isa = PBXGroup;
+			children = (
+				0C4B238314598AD20080D960 /* CodecCommander */,
+				0C4B238014598AD20080D960 /* Frameworks */,
+				0C4B237F14598AD20080D960 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		0C4B237F14598AD20080D960 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0C4B237E14598AD20080D960 /* CodecCommander.kext */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		0C4B238014598AD20080D960 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0C4B238114598AD20080D960 /* Other Frameworks */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		0C4B238114598AD20080D960 /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0C4B238214598AD20080D960 /* Kernel.framework */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+		0C4B238314598AD20080D960 /* CodecCommander */ = {
+			isa = PBXGroup;
+			children = (
+				8499218F1600F4FC00CCDF3B /* CodecCommander.h */,
+				8499218E1600F4FC00CCDF3B /* CodecCommander.cpp */,
+				0C4B238414598AD20080D960 /* Supporting Files */,
+			);
+			path = CodecCommander;
+			sourceTree = "<group>";
+		};
+		0C4B238414598AD20080D960 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				0C4B238514598AD20080D960 /* CodecCommander-Info.plist */,
+				0C4B238614598AD20080D960 /* InfoPlist.strings */,
+				0C4B238D14598AD20080D960 /* CodecCommander-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		0C4B237A14598AD20080D960 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				849921911600F4FC00CCDF3B /* CodecCommander.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		0C4B237D14598AD20080D960 /* CodecCommander */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0C4B239014598AD20080D960 /* Build configuration list for PBXNativeTarget "CodecCommander" */;
+			buildPhases = (
+				0C4B237814598AD20080D960 /* Sources */,
+				0C4B237914598AD20080D960 /* Frameworks */,
+				0C4B237A14598AD20080D960 /* Headers */,
+				0C4B237B14598AD20080D960 /* Resources */,
+				0C4B237C14598AD20080D960 /* Rez */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CodecCommander;
+			productName = ACPIPoller;
+			productReference = 0C4B237E14598AD20080D960 /* CodecCommander.kext */;
+			productType = "com.apple.product-type.kernel-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0C4B237314598AD10080D960 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0500;
+			};
+			buildConfigurationList = 0C4B237614598AD10080D960 /* Build configuration list for PBXProject "CodecCommander" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 0C4B237114598AD10080D960;
+			productRefGroup = 0C4B237F14598AD20080D960 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0C4B237D14598AD20080D960 /* CodecCommander */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0C4B237B14598AD20080D960 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0C4B238814598AD20080D960 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXRezBuildPhase section */
+		0C4B237C14598AD20080D960 /* Rez */ = {
+			isa = PBXRezBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXRezBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0C4B237814598AD20080D960 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				849921901600F4FC00CCDF3B /* CodecCommander.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		0C4B238614598AD20080D960 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				0C4B238714598AD20080D960 /* en */,
+			);
+			name = InfoPlist.strings;
+			path = ..;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		0C4B238E14598AD20080D960 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEPLOYMENT_POSTPROCESSING = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"DEBUG_MSG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LLVM_LTO = NO;
+				"LLVM_LTO[arch=x86_64]" = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = "-fno-stack-protector";
+				"OTHER_LDFLAGS[arch=x86_64]" = "-dead_strip";
+				SDKROOT = macosx;
+				STRIP_STYLE = "non-global";
+			};
+			name = Debug;
+		};
+		0C4B238F14598AD20080D960 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEPLOYMENT_POSTPROCESSING = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = YES;
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LLVM_LTO = NO;
+				"LLVM_LTO[arch=x86_64]" = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				OTHER_CFLAGS = "-fno-stack-protector";
+				"OTHER_LDFLAGS[arch=x86_64]" = "-dead_strip";
+				SDKROOT = macosx;
+				STRIP_STYLE = "non-global";
+			};
+			name = Release;
+		};
+		0C4B239114598AD20080D960 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1.0.0d1;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "CodecCommander/CodecCommander-Prefix.pch";
+				INFOPLIST_FILE = "CodecCommander/CodecCommander-Info.plist";
+				MODULE_NAME = org.tw.CodecCommander;
+				MODULE_VERSION = 1.0.0d1;
+				PRODUCT_NAME = CodecCommander;
+				STRIP_INSTALLED_PRODUCT = YES;
+			};
+			name = Debug;
+		};
+		0C4B239214598AD20080D960 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1.0.0d1;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "CodecCommander/CodecCommander-Prefix.pch";
+				INFOPLIST_FILE = "CodecCommander/CodecCommander-Info.plist";
+				MODULE_NAME = org.tw.CodecCommander;
+				MODULE_VERSION = 1.0.0d1;
+				PRODUCT_NAME = CodecCommander;
+				STRIP_INSTALLED_PRODUCT = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0C4B237614598AD10080D960 /* Build configuration list for PBXProject "CodecCommander" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0C4B238E14598AD20080D960 /* Debug */,
+				0C4B238F14598AD20080D960 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0C4B239014598AD20080D960 /* Build configuration list for PBXNativeTarget "CodecCommander" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0C4B239114598AD20080D960 /* Debug */,
+				0C4B239214598AD20080D960 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 0C4B237314598AD10080D960 /* Project object */;
+}
