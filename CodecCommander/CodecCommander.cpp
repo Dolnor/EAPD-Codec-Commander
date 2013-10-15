@@ -94,14 +94,14 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 {
 	if (kPowerStateOff == powerStateOrdinal)
 	{
-		DEBUG_LOG("CodecCommander: power is off\n");
+		DEBUG_LOG("CodecCommander::power is off\n");
         // external amp has powered down
         eapdPoweredDown=true;
 	}
 	else if (kPowerStateOn == powerStateOrdinal)
 	{
-		DEBUG_LOG("CodecCommander: power is on\n");
-        // update external amp by sendind verb command
+		DEBUG_LOG("CodecCommander::power is on\n");
+        // update external amp by sending verb command
         performVerbUpdate();
 	}
 	
@@ -134,7 +134,7 @@ void CodecCommander::stop(IOService *provider)
 }
 
 /******************************************************************************
- * CodecCommander::setParamPropertiesGated - set variables basaed on usr config
+ * CodecCommander::setParamPropertiesGated - set variables based on user config
  ******************************************************************************/
 
 void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
@@ -217,7 +217,7 @@ static void updateEAPD() {
             hpNodeUpdated = false;
         }
         
-        // flag as being active, reset counter
+        // flag the amp as being active, reset counter
         DEBUG_LOG("CodecCommander: command sent\n");
         eapdPoweredDown = false;
         nodeCounter = 0;
@@ -245,7 +245,7 @@ void startUpdate() {
 }
 
 /******************************************************************************
- * Perform Verb Update if EAPD state updating is requested by user
+ * Perform verb update if EAPD state updating is requested by user
  ******************************************************************************/
 
 void CodecCommander::performVerbUpdate(){
@@ -346,7 +346,7 @@ static const DSDT_HEADER* getDSDT()
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 * Remove spaces from OEM ID and Table ID fields if any. Normally, if maker name
-* is shorthen than 6 bytes it will be trail-spaced, for eg. "DELL  " and "QA09   "
+* is shorther than 6 bytes it will be trail-spaced, for eg. "DELL  " and "QA09   "
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 static void stripTrailingSpaces(char* str)
@@ -359,13 +359,13 @@ static void stripTrailingSpaces(char* str)
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Obtain onformation for make and model to match agains config in Info.plist
- * First try to get data from Clover, it reads DMI and stores it in /efi/platform
+ * Obtain information for make and model to match against config in Info.plist
+ * First, try to get data from Clover, it reads DMI and stores it in /efi/platform
  * DMI data won't match DSDT header TableID used for model and if DSDT patcher in 
  * Clover is used it will be "Apple ".
  * 
- * So if you use Clover define your platform config based on DMI
- * or if you use Chameleon define it based on DSDT Table ID
+ * So, if you use Clover define your platform config based on DMI data
+ *  or if you use Chameleon define it based on DSDT Table ID
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 static OSString* getPlatformManufacturer()
