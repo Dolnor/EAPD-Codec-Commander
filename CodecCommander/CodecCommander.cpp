@@ -27,7 +27,6 @@
 
 // Constants for EAPD comman verb sending
 
-#define kSendEAPDCommandVerbs       "EAPD Command Verbs"
 #define kHDACodecAddress            "HDEF Codec Address"
 #define kUpdateSpeakerNodeNumber    "Update Speaker Node"
 #define kUpdateHeadphoneNodeNumber  "Update Headphone Node"
@@ -38,7 +37,6 @@
 
 IOMemoryDescriptor *ioreg_;
 bool eapdPoweredDown = true; //assume user pinconfig doesn't contain *speacial* codec verb
-bool eapdUpdate = false;
 bool hpNodeUpdated = false;
 
 UInt16 status, nodeCounter = 0;
@@ -141,12 +139,6 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
 {
     if (NULL == dict)
         return;
-
-    // Determine if EAPD status updating by sending command verbs is required
-    if (OSBoolean*  xml = OSDynamicCast(OSBoolean, dict->getObject(kSendEAPDCommandVerbs))) {
-        eapdUpdate = xml->isTrue();
-        setProperty(kSendEAPDCommandVerbs, xml->isTrue() ? kOSBooleanTrue : kOSBooleanFalse);
-    }
     
     // Get codec number (codec address)
     if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kHDACodecAddress)))
@@ -229,6 +221,10 @@ void startUpdate() {
     if(eapdPoweredDown){
         // determine HDEF ACPI device path in IORegistry
         IORegistryEntry *hdaDeviceEntry = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/HDEF");
+        if(hdaDeviceEntry == NULL) {
+            hdaDeviceEntry = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PCI0/AppleACPIPCI/HDEF@1B");
+            DEBUG_LOG("CodecCommander: PCI0 address is odd, got HDEF device path though\n");
+        }
 
         if (hdaDeviceEntry != NULL) {
             IOService *service = OSDynamicCast(IOService, hdaDeviceEntry);
@@ -253,13 +249,13 @@ void CodecCommander::performVerbUpdate(){
     // delay sending codec verb command by 40ms, otherwise it won't pass
     IOSleep(40);
     
-    // EAPD Update + HP Node
-    // EAPD Update + SP Node
-    // EAPD Update + SP/HP Nodes
+    // HP node only
+    // SP node only
+    // SP/HP nodes both
     
-    if((eapdUpdate && !spNodeNumber) ||
-       (eapdUpdate && !hpNodeNumber) ||
-       (eapdUpdate && hpNodeNumber && spNodeNumber))
+    if((!spNodeNumber) ||
+       (!hpNodeNumber) ||
+       ( hpNodeNumber && spNodeNumber))
         startUpdate();
 }
 

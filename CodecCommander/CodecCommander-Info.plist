@@ -42,8 +42,6 @@
 			<dict>
 				<key>Default</key>
 				<dict>
-					<key>EAPD Command Verbs</key>
-					<true/>
 					<key>HDEF Codec Address</key>
 					<integer>0</integer>
 					<key>Update Speaker Node</key>
@@ -55,8 +53,6 @@
 				<dict>
 					<key>0YW3P2</key>
 					<dict>
-						<key>EAPD Command Verbs</key>
-						<true/>
 						<key>Update Speaker Node</key>
 						<integer>20</integer>
 					</dict>
