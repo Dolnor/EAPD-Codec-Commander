@@ -37,7 +37,7 @@
 // Define variables for EAPD state updating
 
 IOMemoryDescriptor *ioreg_;
-bool eapdPoweredDown = false;
+bool eapdPoweredDown = true; //assume user pinconfig doesn't contain *speacial* codec verb
 bool eapdUpdate = false;
 bool hpNodeUpdated = false;
 
@@ -94,13 +94,13 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 {
 	if (kPowerStateOff == powerStateOrdinal)
 	{
-		DEBUG_LOG("CodecCommander::power is off\n");
+		DEBUG_LOG("CodecCommander::power: is off\n");
         // external amp has powered down
         eapdPoweredDown=true;
 	}
 	else if (kPowerStateOn == powerStateOrdinal)
 	{
-		DEBUG_LOG("CodecCommander::power is on\n");
+		DEBUG_LOG("CodecCommander::power: is on\n");
         // update external amp by sending verb command
         performVerbUpdate();
 	}
@@ -377,7 +377,7 @@ static OSString* getPlatformManufacturer()
         if (OSData *data = OSDynamicCast(OSData, platformNode->getProperty("OEMVendor"))) {
             if (OSString *vendor = OSString::withCString((char*)data->getBytesNoCopy())) {
                 if (OSString *manufacturer = getManufacturerNameFromOEMName(vendor)) {
-                    DEBUG_LOG("CodecCommander::init: DMI Vendor %s\n", manufacturer->getCStringNoCopy());
+                    DEBUG_LOG("CodecCommander::init: make %s\n", manufacturer->getCStringNoCopy());
                     return manufacturer;
                 }
             }
@@ -393,6 +393,7 @@ static OSString* getPlatformManufacturer()
     bcopy(pDSDT->oemID, oemID, sizeof(pDSDT->oemID));
     oemID[sizeof(oemID)-1] = 0;
     stripTrailingSpaces(oemID);
+    DEBUG_LOG("CodecCommander::init: make %s\n", oemID);
     return OSString::withCStringNoCopy(oemID);
 }
 
@@ -403,7 +404,7 @@ static OSString* getPlatformProduct()
         
         if (OSData *data = OSDynamicCast(OSData, platformNode->getProperty("OEMBoard"))) {
             if (OSString *product = OSString::withCString((char*)data->getBytesNoCopy())) {
-                DEBUG_LOG("CodecCommander:init:: DMI Board %s\n", product->getCStringNoCopy());
+                DEBUG_LOG("CodecCommander::init: model %s\n", product->getCStringNoCopy());
                 return product;
             }
         }
@@ -417,6 +418,7 @@ static OSString* getPlatformProduct()
     bcopy(pDSDT->oemTableID, oemTableID, sizeof(pDSDT->oemTableID));
     oemTableID[sizeof(oemTableID)-1] = 0;
     stripTrailingSpaces(oemTableID);
+    DEBUG_LOG("CodecCommander::init: model %s\n", oemTableID);
     return OSString::withCStringNoCopy(oemTableID);
 }
 

@@ -10,7 +10,7 @@ This kext is intended to take care of this.
 ### How is this useful over patched IOAudioFamily?
 People used to rely on custom IOAudioFamily - Apple's open source files were altered, incorporating a method (originally coded by km9) to update the EAPD after sleep. What's bad about this kind of approach is that it required sources for modification to happen… and as everyone probably knows by now, Apple tends to delay the release of sources for 3 weeks to 2 month after OS updates get released. 
 
-No more waiting for sources, no need to be searching for a kext that matches your node layout and no need to have different kexts for different OS X versions (generations, if you will). This kext has OS X Target set to 10.6, so you are good for 10.6 throught 10.9.
+No more waiting for sources, no need to be searching for a kext that matches your node layout and no need to have different kexts for different OS X versions (generations, if you will). This kext has OS X Target set to 10.6, so you are good for 10.6 throughout 10.9.
 
 ### How do I enable it?
 You have to edit settings inside Info.plist. There are four Default settings defined there which have default values of:
@@ -54,17 +54,14 @@ As you can see from the example above, the speaker node where EAPD amp resides i
 ### Is multiple profile support present?
 Yes! Thanks to methods implemented in VoodooPS2Controller by RehabMan. 
 This kext also supports custom profiles (so you can use same kext on multiple machines if you define platform profiles for each machine). 
-- For Clover bootloader you have compile a debug build and DMI information for custom profile will be posted in Console log.
-				kernel[0]: CodecCommander::init: DMI Vendor DELL
-				kernel[0]: CodecCommander::init: DMI Board 0YW3P2
-- For Chameleon/Chimera/bareBoot/XPC bootloaders open up your DSDT table and look for oemID and TableID in the header of it.
+- For Clover bootloader you have to compile a debug build and DMI information for custom profile will be posted in Console log.
+				kernel[0]: CodecCommander::init: make DELL
+				kernel[0]: CodecCommander::init: model 0YW3P2
+- For Chameleon/Chimera/bareBoot/XPC bootloaders you can also compile a debug build and check the Console log. Alternatively, open up your DSDT table and look for oemID and TableID in the header of it.
 				DefinitionBlock ("DSDT.aml", "DSDT", 2, "DELL  ", "QA09   ", 0x00000000)
 DELL would be your make and QA09 would be your model. 
 
 These two methods never match, so make sure if you need a custom platform profile you get the info from right place.
-
-### I get no audio on boot, but it works after sleep-wake cycle ?
-As this kext relies on IOResources provider class it gets initialized very early in the boot process, so sending a codec command verb at this point is pointless, because AppleHDA is actually one of the later extensions to be initialized. So you have to have the codec verb in your pinConfigurations (HDA Hardware Config Resource -> HDAConfigDefault -> ConfigData -> 01470c02 (in case your codec address is 0 and node is 0x14) or you won't have working audio after boot.
 
 ### Credits
 - EAPD fix (resumable-mutable-audio for IOAudioFamily): km9
