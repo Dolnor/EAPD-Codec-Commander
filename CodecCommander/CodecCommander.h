@@ -72,8 +72,8 @@ private:
     void setParamPropertiesGated(OSDictionary* dict);
     
 protected:
-    // issue EAPD update command
-    static void performVerbUpdate();
+    // handle codec verb command
+    void handleCommand(UInt32 cmd);
 };
 
 #endif // __CodecCommander__

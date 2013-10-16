@@ -31,8 +31,6 @@
 #define kUpdateSpeakerNodeNumber    "Update Speaker Node"
 #define kUpdateHeadphoneNodeNumber  "Update Headphone Node"
 
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 // Define variables for EAPD state updating
 
 IOMemoryDescriptor *ioreg_;
@@ -45,7 +43,13 @@ UInt8  spNodeNumber = 0x00;
 UInt8  hpNodeNumber = 0x00;
 UInt32 verbCommand  = 0x70c02;
 
-void startUpdate();
+// Define usable power states
+
+static IOPMPowerState powerStateArray[ kPowerStateCount ] =
+{
+	{ 1,0,0,0,0,0,0,0,0,0,0,0 },
+	{ 1,IOPMDeviceUsable,IOPMPowerOn,IOPMPowerOn,0,0,0,0,0,0,0,0 }
+};
 
 OSDefineMetaClassAndStructors(org_tw_CodecCommander, IOService)
 
@@ -79,40 +83,27 @@ IOService *CodecCommander::probe(IOService *provider, SInt32 *score)
 }
 
 /******************************************************************************
- * CodecCommander::setPowerState - set active power state
- ******************************************************************************/
-
-static IOPMPowerState powerStateArray[ kPowerStateCount ] =
-{
-	{ 1,0,0,0,0,0,0,0,0,0,0,0 },
-	{ 1,IOPMDeviceUsable,IOPMPowerOn,IOPMPowerOn,0,0,0,0,0,0,0,0 }
-};
-
-IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker)
-{
-	if (kPowerStateOff == powerStateOrdinal)
-	{
-		DEBUG_LOG("CodecCommander::power: is off\n");
-        // external amp has powered down
-        eapdPoweredDown=true;
-	}
-	else if (kPowerStateOn == powerStateOrdinal)
-	{
-		DEBUG_LOG("CodecCommander::power: is on\n");
-        // update external amp by sending verb command
-        if (eapdPoweredDown)
-            performVerbUpdate();
-	}
-	
-	return IOPMAckImplied;
-}
-
-/******************************************************************************
  * CodecCommander::start - start kernel extension and init PM
  ******************************************************************************/
 bool CodecCommander::start(IOService *provider)
 {
     DEBUG_LOG("CodecCommander::start: Starting\n");
+    
+    // determine HDEF ACPI device path in IORegistry
+    IORegistryEntry *hdaDeviceEntry = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/HDEF");
+    if(hdaDeviceEntry == NULL) {
+        hdaDeviceEntry = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PCI0/AppleACPIPCI/HDEF@1B");
+    }
+    
+    if (hdaDeviceEntry != NULL) {
+        IOService *service = OSDynamicCast(IOService, hdaDeviceEntry);
+        
+        // get address field from IODeviceMemory
+        if (service != NULL && service->getDeviceMemoryCount() != 0) {
+            ioreg_ = service->getDeviceMemoryWithIndex(0);
+        }
+        hdaDeviceEntry->release();
+    }
    
     // init power state management & set state as PowerOn
     PMinit();
@@ -165,132 +156,141 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
 }
 
 /******************************************************************************
-* EAPD verb sending methods by km9, update EAPD (external amp) state
+* EAPD verb sending approach based on data from
+* Intel High Definition Audio Specification Revision 1.0, 2004
 ******************************************************************************/
 
-static void updateEAPD() {
+static UInt32 codecCommand() {
     
-    if (ioreg_ == NULL) {
-        return;
-    }
-    
-    // send verb command
     UInt32 cmd;
-    // to speaker node if node number is defined and counter is 0 (SP or SP/HP)
+    // speaker node if node number is defined and counter is 0 (SP or SP/HP)
     if(nodeCounter == 0 && spNodeNumber)
         cmd = (codecNumber << 28) | (spNodeNumber << 20) | verbCommand;
-    // to headphone node if counter is 0 (HP) or 1 (SP/HP)
+    
+    // headphone node if counter is 0 (HP) or 1 (SP/HP)
     else {
         cmd = (codecNumber << 28) | (hpNodeNumber << 20) | verbCommand;
         hpNodeUpdated = true;
     }
     
-    DEBUG_LOG("CodecCommander: sending codec verb command %04x\n", cmd);
-    
-    /* Intel HD Audio Spec suggests:
-     
-     - Offset 60h: Immediate Command Output Interface - 32 bit register
-     Bit 0-15 - Immediate Command Write (ICW): The value written into this register is sent
-     out over the link during the next available frame. Software must ensure that the
-     ICB bit in the Immediate Command Status register is clear before writing a value
-     into this register or undefined behavior will result. Reads from this register will
-     always return 0’s.
-     
-     - Offset 64h: Immediate Response Input Interface - 32 bit register
-     Immediate Response Read (IRR): The value in this register latches the last
-     response to come in over the link.
-     
-     - Offset 68h: Immediate Command Status - 16 bit register
-     Bit 0 - Immediate Command Busy (ICB): This bit is a 0 when the controller can accept
-     an immediate command. Software must wait for this bit to be 0 before writing a
-     value in the ICW register.
-   
-     Bit 1 - Immediate Result Valid (IRV): This bit is set to a 1 by hardware when a new
-     response is latched into the IRR register. Software must clear this bit before
-     issuing a new command by writing a one to it so that the software may determine
-     when a new response has arrived.
-     
-     */
-    
-    // write command to ICW field
-    ioreg_->writeBytes(0x60, &cmd, sizeof(cmd));
-    status = 1;
-    // set ICB as being busy
-    ioreg_->writeBytes(0x68, &status, sizeof(status));
-    
-    // wait for response on Immediate Command Status
-    for (int i = 0; i < 1000; i++) {
-        ::IODelay(100);
-        
-        // check IRV for the status of previous write
-        ioreg_->readBytes(0x68, &status, sizeof(status));
-        if (status & 0x2)
-            break;
-    }
-    
-    if (status & 0x2) {
-    
-        // clear IRV bit for next command write
-        status = 0x2;
-        ioreg_->writeBytes(0x68, &status, sizeof(status));
-    
-        // if headphone node number is defined and not updated already
-        if(hpNodeNumber && !hpNodeUpdated) {
-        
-            // increment counter and start over
-            nodeCounter++;
-            updateEAPD();
-            hpNodeUpdated = false;
-        }
-        
-        // flag the amp as being active, reset counter
-        DEBUG_LOG("CodecCommander: command sent\n");
-        eapdPoweredDown = false;
-        nodeCounter = 0;
-    }
+    return cmd;
 }
 
-void startUpdate() {
+/****************************************************************************/
+
+void CodecCommander::handleCommand(UInt32 cmd){
     
     if(eapdPoweredDown){
-        // determine HDEF ACPI device path in IORegistry
-        IORegistryEntry *hdaDeviceEntry = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/HDEF");
-        if(hdaDeviceEntry == NULL) {
-            hdaDeviceEntry = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PCI0/AppleACPIPCI/HDEF@1B");
-            DEBUG_LOG("CodecCommander: PCI0 address is odd, got HDEF device path though\n");
+        
+        if (ioreg_ == NULL) {
+            return;
         }
-
-        if (hdaDeviceEntry != NULL) {
-            IOService *service = OSDynamicCast(IOService, hdaDeviceEntry);
-            
-            // get address field from IODeviceMemory
-            if (service != NULL && service->getDeviceMemoryCount() != 0) {
-                ioreg_ = service->getDeviceMemoryWithIndex(0);
+    
+        /* Intel HD Audio Spec suggests:
+     
+         - Offset 60h: Immediate Command Output Interface - 32 bit register
+         Bit 0-15 - Immediate Command Write (ICW): The value written into this register is sent
+         out over the link during the next available frame. Software must ensure that the
+         ICB bit in the Immediate Command Status register is clear before writing a value
+         into this register or undefined behavior will result. Reads from this register will
+         always return 0’s.
+     
+         - Offset 64h: Immediate Response Input Interface - 32 bit register
+         Immediate Response Read (IRR): The value in this register latches the last
+         response to come in over the link.
+     
+         - Offset 68h: Immediate Command Status - 16 bit register
+         Bit 0 - Immediate Command Busy (ICB): This bit is a 0 when the controller can accept
+         an immediate command. Software must wait for this bit to be 0 before writing a
+         value in the ICW register.
+     
+         Bit 1 - Immediate Result Valid (IRV): This bit is set to a 1 by hardware when a new
+         response is latched into the IRR register. Software must clear this bit before
+         issuing a new command by writing a one to it so that the software may determine
+         when a new response has arrived.
+     
+         */
+    
+        // write command to ICW field
+        ioreg_->writeBytes(0x60, &cmd, sizeof(cmd));
+        DEBUG_LOG("CodecCommander: command %04x written to ICW register\n", cmd);
+    
+        // set ICB as being busy
+        status = 1;
+        ioreg_->writeBytes(0x68, &status, sizeof(status));
+        DEBUG_LOG("CodecCommander: status of ICB field changed to %d\n", status);
+    
+        // wait for response on Immediate Command Status
+        for (int i = 0; i < 1000; i++) {
+            ::IODelay(100);
+        
+            // check IRV for the status of previous write
+            DEBUG_LOG("CodecCommander: get status of IRV field\n");
+            ioreg_->readBytes(0x68, &status, sizeof(status));
+            // we are good if ICW command has latched into IRR
+            if (status & 0x2) {
+                DEBUG_LOG("CodecCommander: response latched in IRR register, IRV returned valid status %d\n", status);
+                break;
             }
-            hdaDeviceEntry->release();
         }
         
-        updateEAPD();
+        DEBUG_LOG("CodecCommander: command failed, IRV returned invalid status %d\n", status);
+    
+        if (status & 0x2) {
+        
+            // clear IRV bit for next command write
+            status = 0x2;
+            ioreg_->writeBytes(0x68, &status, sizeof(status));
+            DEBUG_LOG("CodecCommander: IRV field cleared, ready for next command\n");
+        
+            // if headphone node number is defined and not updated already
+            if(hpNodeNumber && !hpNodeUpdated) {
+            
+                // increment counter and start over
+                nodeCounter++;
+                handleCommand(codecCommand());
+                hpNodeUpdated = false;
+            }
+        
+            // flag the amp as being active, reset counter
+            eapdPoweredDown = false;
+            nodeCounter = 0;
+        }
     }
 }
 
 /******************************************************************************
- * Perform verb update if EAPD state updating is requested by user
+ * CodecCommander::setPowerState - set active power state
  ******************************************************************************/
 
-void CodecCommander::performVerbUpdate(){
-    
-    // delay sending codec verb command by 40ms, otherwise it won't pass
-    IOSleep(40);
-    
-    // HP node only
-    // SP node only
-    // SP/HP nodes both
-    
-    if((!spNodeNumber) ||
-       (!hpNodeNumber) ||
-       ( hpNodeNumber && spNodeNumber))
-        startUpdate();
+IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker)
+{
+	if (kPowerStateOff == powerStateOrdinal)
+	{
+		DEBUG_LOG("CodecCommander::power: is off\n");
+        // external amp has powered down
+        eapdPoweredDown=true;
+	}
+	else if (kPowerStateOn == powerStateOrdinal)
+	{
+		DEBUG_LOG("CodecCommander::power: is on\n");
+        // update external amp by sending verb command
+        if (eapdPoweredDown) {
+            // delay sending codec verb command by 40ms, otherwise it won't pass
+            IOSleep(40);
+            
+            // HP node only
+            // SP node only
+            // SP/HP nodes both
+            
+            if((!spNodeNumber) ||
+               (!hpNodeNumber) ||
+               ( hpNodeNumber && spNodeNumber))
+                handleCommand(codecCommand());
+        }
+	}
+	
+	return IOPMAckImplied;
 }
 
 /******************************************************************************
