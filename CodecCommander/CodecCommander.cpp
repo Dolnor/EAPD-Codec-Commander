@@ -100,7 +100,8 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 	{
 		DEBUG_LOG("CodecCommander::power: is on\n");
         // update external amp by sending verb command
-        performVerbUpdate();
+        if (eapdPoweredDown)
+            performVerbUpdate();
 	}
 	
 	return IOPMAckImplied;
@@ -127,7 +128,8 @@ bool CodecCommander::start(IOService *provider)
  ******************************************************************************/
 void CodecCommander::stop(IOService *provider)
 {
-	DEBUG_LOG("CodecCommander::stop: Stopping\n");
+	PMstop();
+    DEBUG_LOG("CodecCommander::stop: Stopping\n");
     super::stop(provider);
 }
 
@@ -184,25 +186,57 @@ static void updateEAPD() {
     }
     
     DEBUG_LOG("CodecCommander: sending codec verb command %04x\n", cmd);
+    
+    /* Intel HD Audio Spec suggests:
+     
+     - Offset 60h: Immediate Command Output Interface - 32 bit register
+     Bit 0-15 - Immediate Command Write (ICW): The value written into this register is sent
+     out over the link during the next available frame. Software must ensure that the
+     ICB bit in the Immediate Command Status register is clear before writing a value
+     into this register or undefined behavior will result. Reads from this register will
+     always return 0’s.
+     
+     - Offset 64h: Immediate Response Input Interface - 32 bit register
+     Immediate Response Read (IRR): The value in this register latches the last
+     response to come in over the link.
+     
+     - Offset 68h: Immediate Command Status - 16 bit register
+     Bit 0 - Immediate Command Busy (ICB): This bit is a 0 when the controller can accept
+     an immediate command. Software must wait for this bit to be 0 before writing a
+     value in the ICW register.
+   
+     Bit 1 - Immediate Result Valid (IRV): This bit is set to a 1 by hardware when a new
+     response is latched into the IRR register. Software must clear this bit before
+     issuing a new command by writing a one to it so that the software may determine
+     when a new response has arrived.
+     
+     */
+    
+    // write command to ICW field
     ioreg_->writeBytes(0x60, &cmd, sizeof(cmd));
     status = 1;
+    // simulate hardware write of 1 to IRV indicating a latch in IRR
     ioreg_->writeBytes(0x68, &status, sizeof(status));
     
-    // wait for response
+    // wait for response on Immediate Command Status
     for (int i = 0; i < 1000; i++) {
         ::IODelay(100);
         
-        // check the status of previous write
+        // check IRV for the status of previous write
         ioreg_->readBytes(0x68, &status, sizeof(status));
         if (status & 0x2)
             break;
     }
     
-    if(status & 0x2) {
-        
+    if (status & 0x2) {
+    
+        // clear IRV bit for next command write
+        status = 0x2;
+        ioreg_->writeBytes(0x68, &status, sizeof(status));
+    
         // if headphone node number is defined and not updated already
         if(hpNodeNumber && !hpNodeUpdated) {
-            
+        
             // increment counter and start over
             nodeCounter++;
             updateEAPD();
