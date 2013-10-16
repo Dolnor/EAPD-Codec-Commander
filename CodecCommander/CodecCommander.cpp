@@ -215,7 +215,7 @@ static void updateEAPD() {
     // write command to ICW field
     ioreg_->writeBytes(0x60, &cmd, sizeof(cmd));
     status = 1;
-    // simulate hardware write of 1 to IRV indicating a latch in IRR
+    // set ICB as being busy
     ioreg_->writeBytes(0x68, &status, sizeof(status));
     
     // wait for response on Immediate Command Status
