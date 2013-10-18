@@ -51,6 +51,15 @@ To determine the node numbers for speaker/headphones or both just search in the 
 
 As you can see from the example above, the speaker node where EAPD amp resides is 0x14, which translates into 20 in decimal. This is the number you have to put in for 'Update Speaker Node'... if this is the only EAPD occurrence for your codec leave 'Update Headphone Node' as 0.  If your codec only has EAPD on Headphone node set 'Update Speaker Node' to 0 and adjust the 'Update Headphone Node' number accordingly. If EAPD is present on both - set both.
 
+### Upon wake I loose audio from speaker anyway, why is that?
+There are versions of ALC269 that mute speaker after 30 sec if DISABLED mixer at node 0x0f is muted and no audio stream is passed through EAPD Amp-Out. Codec incorrectly reports internal connections. Must override mut=1 capability as mute=0. No idea how to do that at this point ... use antipop 1.0.2 to generate audio stream for now.
+         
+             			Node 0x0f [Audio Mixer] wcaps 0x20010a: Mono Amp-In
+                		    Amp-In caps: ofs=0x00, nsteps=0x00, stepsize=0x00, mute=1
+                		    Amp-In vals:  [0x00] [0x80]
+                    		    Connection: 2
+                        	        0x02 0x0b
+
 ### Is multiple profile support present?
 Yes! Thanks to methods implemented in VoodooPS2Controller by RehabMan. 
 This kext also supports custom profiles (so you can use same kext on multiple machines if you define platform profiles for each machine). 
