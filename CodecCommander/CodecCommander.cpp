@@ -248,7 +248,7 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
         if (eapdPoweredDown) {
             
             // delay sending codec verb command by 100ms, otherwise sometimes it breaks audio
-            IOSleep(100);
+            ::IODelay(100);
             if(spNodeNumber)
             {
                 handleCommand(spCommand); // SP node only
