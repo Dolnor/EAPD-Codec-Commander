@@ -54,11 +54,11 @@ As you can see from the example above, the speaker node where EAPD amp resides i
 ### Upon wake I loose audio from speaker anyway, why is that?
 There are versions of ALC269 that mute speaker after 30 sec if DISABLED mixer at node 0x0f is muted and no audio stream is passed through EAPD Amp-Out. Codec incorrectly reports internal connections. Must override mut=1 capability as mute=0. No idea how to do that at this point ... use antipop 1.0.2 to generate audio stream for now.
          
-             		Node 0x0f [Audio Mixer] wcaps 0x20010a: Mono Amp-In
-                	    Amp-In caps: ofs=0x00, nsteps=0x00, stepsize=0x00, mute=1
-               		    Amp-In vals:  [0x00] [0x80]
-              		      Connection: 2
-                         	0x02 0x0b
+             			Node 0x0f [Audio Mixer] wcaps 0x20010a: Mono Amp-In
+                		    Amp-In caps: ofs=0x00, nsteps=0x00, stepsize=0x00, mute=1
+                		    Amp-In vals:  [0x00] [0x80]
+                    		    Connection: 2
+                        	        0x02 0x0b
 
 ### Is multiple profile support present?
 Yes! Thanks to methods implemented in VoodooPS2Controller by RehabMan. 
@@ -73,7 +73,9 @@ DELL would be your make and QA09 would be your model.
 These two methods never match, so make sure if you need a custom platform profile you get the info from right place.
 
 ### Credits
-- EAPD fix (resumable-mutable-sound-v1 for IOAudioFamily): km9
+- EAPD fix (resumable-mutable-audio for IOAudioFamily): km9
+
+- Multiple nodes updating via command verbs: EMlyDinEsHMG
 
 - DMI info parsing from Clover: kozlek
 
