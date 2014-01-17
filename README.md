@@ -5,9 +5,7 @@ Used for updating EAPD (External Amplifier) state on HDA (High Definition Audio)
 
 Usually, this external amp is present on laptops and ITX board, most common on machines with ALC269 and ALC665 codecs. When machine falls asleep the amp is powered down on speaker/headphone node and after waking up even though it seems like audio is working, there is no sound coming from speaker/headphones because amp requires a codec command verb sent to it in order to powered up.
 
-This kext is intended to take care of this*
-
-* For OS X versions below 10.9.2, because for some reason Apple decided to heavily alter the aglos in AppleHDA 2.6.0 hence enabling audio stream after sleep no longer works. You have to roll back 2.5.3 kext until a workaround is found.
+This kext is intended to take care of this.
 
 ### How is this useful over patched IOAudioFamily?
 People used to rely on custom IOAudioFamily - Apple's open source files were altered, incorporating a method (originally coded by km9) to update the EAPD after sleep. What's bad about this kind of approach is that it required sources for modification to happen… and as everyone probably knows by now, Apple tends to delay the release of sources for 3 weeks to 2 month after OS updates get released. 
@@ -62,6 +60,9 @@ There are versions of ALC269 that mute speaker after 30 sec if DISABLED mixer at
                     		    Connection: 2
                         	        0x02 0x0b
 
+
+For OS X versions below 10.9.2 that should work, but not with 10.9.2 because for some reason Apple decided to heavily alter the aglos in AppleHDA 2.6.0 hence enabling audio stream after sleep no longer works. If you have ALC269 (this generally doesn't happen on ALC665) and after updating to 10.9.2 audio is not resuming properly even with antipop installed, you will have to roll back 2.5.3 kext until a workaround is found.
+
 ### Is multiple profile support present?
 Yes! Thanks to methods implemented in VoodooPS2Controller by RehabMan. 
 This kext also supports custom profiles (so you can use same kext on multiple machines if you define platform profiles for each machine). 
@@ -75,9 +76,7 @@ DELL would be your make and QA09 would be your model.
 These two methods never match, so make sure if you need a custom platform profile you get the info from right place.
 
 ### Credits
-- EAPD fix (resumable-mutable-audio for IOAudioFamily): km9
-
-- Multiple nodes updating via command verbs: EMlyDinEsHMG
+- EAPD fix (resumable-mutable-sound-v1 for IOAudioFamily): km9
 
 - DMI info parsing from Clover: kozlek
 
