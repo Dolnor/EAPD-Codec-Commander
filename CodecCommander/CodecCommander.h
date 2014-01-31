@@ -20,16 +20,7 @@
 #ifndef __CodecCommander__
 #define __CodecCommander__
 
-#define CodecCommander org_tw_CodecCommander
-
-#include <IOKit/IOService.h>
-#include <IOKit/acpi/IOACPIPlatformDevice.h>
-#include <IOKit/IOTimerEventSource.h>
-#include <IOKit/IODeviceTreeSupport.h>
-
-#ifndef EXPORT
-#define EXPORT __attribute__((visibility("default")))
-#endif
+#define CodecCommander CodecCommander
 
 #ifdef DEBUG_MSG
 #define DEBUG_LOG(args...)  IOLog(args)
@@ -37,22 +28,31 @@
 #define DEBUG_LOG(args...)
 #endif
 
+#include <IOKit/IOService.h>
+#include <IOKit/IOWorkLoop.h>
+#include <IOKit/IOTimerEventSource.h>
+#include <IOKit/IODeviceTreeSupport.h>
+
+#include  "CCHIDKeyboardDevice.h"
+
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 // define & enumerate power states
 enum
 {
-	kPowerStateOff = 0,
-	kPowerStateOn,
+	kPowerStateSleep    = 0,
+    kPowerStateDoze     = 1,
+	kPowerStateNormal   = 2,
 	kPowerStateCount
 };
 
 OSString* getManufacturerNameFromOEMName(OSString *name);
 
-class EXPORT CodecCommander : public IOService
+class CodecCommander : public IOService
 {
     typedef IOService super;
-	OSDeclareDefaultStructors(org_tw_CodecCommander)
+	OSDeclareDefaultStructors(CodecCommander)
 
 public:
     // standart IOKit methods
@@ -60,20 +60,44 @@ public:
     virtual IOService *probe(IOService *provider, SInt32 *score);
     virtual bool start(IOService *provider);
 	virtual void stop(IOService *provider);
+    virtual void       free(void);
+    
+    // workloop parameters
+    bool startWorkLoop(IOService *provider);
+    void onTimerAction();
     
     //power management event
     virtual IOReturn setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker);
     
+    // get confing and make config
     static OSDictionary* getConfigurationNode(OSDictionary* list, OSString* model = 0);
     static OSDictionary* makeConfigurationNode(OSDictionary* list, OSString* model = 0);
+    
+    // generate a stream
+    void createAudioStream ();
 
 private:
     // set info.plist defined parameters
     void setParamPropertiesGated(OSDictionary* dict);
     
 protected:
+    
+    // parse audio engine state from ioreg | true -> stream up
+    void parseAudioEngineState();
+    
     // handle codec verb command
-    void handleCommand(UInt32 cmd);
+    void getOutputs();
+    void setOutputs();
+    void setStatus(UInt32 cmd);
+    void getStatus(UInt32 cmd);
+    void clearIRV();
+    
+    IOWorkLoop*			fWorkLoop;		// our workloop
+    IOTimerEventSource* fTimer;	// used to simulate capture hardware
+    
+    //virtual keyboard
+    CCHIDKeyboardDevice * _keyboardDevice;
+
 };
 
 #endif // __CodecCommander__

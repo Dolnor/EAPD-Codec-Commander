@@ -7,12 +7,22 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A86A42B189B88240050DBCF /* CCHIDKeyboard.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0A86A429189B88240050DBCF /* CCHIDKeyboard.cpp */; };
+		0A86A42C189B88240050DBCF /* CCHIDKeyboard.h in Headers */ = {isa = PBXBuildFile; fileRef = 0A86A42A189B88240050DBCF /* CCHIDKeyboard.h */; };
+		0A86A42F189B896A0050DBCF /* CCHIDKeyboardDevice.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0A86A42D189B896A0050DBCF /* CCHIDKeyboardDevice.cpp */; };
+		0A86A430189B896A0050DBCF /* CCHIDKeyboardDevice.h in Headers */ = {isa = PBXBuildFile; fileRef = 0A86A42E189B896A0050DBCF /* CCHIDKeyboardDevice.h */; };
+		0ABE527B189976190069716A /* PIOReadme in Resources */ = {isa = PBXBuildFile; fileRef = 0ABE527A189976190069716A /* PIOReadme */; };
 		0C4B238814598AD20080D960 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0C4B238614598AD20080D960 /* InfoPlist.strings */; };
 		849921901600F4FC00CCDF3B /* CodecCommander.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8499218E1600F4FC00CCDF3B /* CodecCommander.cpp */; };
 		849921911600F4FC00CCDF3B /* CodecCommander.h in Headers */ = {isa = PBXBuildFile; fileRef = 8499218F1600F4FC00CCDF3B /* CodecCommander.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0A86A429189B88240050DBCF /* CCHIDKeyboard.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CCHIDKeyboard.cpp; sourceTree = "<group>"; };
+		0A86A42A189B88240050DBCF /* CCHIDKeyboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CCHIDKeyboard.h; sourceTree = "<group>"; };
+		0A86A42D189B896A0050DBCF /* CCHIDKeyboardDevice.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CCHIDKeyboardDevice.cpp; sourceTree = "<group>"; };
+		0A86A42E189B896A0050DBCF /* CCHIDKeyboardDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CCHIDKeyboardDevice.h; sourceTree = "<group>"; };
+		0ABE527A189976190069716A /* PIOReadme */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = PIOReadme; sourceTree = "<group>"; };
 		0C4B237E14598AD20080D960 /* CodecCommander.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodecCommander.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C4B238214598AD20080D960 /* Kernel.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Kernel.framework; path = System/Library/Frameworks/Kernel.framework; sourceTree = SDKROOT; };
 		0C4B238514598AD20080D960 /* CodecCommander-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "CodecCommander-Info.plist"; sourceTree = "<group>"; };
@@ -33,9 +43,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0A86A428189B87CC0050DBCF /* CCHIDKeyboard */ = {
+			isa = PBXGroup;
+			children = (
+				0A86A42A189B88240050DBCF /* CCHIDKeyboard.h */,
+				0A86A429189B88240050DBCF /* CCHIDKeyboard.cpp */,
+				0A86A42E189B896A0050DBCF /* CCHIDKeyboardDevice.h */,
+				0A86A42D189B896A0050DBCF /* CCHIDKeyboardDevice.cpp */,
+			);
+			name = CCHIDKeyboard;
+			sourceTree = "<group>";
+		};
 		0C4B237114598AD10080D960 = {
 			isa = PBXGroup;
 			children = (
+				0A86A428189B87CC0050DBCF /* CCHIDKeyboard */,
 				0C4B238314598AD20080D960 /* CodecCommander */,
 				0C4B238014598AD20080D960 /* Frameworks */,
 				0C4B237F14598AD20080D960 /* Products */,
@@ -79,6 +101,7 @@
 		0C4B238414598AD20080D960 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				0ABE527A189976190069716A /* PIOReadme */,
 				0C4B238514598AD20080D960 /* CodecCommander-Info.plist */,
 				0C4B238614598AD20080D960 /* InfoPlist.strings */,
 				0C4B238D14598AD20080D960 /* CodecCommander-Prefix.pch */,
@@ -94,6 +117,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				849921911600F4FC00CCDF3B /* CodecCommander.h in Headers */,
+				0A86A42C189B88240050DBCF /* CCHIDKeyboard.h in Headers */,
+				0A86A430189B896A0050DBCF /* CCHIDKeyboardDevice.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -150,6 +175,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0C4B238814598AD20080D960 /* InfoPlist.strings in Resources */,
+				0ABE527B189976190069716A /* PIOReadme in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -170,6 +196,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0A86A42F189B896A0050DBCF /* CCHIDKeyboardDevice.cpp in Sources */,
+				0A86A42B189B88240050DBCF /* CCHIDKeyboard.cpp in Sources */,
 				849921901600F4FC00CCDF3B /* CodecCommander.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

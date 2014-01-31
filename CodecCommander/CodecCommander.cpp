@@ -19,6 +19,7 @@
 
 #include <IOKit/IOCommandGate.h>
 #include "CodecCommander.h"
+#include "CCHIDKeyboardDevice.h"
 
 // Constats for Platform Profile
 
@@ -31,34 +32,53 @@
 #define kUpdateSpeakerNodeNumber    "Update Speaker Node"
 #define kUpdateHeadphoneNodeNumber  "Update Headphone Node"
 
-// Define variables for EAPD state updating
+// Generate audio stream
+#define kGenerateStream             "Generate Stream"
+#define kStreamDelay                "Stream Delay"
 
-IOMemoryDescriptor *ioreg_;
-bool eapdPoweredDown = true; //assume user pinconfig doesn't contain *speacial* codec verb
+// Workloop requred? and Workloop timer aka update interval, ms
+#define kUpdateMultipleTimes        "Update Multiple Times"
+#define kUpdateInterval             "Update Interval"
+
+// Define variables for EAPD state updating
+IOMemoryDescriptor *ioregEntry;
+
+bool multiUpdate = false;
+bool generatePop = false;
+bool eapdPoweredDown = true;
+bool coldBoot = true; // assume booting from cold since hibernate is broken on most hacks
+bool latched  = false; // has command latched in IRR?
 
 UInt8  codecNumber, spNodeNumber, hpNodeNumber;
-UInt16 status;
-UInt32 spCommand, hpCommand;
+UInt8  hdaEngineState;
+UInt16 updateInterval, streamDelay, status;
+UInt32 spCommandWrite, hpCommandWrite, spCommandRead, hpCommandRead, response;
+
+int updateCount = 0; //update counter interator
 
 // Define usable power states
-
 static IOPMPowerState powerStateArray[ kPowerStateCount ] =
 {
-	{ 1,0,0,0,0,0,0,0,0,0,0,0 },
-	{ 1,IOPMDeviceUsable,IOPMPowerOn,IOPMPowerOn,0,0,0,0,0,0,0,0 }
+    { 1,0,0,0,0,0,0,0,0,0,0,0 },
+    { 1,kIOPMDeviceUsable, kIOPMDoze, kIOPMDoze, 0,0,0,0,0,0,0,0 },
+    { 1,kIOPMDeviceUsable, IOPMPowerOn, IOPMPowerOn, 0,0,0,0,0,0,0,0 }
 };
 
-OSDefineMetaClassAndStructors(org_tw_CodecCommander, IOService)
+OSDefineMetaClassAndStructors(CodecCommander, IOService)
 
 /******************************************************************************
  * CodecCommander::init - parse kernel extension Info.plist
  ******************************************************************************/
 bool CodecCommander::init(OSDictionary *dict)
 {
-    DEBUG_LOG("CodecCommander::init: Initializing\n");
+    DEBUG_LOG("CodecCommander: cc: commander initializing\n");
     
     if (!super::init(dict))
         return false;
+    
+    fWorkLoop = 0;
+    fTimer = 0;
+    
     // get configuration for respective platform
     OSDictionary* list = OSDynamicCast(OSDictionary, dict->getObject(kPlatformProfile));
     OSDictionary* config = CodecCommander::makeConfigurationNode(list);
@@ -67,9 +87,13 @@ bool CodecCommander::init(OSDictionary *dict)
     setParamPropertiesGated(config);
     OSSafeRelease(config);
     
-    // set codec address and node number for EAPD state update
-    spCommand = (codecNumber << 28) | (spNodeNumber << 20) | 0x70c02;
-    hpCommand = (codecNumber << 28) | (hpNodeNumber << 20) | 0x70c02;
+    // set codec address and node number for EAPD status set
+    spCommandWrite = (codecNumber << 28) | (spNodeNumber << 20) | 0x70c02;
+    hpCommandWrite = (codecNumber << 28) | (hpNodeNumber << 20) | 0x70c02;
+    
+    // set codec address and node number for EAPD status get
+    spCommandRead  = (codecNumber << 28) | (spNodeNumber << 20) | 0xf0c00;
+    hpCommandRead  = (codecNumber << 28) | (hpNodeNumber << 20) | 0xf0c00;
     
     return true;
 }
@@ -79,8 +103,74 @@ bool CodecCommander::init(OSDictionary *dict)
  ******************************************************************************/
 IOService *CodecCommander::probe(IOService *provider, SInt32 *score)
 {
-    DEBUG_LOG("CodecCommander::probe: Probing\n");
+    DEBUG_LOG("CodecCommander: cc: commander probing\n");
     return this;
+}
+
+/******************************************************************************
+ * CodecCommander::parseAudioEngineState - repeats the action each time timer fires
+ ******************************************************************************/
+
+void CodecCommander::parseAudioEngineState()
+{
+    IORegistryEntry *hdaEngineOutputEntry = IORegistryEntry::fromPath(
+                                                                      "IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/HDEF@1B/AppleHDAController@1B/IOHDACodecDevice@1B,0/IOHDACodecDriver/IOHDACodecFunction@1B,0,1/AppleHDACodecGeneric/AppleHDADriver/AppleHDAEngineOutput@1B,0,1,1");
+    if (hdaEngineOutputEntry != NULL) {
+        OSNumber *state = OSDynamicCast(OSNumber, hdaEngineOutputEntry->getProperty("IOAudioEngineState"));
+        if (state != NULL) {
+            hdaEngineState = state->unsigned8BitValue();
+            //DEBUG_LOG("CodecCommander:  EngineOutput power state %d\n", hdaEngineState);
+            
+            if (hdaEngineState == 0x1)
+                DEBUG_LOG("CodecCommander:  r: audio stream active\n");
+            else
+                DEBUG_LOG("CodecCommander:  r: audio stream inactive\n");
+        }
+        else {
+            DEBUG_LOG("CodecCommander: IOAudioEngineState unknown\n");
+            return;
+        }
+    }
+    else {
+        DEBUG_LOG("CodecCommander: AppleHDAEngineOutput@1B,0,1,1 is unreachable\n");
+        return;
+    }
+    
+    hdaEngineOutputEntry->release();
+}
+
+/******************************************************************************
+ * CodecCommander::onTimerAction - repeats the action each time timer fires
+ ******************************************************************************/
+
+void CodecCommander::onTimerAction()
+{
+    // check if audio stream is up on given output
+    parseAudioEngineState();
+    // get EAPD status from command response if audio stream went up
+    if (hdaEngineState == 0x1) {
+        getOutputs();
+         // if engine output stream has started, but EAPD isn't up
+        if(response == 0x0) {
+            setOutputs();
+        }
+    }
+    
+    fTimer->setTimeoutMS(updateInterval);
+    
+    // EAPD usually takes 1 write at wake and 2 consecutive writes with delays to re-enable
+    // but behavior is very random, it could take 2 times and coult take 3, sometimes 1
+    // so this is disabled and workloop goes forever checking the audio engine state and
+    // EAPD state when audio stream is present
+    
+
+    // if EAPD was re-enabled timeout should be cancelled, EAPD wont be disabled again
+    if (updateCount == 2) { // to be absolutely sure check if response == 0x2 too
+        DEBUG_LOG("CodecCommander: cc: workloop ended after %d PIOs\n",  updateCount);
+        IOLog("CodecCommander: EAPD re-enabled\n");
+        fTimer->cancelTimeout();
+    }
+    
 }
 
 /******************************************************************************
@@ -88,10 +178,32 @@ IOService *CodecCommander::probe(IOService *provider, SInt32 *score)
  ******************************************************************************/
 bool CodecCommander::start(IOService *provider)
 {
-    DEBUG_LOG("CodecCommander::start: Starting\n");
+    DEBUG_LOG("CodecCommander: cc: commander version 2.1.0 starting\n");
+
+    if(!provider || !super::start( provider ))
+	{
+		DEBUG_LOG("CodecCommander: cc: error loading kext\n");
+		return false;
+	}
+    
+    // start virtual keyboard device
+    _keyboardDevice = new CCHIDKeyboardDevice;
+    
+    if ( !_keyboardDevice              ||
+        !_keyboardDevice->init()       ||
+        !_keyboardDevice->attach(this) )
+    {
+        _keyboardDevice->release();
+        DEBUG_LOG("CodecCommander: hi: unable to create keyboard device\n");
+    }
+    else
+    {
+        DEBUG_LOG("CodecCommander: hi: keyboard device created\n");
+        _keyboardDevice->registerService();
+    }
     
     // determine HDEF ACPI device path in IORegistry
-    IORegistryEntry *hdaDeviceEntry = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/HDEF");
+    IORegistryEntry *hdaDeviceEntry = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/HDEF@1B");
     if(hdaDeviceEntry == NULL) {
         hdaDeviceEntry = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PCI0/AppleACPIPCI/HDEF@1B");
     }
@@ -101,28 +213,57 @@ bool CodecCommander::start(IOService *provider)
         
         // get address field from IODeviceMemory
         if (service != NULL && service->getDeviceMemoryCount() != 0) {
-            ioreg_ = service->getDeviceMemoryWithIndex(0);
+            ioregEntry = service->getDeviceMemoryWithIndex(0);
+            
         }
         hdaDeviceEntry->release();
     }
-   
+    
     // init power state management & set state as PowerOn
     PMinit();
-    registerPowerDriver(this, powerStateArray, 2);
+    registerPowerDriver(this, powerStateArray, kPowerStateCount);
 	provider->joinPMtree(this);
+    
+    // setup workloop and timer
+    fWorkLoop = IOWorkLoop::workLoop();
+    fTimer = IOTimerEventSource::timerEventSource(this,
+                                                          OSMemberFunctionCast(IOTimerEventSource::Action, this,
+                                                                               &CodecCommander::onTimerAction));
+    if (!fWorkLoop || !fTimer)
+        stop(provider);;
+    
+    if (fWorkLoop->addEventSource(fTimer) != kIOReturnSuccess)
+        stop(provider);
     
 	this->registerService(0);
     return true;
 }
 
 /******************************************************************************
- * CodecCommander::stop - stop kernel extension
+ * CodecCommander::stop & free - stop and free kernel extension
  ******************************************************************************/
 void CodecCommander::stop(IOService *provider)
 {
-	PMstop();
-    DEBUG_LOG("CodecCommander::stop: Stopping\n");
+    DEBUG_LOG("CodecCommander: cc: commander stopping\n");
+    // if workloop is active - release it
+    if (fWorkLoop) {
+        if(fTimer) {
+            OSSafeReleaseNULL(fTimer);// disable outstanding calls
+        }
+        OSSafeReleaseNULL(fWorkLoop);
+    }
+    // stop virtual keyboard device
+    if (_keyboardDevice)
+		_keyboardDevice->release();
+        _keyboardDevice = NULL;
+    
+    PMstop();
     super::stop(provider);
+}
+
+void CodecCommander::free(void)
+{
+	super::free();
 }
 
 /******************************************************************************
@@ -135,95 +276,183 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
         return;
     
     // Get codec number (codec address)
-    if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kHDACodecAddress)))
-    {
+    if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kHDACodecAddress))) {
         codecNumber = num->unsigned8BitValue();
         setProperty(kHDACodecAddress, codecNumber, 8);
     }
     
     // Get headphone node number
-    if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateHeadphoneNodeNumber)))
-    {
+    if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateHeadphoneNodeNumber))) {
         hpNodeNumber= num->unsigned8BitValue();
         setProperty(kUpdateHeadphoneNodeNumber, hpNodeNumber, 8);
     }
     
     // Get speaker node number
-    if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateSpeakerNodeNumber)))
-    {
+    if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateSpeakerNodeNumber))) {
         spNodeNumber = num->unsigned8BitValue();
         setProperty(kUpdateSpeakerNodeNumber, spNodeNumber, 8);
+    }
+    
+    // Is *pop* generation required at wake ?
+    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kGenerateStream))) {
+        generatePop = bl;
+        setProperty(kGenerateStream,bl);
+        
+        // Get stream delay
+        if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kStreamDelay))) {
+            streamDelay = num->unsigned16BitValue();
+            setProperty(kStreamDelay, streamDelay, 16);
+        }
+    }
+    
+    // Determine if multiple update is needed and what is the update interval (for 10.9.2 and up)
+    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kUpdateMultipleTimes))) {
+        multiUpdate = bl;
+        setProperty(kUpdateMultipleTimes,bl);
+        
+        if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateInterval))) {
+            updateInterval = num->unsigned16BitValue();
+            setProperty(kUpdateInterval, updateInterval, 16);
+        }
     }
 }
 
 /******************************************************************************
-* Command handling method for sending codec verb commands to
-* Immediate Command Input and Output Registers (offsets 0x60, 0x64 and 0x68),
-* based on High Definition Audio Specification Revision 1.0a - June 17,2010
+ * CodecCommander::getOutputs & setOutputs - get/set EAPD status on SP/HP
+ ******************************************************************************/
+
+void CodecCommander::setOutputs()
+{
+    // delay sending codec verb command by 100ms, otherwise sometimes it breaks audio
+    if (eapdPoweredDown) {
+        IOSleep(100);
+        if(spNodeNumber) {
+            setStatus(spCommandWrite); // SP node only
+            if (hpNodeNumber) // both SP/HP nodes
+                setStatus(hpCommandWrite);
+        }
+        else // HP node only
+            setStatus(hpCommandWrite);
+    }
+}
+
+void CodecCommander::getOutputs()
+{
+    IOSleep(100);
+    if(spNodeNumber) {
+        getStatus(spCommandRead);
+        if (hpNodeNumber)
+            getStatus(hpCommandRead);
+    }
+    else
+        getStatus(hpCommandRead);
+}
+
+/******************************************************************************
+* Verb command handling methods for getting and setting EAPD status
 ******************************************************************************/
 
-void CodecCommander::handleCommand(UInt32 cmd){
-    
-    if (ioreg_ == NULL) {
+void CodecCommander::getStatus(UInt32 cmd)
+{
+    if (ioregEntry == NULL) {
         return;
     }
+    // write verb command-get F0Ch to ICW 60h:Bit0-31 field
+    ioregEntry->writeBytes(0x60, &cmd, sizeof(cmd));
+    DEBUG_LOG("CodecCommander:  r: ICW stored get command %04x\n", cmd);
     
-    /* Intel HD Audio Spec suggests:
-     
-    - Offset 60h: Immediate Command Output Interface - 32 bit register
-    Bit 0-15 - Immediate Command Write (ICW): The value written into this register is sent
-    out over the link during the next available frame. Software must ensure that the
-    ICB bit in the Immediate Command Status register is clear before writing a value
-    into this register or undefined behavior will result. Reads from this register will
-    always return 0’s.
-     
-    - Offset 64h: Immediate Response Input Interface - 32 bit register
-    Immediate Response Read (IRR): The value in this register latches the last
-    response to come in over the link.
-     
-    - Offset 68h: Immediate Command Status - 16 bit register
-    Bit 0 - Immediate Command Busy (ICB): This bit is a 0 when the controller can accept
-    an immediate command. Software must wait for this bit to be 0 before writing a
-    value in the ICW register.
+    // set ICB 68h:Bit0 to cause the verb to be sent over the link
+    status = 0x1;
+    ioregEntry->writeBytes(0x68, &status, sizeof(status));
+    DEBUG_LOG("CodecCommander:  r: ICB was set, sending verb over the link\n");
     
-    Bit 1 - Immediate Result Valid (IRV): This bit is set to a 1 by hardware when a new
-    response is latched into the IRR register. Software must clear this bit before
-    issuing a new command by writing a one to it so that the software may determine
-    when a new response has arrived.
-     
-    */
-    
-    // write command to ICW field
-    ioreg_->writeBytes(0x60, &cmd, sizeof(cmd));
-    DEBUG_LOG("CodecCommander: command %04x written to ICW register\n", cmd);
-    
-    // set ICB as being busy
-    status = 1;
-    ioreg_->writeBytes(0x68, &status, sizeof(status));
-    DEBUG_LOG("CodecCommander: status of ICB field changed to %d\n", status);
-    
-    // wait for response on Immediate Command Status
+    // wait for response to latch, get EAPD status from IRR 64h:Bit1
     for (int i = 0; i < 1000; i++) {
         ::IODelay(100);
-        
-        // check IRV for the status of previous write
-        DEBUG_LOG("CodecCommander: get status of IRV field\n");
-        ioreg_->readBytes(0x68, &status, sizeof(status));
-        // we are good if ICW command has latched into IRR
-        if (status & 0x2) {
-            DEBUG_LOG("CodecCommander: response latched in IRR register, IRV returned valid status %d\n", status);
+        ioregEntry->readBytes(0x64, &response, sizeof(response));
+    }
+    
+    //DEBUG_LOG("CodecCommander:  r: IRR read -> %d\n", response);
+    
+    clearIRV(); // prepare for next command
+    
+    if (response == 0x2) { // bit 1 will be cleared after 35 second
+        DEBUG_LOG("CodecCommander:  r: IRR is set, EAPD active\n");
+        eapdPoweredDown = false;
+    }
+    if (response == 0x0) {
+        DEBUG_LOG("CodecCommander:  r: IRR isn't set, EAPD inactive\n");
+        eapdPoweredDown = true;
+    }
+}
+
+void CodecCommander::setStatus(UInt32 cmd){
+    
+    if (ioregEntry == NULL) {
+        return;
+    }
+       
+    // write verb command-set 70Ch with 8 bit payload to ICW 60h:Bit0-31 field
+    ioregEntry->writeBytes(0x60, &cmd, sizeof(cmd));
+    DEBUG_LOG("CodecCommander:  w: ICW stored set command %04x\n", cmd);
+    
+    // set ICB 68h:Bit0 to cause the verb to be sent over the link
+    status = 0x1;
+    ioregEntry->writeBytes(0x68, &status, sizeof(status));
+    DEBUG_LOG("CodecCommander:  w: ICB was set, sending verb over the link\n");
+    
+    // wait for IRV 68h:Bit1 to be set by hardware
+    for (int i = 0; i < 1000; i++) {
+        ::IODelay(100);
+        ioregEntry->readBytes(0x68, &status, sizeof(status));
+        if (status & 0x2) { // we are good if IRV was set
             goto Success;
         }
     }
-        
-    DEBUG_LOG("CodecCommander: command failed, IRV returned invalid status %d\n", status);
-        
+
+    // timeout reached, time to clear ICB
+    status = 0x0;
+    ioregEntry->writeBytes(0x68, &status, sizeof(status));
+    // wait for ICB 68h:Bit0 to clear
+    for (int i = 0; i < 1000; i++) {
+        ::IODelay(100);
+        // check ICB for the status of previous write
+        ioregEntry->readBytes(0x68, &status, sizeof(status));
+        if (status & 0x0) { // ICB cleared
+            DEBUG_LOG("CodecCommander: rw: IRV wasn't set by hardware, ICB cleared\n");
+        }
+    }
+ 
 Success:
-        
-    // clear IRV bit for next command write
+    if(!coldBoot) {
+        updateCount++;  // count the amount of times successfully enabling EAPD
+        DEBUG_LOG("CodecCommander: rw: PIO operation #%d\n",  updateCount);
+    }
+
+    DEBUG_LOG("CodecCommander: rw: IRV was set by hardware\n");
+    clearIRV(); // prepare for next command
+}
+
+
+void CodecCommander::clearIRV()
+{
+    // clear IRV bit 1 preparing for next command write
     status = 0x2;
-    ioreg_->writeBytes(0x68, &status, sizeof(status));
-    DEBUG_LOG("CodecCommander: IRV field cleared, ready for next command\n");
+    ioregEntry->writeBytes(0x68, &status, sizeof(status));
+    DEBUG_LOG("CodecCommander: rw: IRV cleared, allowing new commands\n");
+}
+
+/******************************************************************************
+ * CodecCommander::createAudioStream - generate *pop* sound to start a stream
+ ******************************************************************************/
+
+void CodecCommander::createAudioStream ()
+{
+    IOSleep(streamDelay);
+    for (int i = 0; i < 2; i++) {
+        if (_keyboardDevice)
+            _keyboardDevice->keyPressed(0x20);
+    }
 }
 
 /******************************************************************************
@@ -232,39 +461,36 @@ Success:
 
 IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker)
 {
-	if (kPowerStateOff == powerStateOrdinal)
-	{
-        DEBUG_LOG("CodecCommander::power: is off\n");
-        // external amp has powered down
-        if (!eapdPoweredDown) {
-            eapdPoweredDown=true;
-        }
-        
+
+    if (kPowerStateSleep == powerStateOrdinal) {
+        DEBUG_LOG("CodecCommander: cc: asleep\n");
+        eapdPoweredDown = true;
+        // coming from sleep, so no longer a cold boot
+        coldBoot = false;
 	}
-	else if (kPowerStateOn == powerStateOrdinal)
-	{
-        DEBUG_LOG("CodecCommander::power: is on\n");
+	else if (kPowerStateNormal == powerStateOrdinal) {
+        DEBUG_LOG("CodecCommander: cc: awake\n");
         // update external amp by sending verb command
         if (eapdPoweredDown) {
-            
-            // delay sending codec verb command by 100ms, otherwise sometimes it breaks audio
-            IOSleep(100);
-            if(spNodeNumber)
-            {
-                handleCommand(spCommand); // SP node only
-                if (hpNodeNumber) // both SP/HP nodes
-                    handleCommand(hpCommand);
-            }
-            else // HP node only
-                handleCommand(hpCommand);
+            updateCount = 0;
+            setOutputs();
 
-            // mark amp as active
-            eapdPoweredDown = false;
         }
-	}
-	
-	return IOPMAckImplied;
+        // if coming from sleep and pop requested
+        if (!coldBoot && generatePop){
+            // if os is 10.9.2 and up -> start the workloop
+            if (multiUpdate) {
+                fTimer->setTimeoutMS(300); // fire timer for workLoop
+                DEBUG_LOG("CodecCommander: cc: workloop started\n");
+            }
+            // *pop* after workloop starts, so that it could read EAPD state
+            createAudioStream();
+        }
+    }
+    
+    return IOPMAckImplied;
 }
+
 
 /******************************************************************************
  * Methods to obtain Platform Profile for EAPD cmd verb sending configuration
@@ -380,7 +606,7 @@ static OSString* getPlatformManufacturer()
         if (OSData *data = OSDynamicCast(OSData, platformNode->getProperty("OEMVendor"))) {
             if (OSString *vendor = OSString::withCString((char*)data->getBytesNoCopy())) {
                 if (OSString *manufacturer = getManufacturerNameFromOEMName(vendor)) {
-                    DEBUG_LOG("CodecCommander::init: make %s\n", manufacturer->getCStringNoCopy());
+                    DEBUG_LOG("CodecCommander: cc: board make - %s\n", manufacturer->getCStringNoCopy());
                     return manufacturer;
                 }
             }
@@ -396,7 +622,7 @@ static OSString* getPlatformManufacturer()
     bcopy(pDSDT->oemID, oemID, sizeof(pDSDT->oemID));
     oemID[sizeof(oemID)-1] = 0;
     stripTrailingSpaces(oemID);
-    DEBUG_LOG("CodecCommander::init: make %s\n", oemID);
+    DEBUG_LOG("CodecCommander: cc: board make - %s\n", oemID);
     return OSString::withCStringNoCopy(oemID);
 }
 
@@ -407,7 +633,7 @@ static OSString* getPlatformProduct()
         
         if (OSData *data = OSDynamicCast(OSData, platformNode->getProperty("OEMBoard"))) {
             if (OSString *product = OSString::withCString((char*)data->getBytesNoCopy())) {
-                DEBUG_LOG("CodecCommander::init: model %s\n", product->getCStringNoCopy());
+                DEBUG_LOG("CodecCommander: cc: board model - %s\n", product->getCStringNoCopy());
                 return product;
             }
         }
@@ -421,7 +647,7 @@ static OSString* getPlatformProduct()
     bcopy(pDSDT->oemTableID, oemTableID, sizeof(pDSDT->oemTableID));
     oemTableID[sizeof(oemTableID)-1] = 0;
     stripTrailingSpaces(oemTableID);
-    DEBUG_LOG("CodecCommander::init: model %s\n", oemTableID);
+    DEBUG_LOG("CodecCommander: cc: board model - %s\n", oemTableID);
     return OSString::withCStringNoCopy(oemTableID);
 }
 
@@ -485,7 +711,7 @@ OSDictionary* CodecCommander::getConfigurationNode(OSDictionary* list, OSString 
     return configuration;
 }
 
-EXPORT OSDictionary* CodecCommander::makeConfigurationNode(OSDictionary* list, OSString* model)
+OSDictionary* CodecCommander::makeConfigurationNode(OSDictionary* list, OSString* model)
 {
     if (!list)
         return NULL;
@@ -493,15 +719,13 @@ EXPORT OSDictionary* CodecCommander::makeConfigurationNode(OSDictionary* list, O
     OSDictionary* result = 0;
     OSDictionary* defaultNode = _getConfigurationNode(list, kDefault);
     OSDictionary* platformNode = getConfigurationNode(list, model);
-    if (defaultNode)
-    {
+    if (defaultNode) {
         // have default node, result is merge with platform node
         result = OSDictionary::withDictionary(defaultNode);
         if (result && platformNode)
             result->merge(platformNode);
     }
-    else if (platformNode)
-    {
+    else if (platformNode) {
         // no default node, try to use just platform node
         result = OSDictionary::withDictionary(platformNode);
     }

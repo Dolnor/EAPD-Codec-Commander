@@ -5,7 +5,7 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2013 TimeWalker. All rights reserved.</string>
 	<key>CFBundleGetInfoString</key>
-	<string>1.0.1, Copyright © 2013 TimeWalker. All rights reserved.</string>
+	<string>2.1.0, Copyright © 2013 TimeWalker. All rights reserved.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
@@ -21,19 +21,30 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>1.0.1</string>
+	<string>2.1.0</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.1</string>
+	<string>2.1.0</string>
 	<key>IOKitPersonalities</key>
 	<dict>
+		<key>CCHIDKeyboard</key>
+		<dict>
+			<key>CFBundleIdentifier</key>
+			<string>${MODULE_NAME}</string>
+			<key>IOClass</key>
+			<string>CCHIDKeyboard</string>
+			<key>IONameMatch</key>
+			<string>CCHIDKeyboardDevice</string>
+			<key>IOProviderClass</key>
+			<string>CCHIDKeyboardDevice</string>
+		</dict>
 		<key>CodecCommander</key>
 		<dict>
 			<key>CFBundleIdentifier</key>
 			<string>${MODULE_NAME}</string>
 			<key>IOClass</key>
-			<string>org_tw_CodecCommander</string>
+			<string>CodecCommander</string>
 			<key>IOMatchCategory</key>
-			<string>org_tw_CodecCommander</string>
+			<string>CodecCommander</string>
 			<key>IOProviderClass</key>
 			<string>IOResources</string>
 			<key>IOResourceMatch</key>
@@ -48,6 +59,14 @@
 					<integer>20</integer>
 					<key>Update Headphone Node</key>
 					<integer>0</integer>
+					<key>Stream Delay</key>
+					<integer>500</integer>
+					<key>Generate Stream</key>
+					<true/>
+					<key>Update Interval</key>
+					<integer>5000</integer>
+					<key>Update Multiple Times</key>
+					<true/>
 				</dict>
 				<key>DELL</key>
 				<dict>
@@ -62,6 +81,8 @@
 	</dict>
 	<key>OSBundleLibraries</key>
 	<dict>
+		<key>com.apple.iokit.IOHIDSystem</key>
+		<string>1.1</string>
 		<key>com.apple.iokit.IOAudioFamily</key>
 		<string>1.1fc9</string>
 		<key>com.apple.kpi.iokit</key>
