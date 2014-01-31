@@ -33,7 +33,7 @@ const CCKeyMap CCHIDKeyboardDevice::keyMap[] = {
 
 bool CCHIDKeyboardDevice::attach( IOService * provider)
 {
-	IOLog("CodecCommander: hi: keyboard device attach\n");
+	DEBUG_LOG("CodecCommander: hi: keyboard device attach\n");
     
     if( !super::attach(provider) )
         return false;
@@ -48,7 +48,7 @@ bool CCHIDKeyboardDevice::attach( IOService * provider)
 
 void CCHIDKeyboardDevice::detach( IOService * provider )
 {
-    IOLog("CodecCommander: hi: keyboard device detach\n");
+    DEBUG_LOG("CodecCommander: hi: keyboard device detach\n");
 	keyboardNest->release();
 	keyboardNest = 0;
     

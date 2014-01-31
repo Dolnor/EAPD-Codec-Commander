@@ -26,16 +26,16 @@ OSDefineMetaClassAndStructors(CCHIDKeyboard, IOHIKeyboard)
 
 bool CCHIDKeyboard::init(OSDictionary *dict)
 {
-	IOLog("CodecCommander: hi: keyboard initializing\n");
+	DEBUG_LOG("CodecCommander: hi: keyboard initializing\n");
     return super::init(dict);
 }
 
 bool CCHIDKeyboard::start(IOService *provider)
 {
-	IOLog("CodecCommander: hi: keyboard starting\n");
+	DEBUG_LOG("CodecCommander: hi: keyboard starting\n");
     if(!provider || !super::start( provider ))
 	{
-		IOLog("CodecCommander: hi: keyboard failed to start\n");
+		DEBUG_LOG("CodecCommander: hi: keyboard failed to start\n");
 		return false;
 	}
 	return true;
@@ -43,7 +43,7 @@ bool CCHIDKeyboard::start(IOService *provider)
 
 void CCHIDKeyboard::stop(IOService *provider)
 {
-	IOLog("CodecCommander: hi: stopping\n");
+	DEBUG_LOG("CodecCommander: hi: stopping\n");
     super::stop(provider);
 }
 
