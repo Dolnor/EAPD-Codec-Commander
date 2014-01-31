@@ -98,6 +98,8 @@ If you are getting a message saying ‘AppleHDAEngineOutput@1B,0,1,1 is unreacha
 ### Credits
 - EAPD fix (resumable-mutable-sound-v1 for IOAudioFamily): km9
 
+- 'Popping' mute bezel at wake idea: EMlyDinEsHMG
+
 - DMI info parsing from Clover: kozlek
 
 - Platform Profile related methods: RehabMan
