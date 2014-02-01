@@ -304,12 +304,10 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
     }
     
     // Is *pop* generation required at wake ?
-    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kGenerateStream))) {
-        generatePop = bl;
-        setProperty(kGenerateStream,bl);
-        
-        if(generatePop)
-            DEBUG_LOG("CodecCommander: cc: stream requested, will *pop* upon wake\n");
+    if (OSBoolean* pop = OSDynamicCast(OSBoolean, dict->getObject(kGenerateStream))) {
+        if (pop)
+            generatePop = (int)pop->getValue();
+        setProperty(kGenerateStream,pop);
         
         // Get stream delay
         if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kStreamDelay))) {
@@ -319,18 +317,23 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
     }
     
     // Determine if multiple update is needed and what is the update interval (for 10.9.2 and up)
-    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kUpdateMultipleTimes))) {
-        multiUpdate = bl;
-        setProperty(kUpdateMultipleTimes,bl);
+    if (OSBoolean* mu = OSDynamicCast(OSBoolean, dict->getObject(kUpdateMultipleTimes))) {
+        if (mu)
+            multiUpdate = (int)mu->getValue();
+        setProperty(kUpdateMultipleTimes,mu);
         
-        if(multiUpdate)
-            DEBUG_LOG("CodecCommander: cc: workloop requested, will start upon wake\n");
         
         if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateInterval))) {
             updateInterval = num->unsigned16BitValue();
             setProperty(kUpdateInterval, updateInterval, 16);
         }
     }
+    
+    if(generatePop == true)
+        DEBUG_LOG("CodecCommander: cc: stream requested, will *pop* upon wake\n");
+    
+    if(multiUpdate == true)
+        DEBUG_LOG("CodecCommander: cc: workloop requested, will start upon wake\n");
 }
 
 /******************************************************************************
