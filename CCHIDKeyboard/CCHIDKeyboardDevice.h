@@ -32,7 +32,7 @@
 
 typedef struct  {
 	UInt16 in; // scancode
-	UInt8 out; // special key number
+	UInt8 out; // adb keycode for special key
 	const char *description; // special key description
 } CCKeyMap;
 

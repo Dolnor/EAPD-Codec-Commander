@@ -108,7 +108,7 @@ IOService *CodecCommander::probe(IOService *provider, SInt32 *score)
 }
 
 /******************************************************************************
- * CodecCommander::parseAudioEngineState - repeats the action each time timer fires
+ * CodecCommander::parseAudioEngineState - repeats the action when timer fires
  ******************************************************************************/
 
 void CodecCommander::parseAudioEngineState()
@@ -158,14 +158,15 @@ void CodecCommander::onTimerAction()
     
     fTimer->setTimeoutMS(updateInterval);
     
-    // EAPD usually takes 1 write at wake and 2 consecutive writes with delays to re-enable
-    // but behavior is very random, it could take 2 times and coult take 3, sometimes 1
-    // so this is disabled and workloop goes forever checking the audio engine state and
-    // EAPD state when audio stream is present
-    
+    /*
+     normally EAPD takes 1 write at wake and 2 consecutive writes to re-enable. if delays are present
+     in between streams behavior is very random, it could take 2 times and coult take 3, sometimes 1
+     so when we are not popping at wake, workloop goes forever checking the audio engine state and
+     EAPD state when audio stream is present
+    */
 
-    // if EAPD was re-enabled timeout should be cancelled, EAPD wont be disabled again
-    if (updateCount == 2) { // to be absolutely sure check if response == 0x2 too
+    // if EAPD was re-enabled using bezel popping timeout should be cancelled, EAPD wont be disabled again
+    if (generatePop && updateCount == 2) { // to be absolutely sure check if response == 0x2 too
         DEBUG_LOG("CodecCommander: cc: workloop ended after %d PIOs\n",  updateCount);
         IOLog("CodecCommander: EAPD re-enabled\n");
         fTimer->cancelTimeout();

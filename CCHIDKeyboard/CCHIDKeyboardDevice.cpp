@@ -31,6 +31,10 @@ const CCKeyMap CCHIDKeyboardDevice::keyMap[] = {
 	{0,0xFF,NULL}
 };
 
+/******************************************************************************
+ * CCHIDKeyboard:attach/detach - standard IOKit methods
+ ******************************************************************************/
+
 bool CCHIDKeyboardDevice::attach( IOService * provider)
 {
 	DEBUG_LOG("CodecCommander: hi: keyboard device attach\n");
@@ -54,6 +58,10 @@ void CCHIDKeyboardDevice::detach( IOService * provider )
     
 	super::detach(provider);
 }
+
+/******************************************************************************
+ * CCHIDKeyboard:keyPressed - get out key for scancode, notify it through ACPI
+ ******************************************************************************/
 
 void CCHIDKeyboardDevice::keyPressed(int code)
 {

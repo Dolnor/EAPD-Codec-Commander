@@ -21,8 +21,11 @@
 
 #define super IOHIKeyboard
 
-
 OSDefineMetaClassAndStructors(CCHIDKeyboard, IOHIKeyboard)
+
+/******************************************************************************
+ * CCHIDKeyboard:init/start/stop/free - standard IOKit methods
+ ******************************************************************************/
 
 bool CCHIDKeyboard::init(OSDictionary *dict)
 {
@@ -53,7 +56,7 @@ void CCHIDKeyboard::free(void)
 }
 
 /******************************************************************************
-* Receive scancode (only down) and send keyboard down and up event
+* CCHIDKeyboard:message - receive scancode and send keyboard down and up event
 ******************************************************************************/
 IOReturn CCHIDKeyboard::message( UInt32 type, IOService * provider, void * argument)
 {
