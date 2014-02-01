@@ -37,11 +37,11 @@ const CCKeyMap CCHIDKeyboardDevice::keyMap[] = {
 
 bool CCHIDKeyboardDevice::attach( IOService * provider)
 {
-	DEBUG_LOG("CodecCommander: hi: keyboard device attach\n");
-    
     if( !super::attach(provider) )
         return false;
-	
+    
+    DEBUG_LOG("CodecCommander: hi: keyboard device attached\n");
+    
 	keyboardNest = OSDynamicCast(CodecCommander, provider);
 	if (NULL == keyboardNest)
 		return false;

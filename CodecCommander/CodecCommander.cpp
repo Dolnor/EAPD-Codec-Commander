@@ -123,8 +123,8 @@ void CodecCommander::parseAudioEngineState()
             
             if (hdaEngineState == 0x1)
                 DEBUG_LOG("CodecCommander:  r: audio stream active\n");
-            else
-                DEBUG_LOG("CodecCommander:  r: audio stream inactive\n");
+            //else
+                //DEBUG_LOG("CodecCommander:  r: audio stream inactive\n"); // will produce spam in console
         }
         else {
             DEBUG_LOG("CodecCommander: IOAudioEngineState unknown\n");
@@ -145,6 +145,13 @@ void CodecCommander::parseAudioEngineState()
 
 void CodecCommander::onTimerAction()
 {
+    /*
+     if your kext is properly patched upon wake EAPD takes 1 write, sometimes 2 writes to re-enable.
+     if delays are present in between streams behavior is very random, it could take 2 times
+     and coult take 3, sometimes 1 so the workloop goes forever checking the audio engine state 
+     and EAPD state when audio stream on engine output is present
+     */
+    
     // check if audio stream is up on given output
     parseAudioEngineState();
     // get EAPD status from command response if audio stream went up
@@ -157,20 +164,22 @@ void CodecCommander::onTimerAction()
     }
     
     fTimer->setTimeoutMS(updateInterval);
-    
-    /*
-     normally EAPD takes 1 write at wake and 2 consecutive writes to re-enable. if delays are present
-     in between streams behavior is very random, it could take 2 times and coult take 3, sometimes 1
-     so when we are not popping at wake, workloop goes forever checking the audio engine state and
-     EAPD state when audio stream is present
-    */
 
+    /*
+     if your kext is improperly patched your EAPD will be disabled 35 sec after *pop* stream stops
+     however it will take exactly 2 PIOs for it to stay enabled until your next sleep cycle, but
+     your jack sense will be always broken upon wake. re-patch your AppleHDA in case you see this behavior
+     based on the log (PIO operation count will always remain at 2) or use the below workloop escape 
+     method if you are unable to repach yourself and dont care about jacks.
+    
     // if EAPD was re-enabled using bezel popping timeout should be cancelled, EAPD wont be disabled again
     if (generatePop && updateCount == 2) { // to be absolutely sure check if response == 0x2 too
         DEBUG_LOG("CodecCommander: cc: workloop ended after %d PIOs\n",  updateCount);
         IOLog("CodecCommander: EAPD re-enabled\n");
         fTimer->cancelTimeout();
     }
+     
+     */
     
 }
 
@@ -299,6 +308,9 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
         generatePop = bl;
         setProperty(kGenerateStream,bl);
         
+        if(generatePop)
+            DEBUG_LOG("CodecCommander: cc: stream requested, will *pop* upon wake\n");
+        
         // Get stream delay
         if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kStreamDelay))) {
             streamDelay = num->unsigned16BitValue();
@@ -310,6 +322,9 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
     if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kUpdateMultipleTimes))) {
         multiUpdate = bl;
         setProperty(kUpdateMultipleTimes,bl);
+        
+        if(multiUpdate)
+            DEBUG_LOG("CodecCommander: cc: workloop requested, will start upon wake\n");
         
         if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateInterval))) {
             updateInterval = num->unsigned16BitValue();
@@ -377,7 +392,7 @@ void CodecCommander::getStatus(UInt32 cmd)
     
     clearIRV(); // prepare for next command
     
-    if (response == 0x2) { // bit 1 will be cleared after 35 second
+    if (response == 0x2) { // bit 1 will be cleared after 35 second if AppleHDA is improperly patched!
         DEBUG_LOG("CodecCommander:  r: IRR is set, EAPD active\n");
         eapdPoweredDown = false;
     }
@@ -427,7 +442,7 @@ void CodecCommander::setStatus(UInt32 cmd){
 Success:
     if(!coldBoot) {
         updateCount++;  // count the amount of times successfully enabling EAPD
-        DEBUG_LOG("CodecCommander: rw: PIO operation #%d\n",  updateCount);
+        DEBUG_LOG("CodecCommander:  w: PIO operation #%d\n",  updateCount);
     }
 
     DEBUG_LOG("CodecCommander: rw: IRV was set by hardware\n");
@@ -479,7 +494,10 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
         }
         // if coming from sleep and pop requested
         if (!coldBoot && generatePop){
-            // if os is 10.9.2 and up -> start the workloop
+            /*
+             behavior may change depending on the way your kext is patched, also on AppleHDA version
+             with 2.6.0 (10.9.2) a workloop is always required, with 2.5.3 and below (10.9.1) it's not ...
+            */
             if (multiUpdate) {
                 fTimer->setTimeoutMS(300); // fire timer for workLoop
                 DEBUG_LOG("CodecCommander: cc: workloop started\n");
