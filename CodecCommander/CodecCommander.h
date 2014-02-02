@@ -47,8 +47,6 @@ enum
 	kPowerStateCount
 };
 
-OSString* getManufacturerNameFromOEMName(OSString *name);
-
 class CodecCommander : public IOService
 {
     typedef IOService super;
@@ -60,7 +58,10 @@ public:
     virtual IOService *probe(IOService *provider, SInt32 *score);
     virtual bool start(IOService *provider);
 	virtual void stop(IOService *provider);
-    virtual void       free(void);
+    virtual void free(void);
+    
+    // generate a stream
+    void createAudioStream ();
     
     // workloop parameters
     bool startWorkLoop(IOService *provider);
@@ -68,36 +69,32 @@ public:
     
     //power management event
     virtual IOReturn setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker);
-    
-    // get confing and make config
-    static OSDictionary* getConfigurationNode(OSDictionary* list, OSString* model = 0);
-    static OSDictionary* makeConfigurationNode(OSDictionary* list, OSString* model = 0);
-    
-    // generate a stream
-    void createAudioStream ();
 
 private:
-    // set info.plist defined parameters
+    // get config dictionary by parsing plist
+    static OSDictionary* makeConfigurationNode(OSDictionary* list, OSString* model = 0);
+    
+    // set plist dictionary parameters
     void setParamPropertiesGated(OSDictionary* dict);
     
 protected:
-    
     // parse audio engine state from ioreg | true -> stream up
     void parseAudioEngineState();
     
-    // handle codec verb command
-    void getOutputs();
-    void setOutputs();
+    // handle codec verb command and read response
     void setStatus(UInt32 cmd);
     void getStatus(UInt32 cmd);
     void clearIRV();
+    
+    // get and set the state of EAPD on outputs
+    void getOutputs();
+    void setOutputs();
     
     IOWorkLoop*			fWorkLoop;		// our workloop
     IOTimerEventSource* fTimer;	// used to simulate capture hardware
     
     //virtual keyboard
     CCHIDKeyboardDevice * _keyboardDevice;
-
 };
 
 #endif // __CodecCommander__

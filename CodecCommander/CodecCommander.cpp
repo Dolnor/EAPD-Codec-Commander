@@ -21,13 +21,11 @@
 #include "CodecCommander.h"
 #include "CCHIDKeyboardDevice.h"
 
-// Constats for Platform Profile
-
-#define kPlatformProfile            "Platform Profile"
+// Constats for Configuration
+#define kConfiguration              "Configuration"
 #define kDefault                    "Default"
 
 // Constants for EAPD comman verb sending
-
 #define kHDACodecAddress            "HDEF Codec Address"
 #define kUpdateSpeakerNodeNumber    "Update Speaker Node"
 #define kUpdateHeadphoneNodeNumber  "Update Headphone Node"
@@ -43,18 +41,11 @@
 // Define variables for EAPD state updating
 IOMemoryDescriptor *ioregEntry;
 
-bool multiUpdate = false;
-bool generatePop = false;
-bool eapdPoweredDown = true;
-bool coldBoot = true; // assume booting from cold since hibernate is broken on most hacks
-bool latched  = false; // has command latched in IRR?
-
-UInt8  codecNumber, spNodeNumber, hpNodeNumber;
-UInt8  hdaEngineState;
+int updateCount = 0; //update counter
+bool multiUpdate, generatePop, eapdPoweredDown, coldBoot, latched;
+UInt8  codecNumber, spNodeNumber, hpNodeNumber, hdaEngineState;
 UInt16 updateInterval, streamDelay, status;
 UInt32 spCommandWrite, hpCommandWrite, spCommandRead, hpCommandRead, response;
-
-int updateCount = 0; //update counter interator
 
 // Define usable power states
 static IOPMPowerState powerStateArray[ kPowerStateCount ] =
@@ -79,11 +70,17 @@ bool CodecCommander::init(OSDictionary *dict)
     fWorkLoop = 0;
     fTimer = 0;
     
-    // get configuration for respective platform
-    OSDictionary* list = OSDynamicCast(OSDictionary, dict->getObject(kPlatformProfile));
+    multiUpdate = false;
+    generatePop = false;
+    eapdPoweredDown = true;
+    coldBoot = true; // assume booting from cold since hibernate is broken on most hacks
+    latched  = false; // has command latched in IRR?
+    
+    // get configuration
+    OSDictionary* list = OSDynamicCast(OSDictionary, dict->getObject(kConfiguration));
     OSDictionary* config = CodecCommander::makeConfigurationNode(list);
     
-    // set platform configuration
+    // set configuration
     setParamPropertiesGated(config);
     OSSafeRelease(config);
     
@@ -115,6 +112,10 @@ void CodecCommander::parseAudioEngineState()
 {
     IORegistryEntry *hdaEngineOutputEntry = IORegistryEntry::fromPath(
                                                                       "IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/HDEF@1B/AppleHDAController@1B/IOHDACodecDevice@1B,0/IOHDACodecDriver/IOHDACodecFunction@1B,0,1/AppleHDACodecGeneric/AppleHDADriver/AppleHDAEngineOutput@1B,0,1,1");
+    // IOHDACodecDevice@1B,0 -> 0 - Codec Address Number
+    // IOHDACodecFunction@1B,0,1 -> 0 - Codec Address Number, 1 - Function Group Number
+    // AppleHDAEngineOutput@1B,0,1,1 -> 0 - Codec Address Number, 1 - Function Group Number, 1 - Engine Output Number
+    
     if (hdaEngineOutputEntry != NULL) {
         OSNumber *state = OSDynamicCast(OSNumber, hdaEngineOutputEntry->getProperty("IOAudioEngineState"));
         if (state != NULL) {
@@ -195,6 +196,12 @@ bool CodecCommander::start(IOService *provider)
 		DEBUG_LOG("CodecCommander: cc: error loading kext\n");
 		return false;
 	}
+    
+    // notify about extra feature requests
+    if(generatePop)
+        DEBUG_LOG("CodecCommander: cc: stream requested, will *pop* upon wake\n");
+    if(multiUpdate)
+        DEBUG_LOG("CodecCommander: cc: workloop requested, will start upon wake\n");
     
     // start virtual keyboard device
     _keyboardDevice = new CCHIDKeyboardDevice;
@@ -288,52 +295,37 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
     // Get codec number (codec address)
     if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kHDACodecAddress))) {
         codecNumber = num->unsigned8BitValue();
-        setProperty(kHDACodecAddress, codecNumber, 8);
     }
     
     // Get headphone node number
     if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateHeadphoneNodeNumber))) {
         hpNodeNumber= num->unsigned8BitValue();
-        setProperty(kUpdateHeadphoneNodeNumber, hpNodeNumber, 8);
     }
     
     // Get speaker node number
     if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateSpeakerNodeNumber))) {
         spNodeNumber = num->unsigned8BitValue();
-        setProperty(kUpdateSpeakerNodeNumber, spNodeNumber, 8);
     }
     
     // Is *pop* generation required at wake ?
-    if (OSBoolean* pop = OSDynamicCast(OSBoolean, dict->getObject(kGenerateStream))) {
-        if (pop)
-            generatePop = (int)pop->getValue();
-        setProperty(kGenerateStream,pop);
-        
+    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kGenerateStream))) {
+        generatePop = (int)bl->getValue();
+            
         // Get stream delay
         if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kStreamDelay))) {
             streamDelay = num->unsigned16BitValue();
-            setProperty(kStreamDelay, streamDelay, 16);
         }
     }
     
-    // Determine if multiple update is needed and what is the update interval (for 10.9.2 and up)
-    if (OSBoolean* mu = OSDynamicCast(OSBoolean, dict->getObject(kUpdateMultipleTimes))) {
-        if (mu)
-            multiUpdate = (int)mu->getValue();
-        setProperty(kUpdateMultipleTimes,mu);
+    // Determine if multiple update is needed (for 10.9.2 and up)
+    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kUpdateMultipleTimes))) {
+        multiUpdate = (int)bl->getValue();
         
-        
+        // What is the update interval
         if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateInterval))) {
             updateInterval = num->unsigned16BitValue();
-            setProperty(kUpdateInterval, updateInterval, 16);
         }
     }
-    
-    if(generatePop == true)
-        DEBUG_LOG("CodecCommander: cc: stream requested, will *pop* upon wake\n");
-    
-    if(multiUpdate == true)
-        DEBUG_LOG("CodecCommander: cc: workloop requested, will start upon wake\n");
 }
 
 /******************************************************************************
@@ -513,168 +505,9 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
     return IOPMAckImplied;
 }
 
-
 /******************************************************************************
- * Methods to obtain Platform Profile for EAPD cmd verb sending configuration
+ * Methods for getting configuration dictionary, courtesy of RehabMan
  ******************************************************************************/
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Simplify data from Clover's DMI readings and use it for profile make and model
- * Courtesy of kozlek (HWSensors project)
- * https://github.com/kozlek/HWSensors
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-OSString* getManufacturerNameFromOEMName(OSString *name)
-{
-    if (!name) {
-        return NULL;
-    }
-    
-    OSString *manufacturer = NULL;
-    
-    if (name->isEqualTo("ASUSTeK Computer INC.") ||
-        name->isEqualTo("ASUSTeK COMPUTER INC.")) manufacturer = OSString::withCString("ASUS");
-    if (name->isEqualTo("Dell Inc.")) manufacturer = OSString::withCString("DELL");
-    if (name->isEqualTo("FUJITSU") ||
-        name->isEqualTo("FUJITSU SIEMENS")) manufacturer = OSString::withCString("FUJITSU");
-    if (name->isEqualTo("Hewlett-Packard")) manufacturer = OSString::withCString("HP");
-    if (name->isEqualTo("IBM")) manufacturer = OSString::withCString("IBM");
-    if (name->isEqualTo("Intel") ||
-        name->isEqualTo("Intel Corp.") ||
-        name->isEqualTo("Intel Corporation")||
-        name->isEqualTo("INTEL Corporation")) manufacturer = OSString::withCString("Intel");
-    if (name->isEqualTo("Lenovo") || name->isEqualTo("LENOVO")) manufacturer = OSString::withCString("Lenovo");
-    if (name->isEqualTo("Micro-Star International") ||
-        name->isEqualTo("MICRO-STAR INTERNATIONAL CO., LTD") ||
-        name->isEqualTo("MICRO-STAR INTERNATIONAL CO.,LTD") ||
-        name->isEqualTo("MSI")) manufacturer = OSString::withCString("MSI");
-    
-    if (!manufacturer && !name->isEqualTo("To be filled by O.E.M."))
-        manufacturer = OSString::withString(name);
-    
-    return manufacturer;
-}
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Get make and model for profile from DSDT header OEM ID and Table ID fields
- * Courtesy of RehabMan (VoodooPS2Controller project)
- * https://github.com/RehabMan/OS-X-Voodoo-PS2-Controller
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-
-#define DSDT_SIGNATURE ('D' | 'S'<<8 | 'D'<<16 | 'T'<<24)
-
-struct DSDT_HEADER // DSDT header structure
-{
-    uint32_t tableSignature;
-    uint32_t tableLength;
-    uint8_t specCompliance;
-    uint8_t checkSum;
-    char oemID[6]; // platform make
-    char oemTableID[8]; // platform model
-    uint32_t oemRevision;
-    uint32_t creatorID;
-    uint32_t creatorRevision;
-};
-
-static const DSDT_HEADER* getDSDT()
-{
-    IORegistryEntry* reg = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert");
-    if (!reg)
-        return NULL;
-    OSDictionary* dict = OSDynamicCast(OSDictionary, reg->getProperty("ACPI Tables"));
-    reg->release();
-    if (!dict)
-        return NULL;
-    OSData* data = OSDynamicCast(OSData, dict->getObject("DSDT"));
-    if (!data || data->getLength() < sizeof(DSDT_HEADER))
-        return NULL;
-    const DSDT_HEADER* pDSDT = (const DSDT_HEADER*)data->getBytesNoCopy();
-    if (!pDSDT || data->getLength() < sizeof(DSDT_HEADER) || pDSDT->tableSignature != DSDT_SIGNATURE)
-        return NULL;
-    return pDSDT;
-}
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* Remove spaces from OEM ID and Table ID fields if any. Normally, if maker name
-* is shorther than 6 bytes it will be trail-spaced, for eg. "DELL  " and "QA09   "
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-static void stripTrailingSpaces(char* str)
-{
-    char* p = str;
-    for (; *p; p++)
-        ;
-    for (--p; p >= str && *p == ' '; --p)
-        *p = 0;
-}
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Obtain information for make and model to match against config in Info.plist
- * First, try to get data from Clover, it reads DMI and stores it in /efi/platform
- * DMI data won't match DSDT header TableID used for model and if DSDT patcher in 
- * Clover is used it will be "Apple ".
- * 
- * So, if you use Clover define your platform config based on DMI data
- *  or if you use Chameleon define it based on DSDT Table ID
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-static OSString* getPlatformManufacturer()
-{
-    // try to get data from Clover first
-    // considering auto patching may be used, so OEM ID will be set to "Apple "
-    if (IORegistryEntry* platformNode = IORegistryEntry::fromPath("/efi/platform", gIODTPlane)) {
-        
-        if (OSData *data = OSDynamicCast(OSData, platformNode->getProperty("OEMVendor"))) {
-            if (OSString *vendor = OSString::withCString((char*)data->getBytesNoCopy())) {
-                if (OSString *manufacturer = getManufacturerNameFromOEMName(vendor)) {
-                    DEBUG_LOG("CodecCommander: cc: board make - %s\n", manufacturer->getCStringNoCopy());
-                    return manufacturer;
-                }
-            }
-        }
-    }
-    
-    // otherwise use DSDT header
-    const DSDT_HEADER* pDSDT = getDSDT();
-    if (!pDSDT)
-        return NULL;
-    // copy to static data, NUL terminate, strip trailing spaces, and return
-    static char oemID[sizeof(pDSDT->oemID)+1];
-    bcopy(pDSDT->oemID, oemID, sizeof(pDSDT->oemID));
-    oemID[sizeof(oemID)-1] = 0;
-    stripTrailingSpaces(oemID);
-    DEBUG_LOG("CodecCommander: cc: board make - %s\n", oemID);
-    return OSString::withCStringNoCopy(oemID);
-}
-
-static OSString* getPlatformProduct()
-{
-    // try to get data from Clover first
-    if (IORegistryEntry* platformNode = IORegistryEntry::fromPath("/efi/platform", gIODTPlane)) {
-        
-        if (OSData *data = OSDynamicCast(OSData, platformNode->getProperty("OEMBoard"))) {
-            if (OSString *product = OSString::withCString((char*)data->getBytesNoCopy())) {
-                DEBUG_LOG("CodecCommander: cc: board model - %s\n", product->getCStringNoCopy());
-                return product;
-            }
-        }
-    }
-    
-    const DSDT_HEADER* pDSDT = getDSDT();
-    if (!pDSDT)
-        return NULL;
-    // copy to static data, NUL terminate, strip trailing spaces, and return
-    static char oemTableID[sizeof(pDSDT->oemTableID)+1];
-    bcopy(pDSDT->oemTableID, oemTableID, sizeof(pDSDT->oemTableID));
-    oemTableID[sizeof(oemTableID)-1] = 0;
-    stripTrailingSpaces(oemTableID);
-    DEBUG_LOG("CodecCommander: cc: board model - %s\n", oemTableID);
-    return OSString::withCStringNoCopy(oemTableID);
-}
-
-static OSDictionary* _getConfigurationNode(OSDictionary *root, const char *name);
-
 static OSDictionary* _getConfigurationNode(OSDictionary *root, OSString *name)
 {
     OSDictionary *configuration = NULL;
@@ -708,27 +541,9 @@ static OSDictionary* _getConfigurationNode(OSDictionary *root, const char *name)
     
     if (root && name) {
         OSString *nameNode = OSString::withCStringNoCopy(name);
-        
         configuration = _getConfigurationNode(root, nameNode);
-        
         OSSafeRelease(nameNode);
     }
-    
-    return configuration;
-}
-
-OSDictionary* CodecCommander::getConfigurationNode(OSDictionary* list, OSString *model)
-{
-    OSDictionary *configuration = NULL;
-    
-    if (OSString *manufacturer = getPlatformManufacturer())
-        if (OSDictionary *manufacturerNode = OSDynamicCast(OSDictionary, list->getObject(manufacturer)))
-            if (!(configuration = _getConfigurationNode(manufacturerNode, getPlatformProduct())))
-                if (!(configuration = _getConfigurationNode(manufacturerNode, model)))
-                    configuration = _getConfigurationNode(manufacturerNode, kDefault);
-    
-    if (!configuration && !(configuration = _getConfigurationNode(list, model)))
-        configuration = _getConfigurationNode(list, kDefault);
     
     return configuration;
 }
@@ -740,16 +555,8 @@ OSDictionary* CodecCommander::makeConfigurationNode(OSDictionary* list, OSString
     
     OSDictionary* result = 0;
     OSDictionary* defaultNode = _getConfigurationNode(list, kDefault);
-    OSDictionary* platformNode = getConfigurationNode(list, model);
     if (defaultNode) {
-        // have default node, result is merge with platform node
         result = OSDictionary::withDictionary(defaultNode);
-        if (result && platformNode)
-            result->merge(platformNode);
-    }
-    else if (platformNode) {
-        // no default node, try to use just platform node
-        result = OSDictionary::withDictionary(platformNode);
     }
     return result;
 }

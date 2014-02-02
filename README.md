@@ -79,19 +79,6 @@ For OS X versions below 10.9.2 that should work, but not with 10.9.2 because for
 
 What will happen is that the kext will still send a command verb at wake, then produce a popping sound. If there’s no active stream 25 second after that, AppleHDAAudioEngine and associated EAPD will be disabled again by codec. The kext will keep monitoring the state of audio engine and if it changes to ‘on’ (ie, you started playing an audio or changed volume.. better works for audio though) it will check for EAPD state. In case it’s determined that EAPD is disabled the verb will be sent to codec to enable it. If EAPD is enabled the kext will continue monitoring to make sure EAPD gets enabled twice. After two PIO operations the check loop will be cancelled and you will see ‘EAPD re-enabled’ message in console. This is because after two iterations EAPD will stay enabled up until your next sleep-wale cycle.
 
-
-### Is multiple profile support present?
-Yes! Thanks to methods implemented in VoodooPS2Controller by RehabMan. 
-This kext also supports custom profiles (so you can use same kext on multiple machines if you define platform profiles for each machine). 
-- For Clover bootloader you have to compile a debug build and DMI information for custom profile will be posted in Console log.
-				kernel[0]: CodecCommander::init: make DELL
-				kernel[0]: CodecCommander::init: model 0YW3P2
-- For Chameleon/Chimera/bareBoot/XPC bootloaders you can also compile a debug build and check the Console log. Alternatively, open up your DSDT table and look for oemID and TableID in the header of it.
-				DefinitionBlock ("DSDT.aml", "DSDT", 2, "DELL  ", "QA09   ", 0x00000000)
-DELL would be your make and QA09 would be your model. 
-
-These two methods never match, so make sure if you need a custom platform profile you get the info from right place.
-
 ### I get a strange message in my console and nothing really works
 If you are getting a message saying ‘AppleHDAEngineOutput@1B,0,1,1 is unreachable’ this means that your EngineOutput has different address. You will need to edit it in the code and recompile according to your IOReg. 
 
@@ -100,6 +87,4 @@ If you are getting a message saying ‘AppleHDAEngineOutput@1B,0,1,1 is unreacha
 
 - 'Popping' mute bezel at wake idea: EMlyDinEsHMG
 
-- DMI info parsing from Clover: kozlek
-
-- Platform Profile related methods: RehabMan
+- Configuration parsing methods: RehabMan

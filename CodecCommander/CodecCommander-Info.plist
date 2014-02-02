@@ -49,7 +49,7 @@
 			<string>IOResources</string>
 			<key>IOResourceMatch</key>
 			<string>IOKit</string>
-			<key>Platform Profile</key>
+			<key>Configuration</key>
 			<dict>
 				<key>Default</key>
 				<dict>
@@ -67,14 +67,6 @@
 					<integer>5000</integer>
 					<key>Update Multiple Times</key>
 					<true/>
-				</dict>
-				<key>DELL</key>
-				<dict>
-					<key>0YW3P2</key>
-					<dict>
-						<key>Update Speaker Node</key>
-						<integer>20</integer>
-					</dict>
 				</dict>
 			</dict>
 		</dict>
