@@ -497,8 +497,13 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
                 fTimer->setTimeoutMS(300); // fire timer for workLoop
                 DEBUG_LOG("CodecCommander: cc: workloop started\n");
             }
-            // *pop* after workloop starts, so that it could read EAPD state
+            /*
+              *pop* after workloop starts but before we seek response, so that it would be
+              possible to read EAPD state in both cases - at wake controller expects set and get actions
+            */
             createAudioStream();
+            if (!multiUpdate)
+                getOutputs();
         }
     }
     

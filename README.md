@@ -13,7 +13,7 @@ People used to rely on custom IOAudioFamily - Apple's open source files were alt
 No more waiting for sources, no need to be searching for a kext that matches your node layout and no need to have different kexts for different OS X versions (generations, if you will). This kext has OS X Target set to 10.6, so you are good for 10.6 throughout 10.9.
 
 ### How do I enable it?
-You have to edit settings inside Info.plist. There are four Default settings defined there which have default values of:
+You have to edit settings inside Info.plist. There are Default settings defined there which have these default values:
 
 				<key>Default</key>
 				<dict>
