@@ -26,7 +26,8 @@
 #define kDefault                    "Default"
 
 // Constants for EAPD comman verb sending
-#define kHDACodecAddress            "HDEF Codec Address"
+#define kCodecAddressNumber         "Codec Address Number"
+#define kEngineOutputNumber         "Engine Output Number"
 #define kUpdateSpeakerNodeNumber    "Update Speaker Node"
 #define kUpdateHeadphoneNodeNumber  "Update Headphone Node"
 
@@ -34,16 +35,20 @@
 #define kGenerateStream             "Generate Stream"
 #define kStreamDelay                "Stream Delay"
 
-// Workloop requred? and Workloop timer aka update interval, ms
+// Workloop requred? is it infinite? and Workloop timer aka update interval, ms
 #define kUpdateMultipleTimes        "Update Multiple Times"
+#define kCheckInfinitely            "Check Infinitely"
 #define kUpdateInterval             "Update Interval"
 
 // Define variables for EAPD state updating
 IOMemoryDescriptor *ioregEntry;
 
+char engineOutputPath[0xD8]; //extra byte here and for hdaDevice for null-terminating the string
+char hdaDevicePath[0x3F];
+
 int updateCount = 0; //update counter
-bool multiUpdate, generatePop, eapdPoweredDown, coldBoot, latched;
-UInt8  codecNumber, spNodeNumber, hpNodeNumber, hdaEngineState;
+bool multiUpdate, checkInfinite, generatePop, eapdPoweredDown, coldBoot, latched;
+UInt8  codecNumber, outputNumber, spNodeNumber, hpNodeNumber, hdaEngineState;
 UInt16 updateInterval, streamDelay, status;
 UInt32 spCommandWrite, hpCommandWrite, spCommandRead, hpCommandRead, response;
 
@@ -72,6 +77,7 @@ bool CodecCommander::init(OSDictionary *dict)
     
     multiUpdate = false;
     generatePop = false;
+    checkInfinite = false;
     eapdPoweredDown = true;
     coldBoot = true; // assume booting from cold since hibernate is broken on most hacks
     latched  = false; // has command latched in IRR?
@@ -83,6 +89,13 @@ bool CodecCommander::init(OSDictionary *dict)
     // set configuration
     setParamPropertiesGated(config);
     OSSafeRelease(config);
+    
+    // set path for ioreg entries
+    snprintf(hdaDevicePath, sizeof(hdaDevicePath),
+             "IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/HDEF@1B");
+    snprintf(engineOutputPath,sizeof(engineOutputPath),
+             "%s/AppleHDAController@1B/IOHDACodecDevice@1B,%d/IOHDACodecDriver/IOHDACodecFunction@1B,%d,1/AppleHDACodecGeneric/AppleHDADriver/AppleHDAEngineOutput@1B,%d,1,%d",
+             hdaDevicePath,codecNumber,codecNumber,codecNumber,outputNumber);
     
     // set codec address and node number for EAPD status set
     spCommandWrite = (codecNumber << 28) | (spNodeNumber << 20) | 0x70c02;
@@ -110,11 +123,7 @@ IOService *CodecCommander::probe(IOService *provider, SInt32 *score)
 
 void CodecCommander::parseAudioEngineState()
 {
-    IORegistryEntry *hdaEngineOutputEntry = IORegistryEntry::fromPath(
-                                                                      "IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/HDEF@1B/AppleHDAController@1B/IOHDACodecDevice@1B,0/IOHDACodecDriver/IOHDACodecFunction@1B,0,1/AppleHDACodecGeneric/AppleHDADriver/AppleHDAEngineOutput@1B,0,1,1");
-    // IOHDACodecDevice@1B,0 -> 0 - Codec Address Number
-    // IOHDACodecFunction@1B,0,1 -> 0 - Codec Address Number, 1 - Function Group Number
-    // AppleHDAEngineOutput@1B,0,1,1 -> 0 - Codec Address Number, 1 - Function Group Number, 1 - Engine Output Number
+    IORegistryEntry *hdaEngineOutputEntry = IORegistryEntry::fromPath(engineOutputPath);
     
     if (hdaEngineOutputEntry != NULL) {
         OSNumber *state = OSDynamicCast(OSNumber, hdaEngineOutputEntry->getProperty("IOAudioEngineState"));
@@ -133,7 +142,7 @@ void CodecCommander::parseAudioEngineState()
         }
     }
     else {
-        DEBUG_LOG("CodecCommander: AppleHDAEngineOutput@1B,0,1,1 is unreachable\n");
+        DEBUG_LOG("CodecCommander: %s is unreachable\n", engineOutputPath);
         return;
     }
     
@@ -146,13 +155,6 @@ void CodecCommander::parseAudioEngineState()
 
 void CodecCommander::onTimerAction()
 {
-    /*
-     if your kext is properly patched upon wake EAPD takes 1 write, sometimes 2 writes to re-enable.
-     if delays are present in between streams behavior is very random, it could take 2 times
-     and coult take 3, sometimes 1 so the workloop goes forever checking the audio engine state 
-     and EAPD state when audio stream on engine output is present
-     */
-    
     // check if audio stream is up on given output
     parseAudioEngineState();
     // get EAPD status from command response if audio stream went up
@@ -167,21 +169,21 @@ void CodecCommander::onTimerAction()
     fTimer->setTimeoutMS(updateInterval);
 
     /*
-     if your kext is improperly patched your EAPD will be disabled 35 sec after *pop* stream stops
-     however it will take exactly 2 PIOs for it to stay enabled until your next sleep cycle, but
-     your jack sense will be always broken upon wake. re-patch your AppleHDA in case you see this behavior
-     based on the log (PIO operation count will always remain at 2) or use the below workloop escape 
-     method if you are unable to repach yourself and dont care about jacks.
+     Normally EAPD will be disabled 35 sec after *pop* stream stops, however it will take exactly 2 PIOs
+     for it to stay enabled until your next sleep cycle, but your jack sense will be lost after 2nd PIO
+     ***
+     If delays are present in between streams it will act random, it could take 2 PIOs or just 1, sometimes 3
+     You can make the workloop go check and update EAPD state infinitely by setting the toggle inside the plist
+    */
     
-    // if EAPD was re-enabled using bezel popping timeout should be cancelled, EAPD wont be disabled again
-    if (generatePop && updateCount == 2) { // to be absolutely sure check if response == 0x2 too
-        DEBUG_LOG("CodecCommander: cc: workloop ended after %d PIOs\n",  updateCount);
-        IOLog("CodecCommander: EAPD re-enabled\n");
-        fTimer->cancelTimeout();
+    if (!checkInfinite) {
+        // if EAPD was re-enabled using bezel popping after 2 PIOs timeout should be cancelled
+        if (generatePop && updateCount == 2) { // to be absolutely sure check if response == 0x2 too
+            DEBUG_LOG("CodecCommander: cc: workloop ended after %d PIOs\n",  updateCount);
+            IOLog("CodecCommander: EAPD re-enabled\n");
+            fTimer->cancelTimeout();
+        }
     }
-     
-     */
-    
 }
 
 /******************************************************************************
@@ -189,7 +191,7 @@ void CodecCommander::onTimerAction()
  ******************************************************************************/
 bool CodecCommander::start(IOService *provider)
 {
-    DEBUG_LOG("CodecCommander: cc: commander version 2.1.0 starting\n");
+    DEBUG_LOG("CodecCommander: cc: commander version 2.1.1 starting\n");
 
     if(!provider || !super::start( provider ))
 	{
@@ -198,10 +200,14 @@ bool CodecCommander::start(IOService *provider)
 	}
     
     // notify about extra feature requests
-    if(generatePop)
+    if (generatePop)
         DEBUG_LOG("CodecCommander: cc: stream requested, will *pop* upon wake\n");
-    if(multiUpdate)
-        DEBUG_LOG("CodecCommander: cc: workloop requested, will start upon wake\n");
+    if (multiUpdate && checkInfinite) {
+        DEBUG_LOG("CodecCommander: cc: infinite workloop requested, will start upon wake\n");
+    }
+    if (multiUpdate && !checkInfinite) {
+        DEBUG_LOG("CodecCommander: cc: finite workloop requested, will start upon wake and stop after 2 PIOs\n");
+    }
     
     // start virtual keyboard device
     _keyboardDevice = new CCHIDKeyboardDevice;
@@ -220,11 +226,7 @@ bool CodecCommander::start(IOService *provider)
     }
     
     // determine HDEF ACPI device path in IORegistry
-    IORegistryEntry *hdaDeviceEntry = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/HDEF@1B");
-    if(hdaDeviceEntry == NULL) {
-        hdaDeviceEntry = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PCI0/AppleACPIPCI/HDEF@1B");
-    }
-    
+    IORegistryEntry *hdaDeviceEntry = IORegistryEntry::fromPath(hdaDevicePath);
     if (hdaDeviceEntry != NULL) {
         IOService *service = OSDynamicCast(IOService, hdaDeviceEntry);
         
@@ -234,6 +236,10 @@ bool CodecCommander::start(IOService *provider)
             
         }
         hdaDeviceEntry->release();
+    }
+    else {
+        DEBUG_LOG("CodecCommander: %s is unreachable\n",hdaDevicePath);
+        return false;
     }
     
     // init power state management & set state as PowerOn
@@ -292,9 +298,14 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
     if (NULL == dict)
         return;
     
-    // Get codec number (codec address)
-    if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kHDACodecAddress))) {
+    // Get codec address number
+    if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kCodecAddressNumber))) {
         codecNumber = num->unsigned8BitValue();
+    }
+    
+    // Get engine output number
+    if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kEngineOutputNumber))) {
+        outputNumber = num->unsigned8BitValue();
     }
     
     // Get headphone node number
@@ -311,9 +322,11 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
     if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kGenerateStream))) {
         generatePop = (int)bl->getValue();
             
-        // Get stream delay
-        if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kStreamDelay))) {
-            streamDelay = num->unsigned16BitValue();
+        if (generatePop) {
+            // Get stream delay
+            if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kStreamDelay))) {
+                streamDelay = num->unsigned16BitValue();
+            }
         }
     }
     
@@ -321,9 +334,16 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
     if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kUpdateMultipleTimes))) {
         multiUpdate = (int)bl->getValue();
         
-        // What is the update interval
-        if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateInterval))) {
-            updateInterval = num->unsigned16BitValue();
+        if (multiUpdate) {
+            // Do we need to check EAPD state infinitely ?
+            if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCheckInfinitely))) {
+                checkInfinite = (int)bl->getValue();
+            }
+        
+            // What is the update interval
+            if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateInterval))) {
+                updateInterval = num->unsigned16BitValue();
+            }
         }
     }
 }
@@ -480,6 +500,12 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
         coldBoot = false;
 	}
 	else if (kPowerStateNormal == powerStateOrdinal) {
+       
+        /*
+         behavior may change depending on the way your kext is patched, also on AppleHDA version
+         with 2.6.0 (10.9.2) a workloop is always required, with 2.5.3 and below (10.9.1) it's not ...
+         */
+        
         DEBUG_LOG("CodecCommander: cc: awake\n");
         // update external amp by sending verb command
         if (eapdPoweredDown) {
@@ -489,10 +515,6 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
         }
         // if coming from sleep and pop requested
         if (!coldBoot && generatePop){
-            /*
-             behavior may change depending on the way your kext is patched, also on AppleHDA version
-             with 2.6.0 (10.9.2) a workloop is always required, with 2.5.3 and below (10.9.1) it's not ...
-            */
             if (multiUpdate) {
                 fTimer->setTimeoutMS(300); // fire timer for workLoop
                 DEBUG_LOG("CodecCommander: cc: workloop started\n");
