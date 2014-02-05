@@ -198,12 +198,11 @@ void CodecCommander::onTimerAction()
     if (checkInfinite) {
         // check if hda codec is powered
         parseCodecPowerState();
-        // if no power at cold boot, after sleep or semi-sleep (fugue) state and power was restored - set EAPD bit
+        // if no power after semi-sleep (fugue) state and power was restored - set EAPD bit
         if (eapdPoweredDown && (hdaCurrentPowerState == 0x1 || hdaCurrentPowerState == 0x2)) {
-            DEBUG_LOG("CodecCommander:  r: hda codec power restored\n");
             setOutputs();
-            // if popping requested - generate stream at wake or fugue-wake
-            if (generatePop && !coldBoot){
+            // if popping requested - generate stream at fugue-wake
+            if (!coldBoot && generatePop){
                 createAudioStream();
             }
         }
@@ -405,8 +404,7 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
 
 void CodecCommander::setOutputs()
 {
-    // delay sending codec verb command by 100ms, otherwise sometimes it breaks audio
-    IOSleep(100);
+    DEBUG_LOG("CodecCommander:  r: hda codec power restored\n");
     if(spNodeNumber) {
         setStatus(spCommandWrite); // SP node only
         if (hpNodeNumber) // both SP/HP nodes
@@ -418,7 +416,6 @@ void CodecCommander::setOutputs()
 
 void CodecCommander::getOutputs()
 {
-    IOSleep(100);
     if(spNodeNumber) {
         getStatus(spCommandRead);
         if (hpNodeNumber)
@@ -531,11 +528,6 @@ void CodecCommander::clearIRV()
 
 void CodecCommander::createAudioStream ()
 {
-    // apply delay only when not using infinite check,
-    // with infinite checks other procedures will created at least 300 to 500ms delay
-    if (!checkInfinite){
-        IOSleep(streamDelay);
-    }
     for (int i = 0; i < 2; i++) {
         if (_keyboardDevice)
             _keyboardDevice->keyPressed(0x20);
@@ -558,11 +550,29 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 	}
 	else if (kPowerStateNormal == powerStateOrdinal) {
         DEBUG_LOG("CodecCommander: cc: awake\n");
+        
+// These operations have to be perform right at wake or codec will enter power mod 0 immediately!
+// *****
+        // set EAPD bit at wake or cold boot
+        if (eapdPoweredDown) {
+            // delay setting by 100ms, otherwise immediate command won't be received
+            IOSleep(100);
+            setOutputs();
+        }
+        // generate audio stream at wake if requested
+        if (!coldBoot && generatePop){
+            // apply delay or it will not trigger a system event
+            IOSleep(streamDelay);
+            createAudioStream();
+        }
+        // only when this is done we can stars a check workloop!
+// *****
+        
         // if infinite checking requested
         if (checkInfinite){
             // if checking infinitely then make sure to delay workloop
             if (coldBoot) {
-                fTimer->setTimeoutMS(15000); // create a nasty 15sec delay for AudioEngineOutput to initialize
+                fTimer->setTimeoutMS(20000); // create a nasty 20sec delay for AudioEngineOutput to initialize
             }
             // if we are waking it will be already initialized
             else {
@@ -573,22 +583,10 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
         // if finite checking requested
         else {
             updateCount = 0; // reset PIO counter after machine awoke from sleep
-            // set EAPD bit at wake or cold boot
-            if (eapdPoweredDown) {
-                setOutputs();
-            }
             // make sure we are only starting the loop when waking
-            if (!coldBoot){
-                if (multiUpdate) {
-                    fTimer->setTimeoutMS(300);
-                    DEBUG_LOG("CodecCommander: cc: workloop started\n");
-                }
-            }
-            // generate audio stream at wake if requested
-            if (!coldBoot){
-                if (generatePop){
-                    createAudioStream();
-                }
+            if (!coldBoot && multiUpdate){
+                fTimer->setTimeoutMS(300);
+                DEBUG_LOG("CodecCommander: cc: workloop started\n");
             }
         }
     }
