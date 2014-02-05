@@ -78,7 +78,8 @@ private:
     void setParamPropertiesGated(OSDictionary* dict);
     
 protected:
-    // parse audio engine state from ioreg | true -> stream up
+    // parse audio engine state and codec power state from ioreg
+    void parseCodecPowerState();
     void parseAudioEngineState();
     
     // handle codec verb command and read response

@@ -33,7 +33,7 @@ You have to edit settings inside Info.plist. There are four Default settings def
 					<integer>5000</integer>
 					<key>Update Multiple Times</key>
 					<true/>
-					<key>Update Infinitely</key>
+					<key>Check Infinitely</key>
 					<false/>
 				</dict>
 
@@ -63,7 +63,7 @@ To determine the node numbers for speaker/headphones or both just search in the 
 
 As you can see from the example above, the speaker node where EAPD amp resides is 0x14, which translates into 20 in decimal. This is the number you have to put in for 'Update Speaker Node'... if this is the only EAPD occurrence for your codec leave 'Update Headphone Node' as 0.  If your codec only has EAPD on Headphone node set 'Update Speaker Node' to 0 and adjust the 'Update Headphone Node' number accordingly. If EAPD is present on both - set both.
 
-### Upon wake I loose audio from speaker, why is that?
+### Upon wake I lose audio from speaker, why is that?
 There are versions of ALC269 that mute speaker after 30 sec if DISABLED mixer at node 0x0f is muted and no audio stream is passed through EAPD Amp-Out. Codec incorrectly reports internal connections. Chances are, headphone and mic jack sensing won’t work either. To fix this set: 
 
 					<key>Generate Stream</key>
@@ -81,14 +81,23 @@ For OS X versions below 10.9.2 that should work, but not with 10.9.2 because for
 					<key>Update Multiple Times</key>
 					<true/>
 
-What will happen is that the kext will still send a command verb at wake, then produce a popping sound. If there’s no active stream 35 second after that, AppleHDAAudioEngine and associated EAPD will be disabled again by codec. The kext will keep monitoring the state of audio engine and if it changes to ‘on’ (ie, you started playing an audio or changed volume.. better works for audio though) it will check for EAPD state. In case it’s determined that EAPD is disabled the verb will be sent to codec to enable it. If EAPD is enabled the kext will continue monitoring to make sure EAPD gets enabled twice. After two PIO operations the check loop will be cancelled and you will see ‘EAPD re-enabled’ message in console. This is because after two iterations EAPD will stay enabled up until your next sleep-wale cycle.
+What will happen is that the kext will still send a command verb at wake, then produce a popping sound. If there’s no active stream 35 second after that, AppleHDAAudioEngine and associated EAPD will be disabled again by codec. The kext will keep monitoring the state of audio engine and if it changes to ‘on’ (ie, you started playing an audio or changed volume.. better works for audio though) it will check for EAPD state. In case it’s determined that EAPD is disabled the verb will be sent to codec to enable it. If EAPD is enabled the kext will continue monitoring to make sure EAPD gets enabled twice. After two PIO operations the check loop will be cancelled and you will see ‘EAPD re-enabled’ message in console. This is because after two iterations EAPD will stay enabled up until your next sleep-wale cycle. 
 
-Sometimes behavior is random, it could take more than two PIO operations for EAPD to reenable, for this purpose another setting can be set in config.. 
+Sometimes behavior is random, it could take more than two PIO operations for EAPD to reenable, for this purpose another setting can be set in config.. Also, after sending PIO and enabling EAPD for the second time your jack sense will stop working… in order to fix that a workaround was added:
 
-					<key>Update Infinitely</key>
-					<false/>
+					<key>Check Infinitely</key>
+					<true/>
 
-Enabling this option will make the kext check for EngineOutput state and EAPD state infinitely, timeout won’t be called after 2 PIOs. This check will be repeated with the update interval (ms) that you have defined in config and will be initiated as soon as machine wakes up. 
+Enabling this option will make the kext check for EngineOutput state and Codec Audio Power State as well as EAPD state infinitely, timeout won’t be called after 2 PIOs. This check will started at cold boot and repeated with the update interval (ms) that you have defined in config. 
+
+If you lose jack sense (autodetect) with 10.9.2 and above just go to Apple menu and select Sleep… wait for 5 seconds and press any key on the keyboard. The machine will start the screen again, send PIO to enable EAPD and will *pop* if requested, allowing you to plug in the headphones or an external mike.
+
+Additional feature request will be displayed in the console log:
+
+					CodecCommander: cc: stream requested, will *pop* upon wake
+					CodecCommander: cc: infinite workloop requested, will start now!
+					CodecCommander: cc: finite workloop requested, will start upon wake and stop after 2 PIOs
+
 
 ### I get a strange message in my console
 If upon wake you are getting a message saying ‘ .../AppleHDAEngineOutput@1B,0,1,1 is unreachable’ this means that your EngineOutput has different address. You need to determine what is the Engine Output Number for the Output that has EAPD on it and set in configuration:
@@ -108,6 +117,7 @@ Here @1B is HDEF device location, 0 - Codec Address Number (you will have to hav
 ### Changelog
 
 Feb 03, 2013 v2.1.1:
+- Add a workaround to jack sense loss after 2 PIO operations (use Apple - Sleep and tap any key after 5 seconds, jack sense should work thereafter).
 
 - Got rid of Platform Profiles as this function has little to no use
 
