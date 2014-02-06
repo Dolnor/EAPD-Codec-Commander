@@ -53,6 +53,8 @@
 			<dict>
 				<key>Default</key>
 				<dict>
+					<key>Simulate Headphones</key>
+					<integer>33</integer>
 					<key>Codec Address Number</key>
 					<integer>0</integer>
 					<key>Engine Output Number</key>
@@ -65,11 +67,9 @@
 					<integer>500</integer>
 					<key>Generate Stream</key>
 					<true/>
-					<key>Update Interval</key>
-					<integer>5000</integer>
+					<key>Check Interval</key>
+					<integer>3000</integer>
 					<key>Check Infinitely</key>
-					<false/>
-					<key>Update Multiple Times</key>
 					<true/>
 				</dict>
 			</dict>

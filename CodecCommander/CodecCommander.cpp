@@ -35,10 +35,10 @@
 #define kGenerateStream             "Generate Stream"
 #define kStreamDelay                "Stream Delay"
 
-// Workloop requred? is it infinite? and Workloop timer aka update interval, ms
-#define kUpdateMultipleTimes        "Update Multiple Times"
-#define kCheckInfinitely            "Check Infinitely"
-#define kUpdateInterval             "Update Interval"
+// Workloop requred and Workloop timer aka update interval, ms
+#define kCheckInfinitely           "Check Infinitely"
+#define kCheckInterval             "Check Interval"
+#define kSimulateHeadphoneJack      "Simulate Headphones"
 
 // Define variables for EAPD state updating
 IOMemoryDescriptor *ioregEntry;
@@ -48,10 +48,10 @@ char hdaDriverPath[0xBA];
 char engineOutputPath[0xD8];
 
 int updateCount = 0; //update counter
-bool multiUpdate, checkInfinite, generatePop, eapdPoweredDown, coldBoot;
-UInt8  codecNumber, outputNumber, spNodeNumber, hpNodeNumber, hdaCurrentPowerState, hdaPrevPowerState, hdaEngineState;
+bool checkInfinite, generatePop, eapdPoweredDown, coldBoot;
+UInt8  codecNumber, outputNumber, spNodeNumber, hpNodeNumber, shpNodeNumber, hdaCurrentPowerState, hdaPrevPowerState, hdaEngineState;
 UInt16 updateInterval, streamDelay, status;
-UInt32 spCommandWrite, hpCommandWrite, spCommandRead, hpCommandRead, response;
+UInt32 spCommandWrite, hpCommandWrite, spCommandRead, hpCommandRead, shpCommandEnable, shpCommandDisable, response;
 
 // Define usable power states
 static IOPMPowerState powerStateArray[ kPowerStateCount ] =
@@ -76,7 +76,6 @@ bool CodecCommander::init(OSDictionary *dict)
     fWorkLoop = 0;
     fTimer = 0;
     
-    multiUpdate = false;
     generatePop = false;
     checkInfinite = false;
     eapdPoweredDown = true;
@@ -110,6 +109,10 @@ bool CodecCommander::init(OSDictionary *dict)
     spCommandRead  = (codecNumber << 28) | (spNodeNumber << 20) | 0xf0c00;
     hpCommandRead  = (codecNumber << 28) | (hpNodeNumber << 20) | 0xf0c00;
     
+    // commands for simulating headphone jack plugging and unplugging
+    shpCommandEnable  = (codecNumber << 28) | (shpNodeNumber << 20) | 0x707c0;
+    shpCommandDisable = (codecNumber << 28) | (shpNodeNumber << 20) | 0x70700;
+    
     return true;
 }
 
@@ -139,9 +142,10 @@ void CodecCommander::parseCodecPowerState()
                 hdaPrevPowerState = hdaCurrentPowerState;
                 // notify about codec power loss state
                 if (hdaCurrentPowerState == 0x0) {
-                    DEBUG_LOG("CodecCommander:  r: hda codec lost power\n");
+                    DEBUG_LOG("CodecCommander: cc: --> hda codec lost power\n");
                     eapdPoweredDown = true;
                     coldBoot = false; //codec entered fugue state or sleep - no longer a cold boot
+                    updateCount = 0;
                 }
             }
         }
@@ -171,9 +175,9 @@ void CodecCommander::parseAudioEngineState()
             //DEBUG_LOG("CodecCommander:  EngineOutput power state %d\n", hdaEngineState);
             
             if (hdaEngineState == 0x1)
-                DEBUG_LOG("CodecCommander:  r: audio stream active\n");
+                DEBUG_LOG("CodecCommander: cc: --> audio stream active\n");
             //else
-                //DEBUG_LOG("CodecCommander:  r: audio stream inactive\n"); // will produce spam in console
+                //DEBUG_LOG("CodecCommander: cc: --> audio stream inactive\n"); // will produce spam in console
         }
         else {
             DEBUG_LOG("CodecCommander: IOAudioEngineState unknown\n");
@@ -200,11 +204,14 @@ void CodecCommander::onTimerAction()
         parseCodecPowerState();
         // if no power after semi-sleep (fugue) state and power was restored - set EAPD bit
         if (eapdPoweredDown && (hdaCurrentPowerState == 0x1 || hdaCurrentPowerState == 0x2)) {
+            DEBUG_LOG("CodecCommander: cc: --> hda codec power restored\n");
             setOutputs();
             // if popping requested - generate stream at fugue-wake
             if (!coldBoot && generatePop){
                 createAudioStream();
             }
+            // simulate headphone jack replug
+            simulateHedphoneJack(); // <------ makes sure this is needed?
         }
     }
     
@@ -221,15 +228,6 @@ void CodecCommander::onTimerAction()
     }
 
     fTimer->setTimeoutMS(updateInterval);
-    
-    if (!checkInfinite) {
-        // if EAPD was re-enabled using bezel popping after 2 PIOs timeout should be cancelled
-        if (generatePop && updateCount == 2) { // to be absolutely sure check if response == 0x2 too
-            DEBUG_LOG("CodecCommander: cc: workloop ended after %d PIOs\n",  updateCount);
-            IOLog("CodecCommander: EAPD re-enabled\n");
-            fTimer->cancelTimeout();
-        }
-    }
 }
 
 /******************************************************************************
@@ -249,14 +247,11 @@ bool CodecCommander::start(IOService *provider)
     if (generatePop && checkInfinite) {
         DEBUG_LOG("CodecCommander: cc: stream requested, will *pop* upon wake or fugue-wake\n");
     }
-    if (multiUpdate && checkInfinite) {
+    if (checkInfinite) {
         DEBUG_LOG("CodecCommander: cc: infinite workloop requested, will start now!\n");
     }
     if (generatePop && !checkInfinite) {
         DEBUG_LOG("CodecCommander: cc: stream requested, will *pop* upon wake\n");
-    }
-    if (multiUpdate && !checkInfinite) {
-        DEBUG_LOG("CodecCommander: cc: finite workloop requested, will start upon wake and stop after 2 PIOs\n");
     }
     
     // start virtual keyboard device
@@ -368,6 +363,11 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
         spNodeNumber = num->unsigned8BitValue();
     }
     
+    // Get hp node number for simulating the unplug event
+    if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kSimulateHeadphoneJack))) {
+        shpNodeNumber = num->unsigned8BitValue();
+    }
+    
     // Is *pop* generation required at wake ?
     if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kGenerateStream))) {
         generatePop = (int)bl->getValue();
@@ -380,18 +380,13 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
         }
     }
     
-    // Determine if multiple update is needed (for 10.9.2 and up)
-    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kUpdateMultipleTimes))) {
-        multiUpdate = (int)bl->getValue();
+    // Determine if infinite check is needed (for 10.9.2 and up)
+    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCheckInfinitely))) {
+        checkInfinite = (int)bl->getValue();
         
-        if (multiUpdate) {
-            // Do we need to check EAPD state infinitely ?
-            if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCheckInfinitely))) {
-                checkInfinite = (int)bl->getValue();
-            }
-        
+        if (checkInfinite) {
             // What is the update interval
-            if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateInterval))) {
+            if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kCheckInterval))) {
                 updateInterval = num->unsigned16BitValue();
             }
         }
@@ -404,7 +399,7 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
 
 void CodecCommander::setOutputs()
 {
-    DEBUG_LOG("CodecCommander:  r: hda codec power restored\n");
+    //DEBUG_LOG("CodecCommander:  r: hda codec power restored\n");
     if(spNodeNumber) {
         setStatus(spCommandWrite); // SP node only
         if (hpNodeNumber) // both SP/HP nodes
@@ -455,7 +450,7 @@ void CodecCommander::getStatus(UInt32 cmd)
     
     if (response == 0x2) { // bit 1 will be cleared after 35 second!
         DEBUG_LOG("CodecCommander:  r: IRR is set, EAPD active\n");
-        //eapdPoweredDown = false;
+        eapdPoweredDown = false;
     }
     if (response == 0x0) {
         DEBUG_LOG("CodecCommander:  r: IRR isn't set, EAPD inactive\n");
@@ -501,7 +496,7 @@ void CodecCommander::setStatus(UInt32 cmd){
     }
  
 Success:
-    if(!coldBoot && !checkInfinite) {
+    if(!coldBoot && (cmd == spCommandWrite || cmd == hpCommandWrite)) {
         updateCount++;  // count the amount of times successfully enabling EAPD
         DEBUG_LOG("CodecCommander:  w: PIO operation #%d\n",  updateCount);
     }
@@ -528,10 +523,23 @@ void CodecCommander::clearIRV()
 
 void CodecCommander::createAudioStream ()
 {
+    DEBUG_LOG("CodecCommander: cc: --> simulate mute-unmute event\n");
     for (int i = 0; i < 2; i++) {
         if (_keyboardDevice)
             _keyboardDevice->keyPressed(0x20);
     }
+}
+
+
+/******************************************************************************
+ * CodecCommander::simulateHeadphoneJack - plug and unplug headphones virtually
+ ******************************************************************************/
+void CodecCommander::simulateHedphoneJack()
+{
+    DEBUG_LOG("CodecCommander: cc: --> simulate headphone jack event\n");
+    setStatus(shpCommandEnable);  // H-Phn PinCap Enable
+    IOSleep(100);
+    setStatus(shpCommandDisable); // H-Phn PinCap Disable
 }
 
 /******************************************************************************
@@ -542,28 +550,22 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 {
 
     if (kPowerStateSleep == powerStateOrdinal) {
-        DEBUG_LOG("CodecCommander: cc: asleep\n");
-        fTimer->cancelTimeout(); // cancel outstanding timer
+        DEBUG_LOG("CodecCommander: cc: --> asleep\n");
         eapdPoweredDown = true;
         // though this probably has been determined after parsing codec power state, we set this as false again
         coldBoot = false;
 	}
 	else if (kPowerStateNormal == powerStateOrdinal) {
-        DEBUG_LOG("CodecCommander: cc: awake\n");
-        
-// These operations have to be perform right at wake or codec will enter power mod 0 immediately!
+        DEBUG_LOG("CodecCommander: cc: --> awake\n");
+        updateCount = 0;
+// This operation has to be performed right at wake or codec will enter power mode 0 immediately!
 // *****
         // set EAPD bit at wake or cold boot
         if (eapdPoweredDown) {
+            DEBUG_LOG("CodecCommander: cc: --> hda codec power restored\n");
             // delay setting by 100ms, otherwise immediate command won't be received
             IOSleep(100);
             setOutputs();
-        }
-        // generate audio stream at wake if requested
-        if (!coldBoot && generatePop){
-            // apply delay or it will not trigger a system event
-            IOSleep(streamDelay);
-            createAudioStream();
         }
         // only when this is done we can stars a check workloop!
 // *****
@@ -576,19 +578,20 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
             }
             // if we are waking it will be already initialized
             else {
-                fTimer->setTimeoutMS(50); // so fire timer for workLoop almost immediately
+                fTimer->setTimeoutMS(100); // so fire timer for workLoop almost immediately
             }
-            DEBUG_LOG("CodecCommander: cc: workloop started\n");
+            DEBUG_LOG("CodecCommander: cc: --> workloop started\n");
         }
-        // if finite checking requested
-        else {
-            updateCount = 0; // reset PIO counter after machine awoke from sleep
-            // make sure we are only starting the loop when waking
-            if (!coldBoot && multiUpdate){
-                fTimer->setTimeoutMS(300);
-                DEBUG_LOG("CodecCommander: cc: workloop started\n");
-            }
+        
+        // generate audio stream at wake if requested
+        if (!coldBoot && generatePop){
+            // apply delay or it will not trigger a system event
+            IOSleep(streamDelay);
+            createAudioStream();
         }
+        
+        // simulate headphone jack replug
+        simulateHedphoneJack();
     }
     
     return IOPMAckImplied;

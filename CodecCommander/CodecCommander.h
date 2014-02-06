@@ -91,6 +91,8 @@ protected:
     void getOutputs();
     void setOutputs();
     
+    void simulateHedphoneJack();
+    
     IOWorkLoop*			fWorkLoop;		// our workloop
     IOTimerEventSource* fTimer;	// used to simulate capture hardware
     
