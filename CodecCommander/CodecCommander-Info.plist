@@ -62,11 +62,11 @@
 					<key>Update Speaker Node</key>
 					<integer>20</integer>
 					<key>Update Headphone Node</key>
-					<integer>0</integer>
+					<integer>33</integer>
 					<key>Stream Delay</key>
 					<integer>500</integer>
 					<key>Generate Stream</key>
-					<true/>
+					<false/>
 					<key>Check Interval</key>
 					<integer>3000</integer>
 					<key>Check Infinitely</key>

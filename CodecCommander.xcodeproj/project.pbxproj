@@ -24,6 +24,7 @@
 		0C4B238514598AD20080D960 /* CodecCommander-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "CodecCommander-Info.plist"; sourceTree = "<group>"; };
 		0C4B238714598AD20080D960 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		0C4B238D14598AD20080D960 /* CodecCommander-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = "CodecCommander-Prefix.pch"; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
+		84007D7A18B974F200C6799A /* makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = makefile; sourceTree = "<group>"; usesTabs = 1; };
 		8499218E1600F4FC00CCDF3B /* CodecCommander.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = CodecCommander.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		8499218F1600F4FC00CCDF3B /* CodecCommander.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = CodecCommander.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		F53FFAEE189C494E009EA51D /* CCHIDKeyboard.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CCHIDKeyboard.cpp; path = CCHIDKeyboard/CCHIDKeyboard.cpp; sourceTree = "<group>"; };
@@ -57,12 +58,14 @@
 		0C4B237114598AD10080D960 = {
 			isa = PBXGroup;
 			children = (
+				84007D7A18B974F200C6799A /* makefile */,
 				0A86A428189B87CC0050DBCF /* CCHIDKeyboard */,
 				0C4B238314598AD20080D960 /* CodecCommander */,
 				0C4B238014598AD20080D960 /* Frameworks */,
 				0C4B237F14598AD20080D960 /* Products */,
 			);
 			sourceTree = "<group>";
+			usesTabs = 0;
 		};
 		0C4B237F14598AD20080D960 /* Products */ = {
 			isa = PBXGroup;
