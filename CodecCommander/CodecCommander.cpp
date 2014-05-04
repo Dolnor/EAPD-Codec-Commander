@@ -244,7 +244,7 @@ void CodecCommander::onTimerAction()
  ******************************************************************************/
 bool CodecCommander::start(IOService *provider)
 {
-    DEBUG_LOG("CodecCommander: cc: commander version 2.1.1 starting\n");
+    DEBUG_LOG("CodecCommander: cc: commander version 2.1.2 starting\n");
 
     if(!provider || !super::start( provider ))
 	{
