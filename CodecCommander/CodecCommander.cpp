@@ -39,6 +39,7 @@ void* _org_rehabman_dontstrip_[] =
 #define kEngineOutputNumber         "Engine Output Number"
 #define kUpdateSpeakerNodeNumber    "Update Speaker Node"
 #define kUpdateHeadphoneNodeNumber  "Update Headphone Node"
+#define kUpdateAlternateNodeNumber  "Update Alternate Node"
 
 // Generate audio stream
 #define kGenerateStream             "Generate Stream"
@@ -59,8 +60,10 @@ char engineOutputPath[0xD8];
 int updateCount = 0; //update counter
 bool checkInfinite, generatePop, eapdPoweredDown, coldBoot;
 UInt8  codecNumber, outputNumber, spNodeNumber, hpNodeNumber, shpNodeNumber, hdaCurrentPowerState, hdaPrevPowerState, hdaEngineState;
+UInt8 altNodeNumber;
 UInt16 updateInterval, streamDelay, status;
 UInt32 spCommandWrite, hpCommandWrite, spCommandRead, hpCommandRead, shpCommandEnable, shpCommandDisable, response;
+UInt32 altCommandWrite, altCommandRead;
 
 // Define usable power states
 static IOPMPowerState powerStateArray[ kPowerStateCount ] =
@@ -113,10 +116,12 @@ bool CodecCommander::init(OSDictionary *dict)
     // set codec address and node number for EAPD status set
     spCommandWrite = (codecNumber << 28) | (spNodeNumber << 20) | 0x70c02;
     hpCommandWrite = (codecNumber << 28) | (hpNodeNumber << 20) | 0x70c02;
+    altCommandWrite = (codecNumber << 28) | (altNodeNumber << 20) | 0x70c02;
     
     // set codec address and node number for EAPD status get
     spCommandRead  = (codecNumber << 28) | (spNodeNumber << 20) | 0xf0c00;
     hpCommandRead  = (codecNumber << 28) | (hpNodeNumber << 20) | 0xf0c00;
+    altCommandRead = (codecNumber << 28) | (altNodeNumber << 20) | 0xf0c00;
     
     // commands for simulating headphone jack plugging and unplugging
     shpCommandEnable  = (codecNumber << 28) | (shpNodeNumber << 20) | 0x707c0;
@@ -372,6 +377,11 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
         spNodeNumber = num->unsigned8BitValue();
     }
     
+    // Get alternate node number
+    if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateAlternateNodeNumber))) {
+        altNodeNumber = num->unsigned8BitValue();
+    }
+    
     // Get hp node number for simulating the unplug event
     if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kSimulateHeadphoneJack))) {
         shpNodeNumber = num->unsigned8BitValue();
@@ -409,24 +419,22 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
 void CodecCommander::setOutputs()
 {
     //DEBUG_LOG("CodecCommander:  r: hda codec power restored\n");
-    if(spNodeNumber) {
-        setStatus(spCommandWrite); // SP node only
-        if (hpNodeNumber) // both SP/HP nodes
-            setStatus(hpCommandWrite);
-    }
-    else // HP node only
+    if (spNodeNumber)
+        setStatus(spCommandWrite);
+    if (hpNodeNumber)
         setStatus(hpCommandWrite);
+    if (altNodeNumber)
+        setStatus(altCommandWrite);
 }
 
 void CodecCommander::getOutputs()
 {
-    if(spNodeNumber) {
+    if (spNodeNumber)
         getStatus(spCommandRead);
-        if (hpNodeNumber)
-            getStatus(hpCommandRead);
-    }
-    else
+    if (hpNodeNumber)
         getStatus(hpCommandRead);
+    if (altNodeNumber)
+        getStatus(altCommandRead);
 }
 
 /******************************************************************************
@@ -505,7 +513,7 @@ void CodecCommander::setStatus(UInt32 cmd){
     }
  
 Success:
-    if(!coldBoot && (cmd == spCommandWrite || cmd == hpCommandWrite)) {
+    if(!coldBoot && (cmd == spCommandWrite || cmd == hpCommandWrite || cmd == altCommandWrite)) {
         updateCount++;  // count the amount of times successfully enabling EAPD
         DEBUG_LOG("CodecCommander:  w: PIO operation #%d\n",  updateCount);
     }

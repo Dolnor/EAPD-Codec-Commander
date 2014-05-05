@@ -65,6 +65,8 @@
 					<integer>20</integer>
 					<key>Update Headphone Node</key>
 					<integer>33</integer>
+					<key>Update Alternate Node</key>
+					<integer>27</integer>
 					<key>Stream Delay</key>
 					<integer>500</integer>
 					<key>Generate Stream</key>
