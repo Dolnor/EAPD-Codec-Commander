@@ -43,7 +43,6 @@ distribute:
 	mkdir ./Distribute
 	cp -R ./Build/Debug ./Distribute
 	cp -R ./Build/Release ./Distribute
-	cp ./PatchCoconut.sh ./Distribute
 	find ./Distribute -path *.DS_Store -delete
 	find ./Distribute -path *.dSYM -exec echo rm -r {} \; >/tmp/org.voodoo.rm.dsym.sh
 	chmod +x /tmp/org.voodoo.rm.dsym.sh
