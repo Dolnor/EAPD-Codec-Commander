@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0ABE527B189976190069716A /* PIOReadme in Resources */ = {isa = PBXBuildFile; fileRef = 0ABE527A189976190069716A /* PIOReadme */; };
 		0C4B238814598AD20080D960 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0C4B238614598AD20080D960 /* InfoPlist.strings */; };
+		84007A42192FE9B700CE8C83 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 84007A41192FE9B700CE8C83 /* README.md */; };
 		849921901600F4FC00CCDF3B /* CodecCommander.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8499218E1600F4FC00CCDF3B /* CodecCommander.cpp */; };
 		849921911600F4FC00CCDF3B /* CodecCommander.h in Headers */ = {isa = PBXBuildFile; fileRef = 8499218F1600F4FC00CCDF3B /* CodecCommander.h */; };
 		F53FFAF2189C494E009EA51D /* CCHIDKeyboard.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F53FFAEE189C494E009EA51D /* CCHIDKeyboard.cpp */; };
@@ -24,6 +25,7 @@
 		0C4B238514598AD20080D960 /* CodecCommander-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "CodecCommander-Info.plist"; sourceTree = "<group>"; };
 		0C4B238714598AD20080D960 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		0C4B238D14598AD20080D960 /* CodecCommander-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = "CodecCommander-Prefix.pch"; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
+		84007A41192FE9B700CE8C83 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
 		84007D7A18B974F200C6799A /* makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = makefile; sourceTree = "<group>"; usesTabs = 1; };
 		8499218E1600F4FC00CCDF3B /* CodecCommander.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = CodecCommander.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		8499218F1600F4FC00CCDF3B /* CodecCommander.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = CodecCommander.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
@@ -58,6 +60,7 @@
 		0C4B237114598AD10080D960 = {
 			isa = PBXGroup;
 			children = (
+				84007A41192FE9B700CE8C83 /* README.md */,
 				84007D7A18B974F200C6799A /* makefile */,
 				0A86A428189B87CC0050DBCF /* CCHIDKeyboard */,
 				0C4B238314598AD20080D960 /* CodecCommander */,
@@ -177,6 +180,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				84007A42192FE9B700CE8C83 /* README.md in Resources */,
 				0C4B238814598AD20080D960 /* InfoPlist.strings in Resources */,
 				0ABE527B189976190069716A /* PIOReadme in Resources */,
 			);

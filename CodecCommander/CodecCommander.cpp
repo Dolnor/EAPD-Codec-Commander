@@ -165,15 +165,12 @@ void CodecCommander::parseCodecPowerState()
         }
         else {
             DEBUG_LOG("CodecCommander: IOAudioPowerState unknown\n");
-            return;
         }
+        hdaDriverEntry->release();
     }
     else {
         DEBUG_LOG("CodecCommander: %s is unreachable\n", hdaDriverPath);
-        return;
     }
-    
-    hdaDriverEntry->release();
 }
 
 /******************************************************************************
@@ -195,15 +192,12 @@ void CodecCommander::parseAudioEngineState()
         }
         else {
             DEBUG_LOG("CodecCommander: IOAudioEngineState unknown\n");
-            return;
         }
+        hdaEngineOutputEntry->release();
     }
     else {
         DEBUG_LOG("CodecCommander: %s is unreachable\n", engineOutputPath);
-        return;
     }
-    
-    hdaEngineOutputEntry->release();
 }
 
 /******************************************************************************
@@ -335,18 +329,18 @@ void CodecCommander::stop(IOService *provider)
         OSSafeReleaseNULL(fWorkLoop);
     }
     // stop virtual keyboard device
-    if (_keyboardDevice)
-		_keyboardDevice->release();
-        _keyboardDevice = NULL;
+    OSSafeReleaseNULL(_keyboardDevice);
     
     PMstop();
     super::stop(provider);
 }
 
+#ifdef DEBUG
 void CodecCommander::free(void)
 {
 	super::free();
 }
+#endif
 
 /******************************************************************************
  * CodecCommander::setParamPropertiesGated - set variables based on user config

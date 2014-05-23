@@ -53,8 +53,7 @@ bool CCHIDKeyboardDevice::attach( IOService * provider)
 void CCHIDKeyboardDevice::detach( IOService * provider )
 {
     DEBUG_LOG("CodecCommander: hi: keyboard device detach\n");
-	keyboardNest->release();
-	keyboardNest = 0;
+    OSSafeReleaseNULL(keyboardNest);
     
 	super::detach(provider);
 }

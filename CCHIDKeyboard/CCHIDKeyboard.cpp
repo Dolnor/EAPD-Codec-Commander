@@ -27,6 +27,7 @@ OSDefineMetaClassAndStructors(CCHIDKeyboard, IOHIKeyboard)
  * CCHIDKeyboard:init/start/stop/free - standard IOKit methods
  ******************************************************************************/
 
+#ifdef DEBUG
 bool CCHIDKeyboard::init(OSDictionary *dict)
 {
 	DEBUG_LOG("CodecCommander: hi: keyboard initializing\n");
@@ -54,6 +55,7 @@ void CCHIDKeyboard::free(void)
 {
 	super::free();
 }
+#endif
 
 /******************************************************************************
 * CCHIDKeyboard:message - receive scancode and send keyboard down and up event

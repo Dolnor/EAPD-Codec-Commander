@@ -37,11 +37,13 @@ class CCHIDKeyboard : public IOHIKeyboard
 	OSDeclareDefaultStructors(CCHIDKeyboard)
 	
 public:
+#ifdef DEBUG
 	// standard IOKit methods
 	virtual bool       init(OSDictionary *dictionary = 0);
 	virtual bool       start(IOService *provider);
 	virtual void       stop(IOService *provider);
 	virtual void       free(void);
+#endif
 	
 	IOReturn message( UInt32 type, IOService * provider, void * argument);
 	
