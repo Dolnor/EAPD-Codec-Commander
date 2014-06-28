@@ -47,6 +47,8 @@ enum
 	kPowerStateCount
 };
 
+OSString* getManufacturerNameFromOEMName(OSString *name);
+
 class CodecCommander : public IOService
 {
     typedef IOService super;
@@ -69,11 +71,12 @@ public:
     
     //power management event
     virtual IOReturn setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker);
-
-private:
-    // get config dictionary by parsing plist
-    static OSDictionary* makeConfigurationNode(OSDictionary* list, OSString* model = 0);
     
+    // get confing and make config dictionary by parsing plist
+    static OSDictionary* getConfigurationNode(OSDictionary* list, OSString* model = 0);
+    static OSDictionary* makeConfigurationNode(OSDictionary* list, OSString* model = 0);
+
+private:   
     // set plist dictionary parameters
     void setParamPropertiesGated(OSDictionary* dict);
     

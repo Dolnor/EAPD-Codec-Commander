@@ -22,14 +22,16 @@
 #include "CCHIDKeyboardDevice.h"
 
 // Constats for Configuration
-#define kConfiguration              "Configuration"
+#define kPlatformProfile            "Platform Profile"
 #define kDefault                    "Default"
 
 // Constants for EAPD comman verb sending
+#define kHDEFLocation               "HDEF Device Location"
 #define kCodecAddressNumber         "Codec Address Number"
 #define kEngineOutputNumber         "Engine Output Number"
 #define kUpdateSpeakerNodeNumber    "Update Speaker Node"
 #define kUpdateHeadphoneNodeNumber  "Update Headphone Node"
+#define kUpdateExtraNodeNumber      "Update Extra Node"
 
 // Generate audio stream
 #define kGenerateStream             "Generate Stream"
@@ -38,20 +40,21 @@
 // Workloop requred and Workloop timer aka update interval, ms
 #define kCheckInfinitely           "Check Infinitely"
 #define kCheckInterval             "Check Interval"
-#define kSimulateHeadphoneJack      "Simulate Headphones"
+#define kSimulateHeadphoneJack     "Simulate Headphones"
 
 // Define variables for EAPD state updating
 IOMemoryDescriptor *ioregEntry;
 
+char hdaLocation[0x02];
 char hdaDevicePath[0x3F];
 char hdaDriverPath[0xBA];
 char engineOutputPath[0xD8];
 
 int updateCount = 0; //update counter
 bool checkInfinite, generatePop, eapdPoweredDown, coldBoot;
-UInt8  codecNumber, outputNumber, spNodeNumber, hpNodeNumber, shpNodeNumber, hdaCurrentPowerState, hdaPrevPowerState, hdaEngineState;
+UInt8  codecNumber, outputNumber, spNodeNumber, hpNodeNumber, shpNodeNumber, extNodeNumber, hdaCurrentPowerState, hdaPrevPowerState, hdaEngineState;
 UInt16 updateInterval, streamDelay, status;
-UInt32 spCommandWrite, hpCommandWrite, spCommandRead, hpCommandRead, shpCommandEnable, shpCommandDisable, response;
+UInt32 spCommandWrite, hpCommandWrite, spCommandRead, hpCommandRead, shpCommandEnable, shpCommandDisable, extCommandWrite, extCommandRead, response;
 
 // Define usable power states
 static IOPMPowerState powerStateArray[ kPowerStateCount ] =
@@ -84,7 +87,7 @@ bool CodecCommander::init(OSDictionary *dict)
     hdaPrevPowerState = hdaCurrentPowerState; //and previous state was the same
     
     // get configuration
-    OSDictionary* list = OSDynamicCast(OSDictionary, dict->getObject(kConfiguration));
+    OSDictionary* list = OSDynamicCast(OSDictionary, dict->getObject(kPlatformProfile));
     OSDictionary* config = CodecCommander::makeConfigurationNode(list);
     
     // set configuration
@@ -93,21 +96,23 @@ bool CodecCommander::init(OSDictionary *dict)
     
     // set path for ioreg entries
     snprintf(hdaDevicePath, sizeof(hdaDevicePath),
-             "IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/HDEF@1B");
+             "IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/HDEF@%s", hdaLocation);
     snprintf(hdaDriverPath,sizeof(hdaDriverPath),
-             "%s/AppleHDAController@1B/IOHDACodecDevice@1B,%d/IOHDACodecDriver/IOHDACodecFunction@1B,%d,1/AppleHDACodecGeneric/AppleHDADriver",
-             hdaDevicePath,codecNumber,codecNumber);
+             "%s/AppleHDAController@%s/IOHDACodecDevice@%s,%d/IOHDACodecDriver/IOHDACodecFunction@%s,%d,1/AppleHDACodecGeneric/AppleHDADriver",
+             hdaDevicePath,hdaLocation,hdaLocation,codecNumber,hdaLocation, codecNumber);
     snprintf(engineOutputPath,sizeof(engineOutputPath),
-             "%s/AppleHDAController@1B/IOHDACodecDevice@1B,%d/IOHDACodecDriver/IOHDACodecFunction@1B,%d,1/AppleHDACodecGeneric/AppleHDADriver/AppleHDAEngineOutput@1B,%d,1,%d",
-             hdaDevicePath,codecNumber,codecNumber,codecNumber,outputNumber);
+             "%s/AppleHDAController@%s/IOHDACodecDevice@%s,%d/IOHDACodecDriver/IOHDACodecFunction@%s,%d,1/AppleHDACodecGeneric/AppleHDADriver/AppleHDAEngineOutput@%s,%d,1,%d",
+             hdaDevicePath,hdaLocation,hdaLocation,codecNumber,hdaLocation,codecNumber,hdaLocation, codecNumber,outputNumber);
     
     // set codec address and node number for EAPD status set
     spCommandWrite = (codecNumber << 28) | (spNodeNumber << 20) | 0x70c02;
     hpCommandWrite = (codecNumber << 28) | (hpNodeNumber << 20) | 0x70c02;
+    extCommandWrite = (codecNumber << 28) | (extNodeNumber << 20) | 0x70c02;
     
     // set codec address and node number for EAPD status get
     spCommandRead  = (codecNumber << 28) | (spNodeNumber << 20) | 0xf0c00;
     hpCommandRead  = (codecNumber << 28) | (hpNodeNumber << 20) | 0xf0c00;
+    extCommandRead  = (codecNumber << 28) | (extNodeNumber << 20) | 0xf0c00;
     
     // commands for simulating headphone jack plugging and unplugging
     shpCommandEnable  = (codecNumber << 28) | (shpNodeNumber << 20) | 0x707c0;
@@ -198,21 +203,18 @@ void CodecCommander::parseAudioEngineState()
 
 void CodecCommander::onTimerAction()
 {
-    // if infinite checks are enabled - essentially are for monitoring fugue state, sleep is fine with finite check
-    if (checkInfinite) {
-        // check if hda codec is powered
-        parseCodecPowerState();
-        // if no power after semi-sleep (fugue) state and power was restored - set EAPD bit
-        if (eapdPoweredDown && (hdaCurrentPowerState == 0x1 || hdaCurrentPowerState == 0x2)) {
-            DEBUG_LOG("CodecCommander: cc: --> hda codec power restored\n");
-            setOutputs();
-            // if popping requested - generate stream at fugue-wake
-            if (!coldBoot && generatePop){
-                createAudioStream();
-            }
-            // simulate headphone jack replug
-            simulateHedphoneJack(); // <------ makes sure this is needed?
+    // check if hda codec is powered - we are monitoring ocurrences of fugue state
+    parseCodecPowerState();
+    // if no power after semi-sleep (fugue) state and power was restored - set EAPD bit
+    if (eapdPoweredDown && (hdaCurrentPowerState == 0x1 || hdaCurrentPowerState == 0x2)) {
+        DEBUG_LOG("CodecCommander: cc: --> hda codec power restored\n");
+        setOutputs();
+        // if popping requested - generate stream at fugue-wake
+        if (!coldBoot && generatePop){
+            createAudioStream();
         }
+        // simulate headphone jack replug
+        simulateHedphoneJack(); // <------ makes sure this is needed?
     }
     
     // check if audio stream is up on given output
@@ -343,6 +345,16 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
     if (NULL == dict)
         return;
     
+    // Get HDA device location address
+    if (OSString* str = OSDynamicCast(OSString, dict->getObject(kHDEFLocation))) {
+        if (str->getLength() > 1) {
+            for (int i=0; i<=1; i++)
+                hdaLocation [i] = str->getChar(i);
+        } else {
+            hdaLocation [0] = str->getChar(0);
+        }
+    }
+    
     // Get codec address number
     if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kCodecAddressNumber))) {
         codecNumber = num->unsigned8BitValue();
@@ -361,6 +373,11 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
     // Get speaker node number
     if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateSpeakerNodeNumber))) {
         spNodeNumber = num->unsigned8BitValue();
+    }
+    
+    // Get extra node number
+    if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kUpdateExtraNodeNumber))) {
+        extNodeNumber = num->unsigned8BitValue();
     }
     
     // Get hp node number for simulating the unplug event
@@ -399,25 +416,22 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
 
 void CodecCommander::setOutputs()
 {
-    //DEBUG_LOG("CodecCommander:  r: hda codec power restored\n");
-    if(spNodeNumber) {
-        setStatus(spCommandWrite); // SP node only
-        if (hpNodeNumber) // both SP/HP nodes
-            setStatus(hpCommandWrite);
-    }
-    else // HP node only
+    if(spNodeNumber)
+        setStatus(spCommandWrite);
+    if (hpNodeNumber)
         setStatus(hpCommandWrite);
+    if (extNodeNumber)
+        setStatus(extCommandWrite);
 }
 
 void CodecCommander::getOutputs()
 {
-    if(spNodeNumber) {
+    if(spNodeNumber)
         getStatus(spCommandRead);
-        if (hpNodeNumber)
-            getStatus(hpCommandRead);
-    }
-    else
+    if (hpNodeNumber)
         getStatus(hpCommandRead);
+    if (extNodeNumber)
+        getStatus(extCommandRead);
 }
 
 /******************************************************************************
@@ -496,9 +510,9 @@ void CodecCommander::setStatus(UInt32 cmd){
     }
  
 Success:
-    if(!coldBoot && (cmd == spCommandWrite || cmd == hpCommandWrite)) {
+    if(!coldBoot && (cmd == spCommandWrite || cmd == hpCommandWrite || cmd == extCommandWrite)) {
         updateCount++;  // count the amount of times successfully enabling EAPD
-        DEBUG_LOG("CodecCommander:  w: PIO operation #%d\n",  updateCount);
+        DEBUG_LOG("CodecCommander: cc: --> PIO event #%d\n",  updateCount);
     }
     
     // mark EAPD bit as set
@@ -536,10 +550,12 @@ void CodecCommander::createAudioStream ()
  ******************************************************************************/
 void CodecCommander::simulateHedphoneJack()
 {
-    DEBUG_LOG("CodecCommander: cc: --> simulate headphone jack event\n");
-    setStatus(shpCommandEnable);  // H-Phn PinCap Enable
-    IOSleep(100);
-    setStatus(shpCommandDisable); // H-Phn PinCap Disable
+    if (shpNodeNumber) {
+        DEBUG_LOG("CodecCommander: cc: --> simulate headphone jack event\n");
+        setStatus(shpCommandEnable);  // H-Phn PinCap Enable
+        IOSleep(500);
+        setStatus(shpCommandDisable); // H-Phn PinCap Disable
+    }
 }
 
 /******************************************************************************
@@ -600,6 +616,163 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 /******************************************************************************
  * Methods for getting configuration dictionary, courtesy of RehabMan
  ******************************************************************************/
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Simplify data from Clover's DMI readings and use it for profile make and model
+ * Courtesy of kozlek (HWSensors project)
+ * https://github.com/kozlek/HWSensors
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+OSString* getManufacturerNameFromOEMName(OSString *name)
+{
+    if (!name) {
+        return NULL;
+    }
+    
+    OSString *manufacturer = NULL;
+    
+    if (name->isEqualTo("ASUSTeK Computer INC.") ||
+        name->isEqualTo("ASUSTeK COMPUTER INC.")) manufacturer = OSString::withCString("ASUS");
+    if (name->isEqualTo("Dell Inc.")) manufacturer = OSString::withCString("DELL");
+    if (name->isEqualTo("FUJITSU") ||
+        name->isEqualTo("FUJITSU SIEMENS")) manufacturer = OSString::withCString("FUJITSU");
+    if (name->isEqualTo("Hewlett-Packard")) manufacturer = OSString::withCString("HP");
+    if (name->isEqualTo("IBM")) manufacturer = OSString::withCString("IBM");
+    if (name->isEqualTo("Intel") ||
+        name->isEqualTo("Intel Corp.") ||
+        name->isEqualTo("Intel Corporation")||
+        name->isEqualTo("INTEL Corporation")) manufacturer = OSString::withCString("Intel");
+    if (name->isEqualTo("Lenovo") || name->isEqualTo("LENOVO")) manufacturer = OSString::withCString("Lenovo");
+    if (name->isEqualTo("Micro-Star International") ||
+        name->isEqualTo("MICRO-STAR INTERNATIONAL CO., LTD") ||
+        name->isEqualTo("MICRO-STAR INTERNATIONAL CO.,LTD") ||
+        name->isEqualTo("MSI")) manufacturer = OSString::withCString("MSI");
+    
+    if (!manufacturer && !name->isEqualTo("To be filled by O.E.M."))
+        manufacturer = OSString::withString(name);
+    
+    return manufacturer;
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Get make and model for profile from DSDT header OEM ID and Table ID fields
+ * Courtesy of RehabMan (VoodooPS2Controller project)
+ * https://github.com/RehabMan/OS-X-Voodoo-PS2-Controller
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
+#define DSDT_SIGNATURE ('D' | 'S'<<8 | 'D'<<16 | 'T'<<24)
+
+struct DSDT_HEADER // DSDT header structure
+{
+    uint32_t tableSignature;
+    uint32_t tableLength;
+    uint8_t specCompliance;
+    uint8_t checkSum;
+    char oemID[6]; // platform make
+    char oemTableID[8]; // platform model
+    uint32_t oemRevision;
+    uint32_t creatorID;
+    uint32_t creatorRevision;
+};
+
+static const DSDT_HEADER* getDSDT()
+{
+    IORegistryEntry* reg = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert");
+    if (!reg)
+        return NULL;
+    OSDictionary* dict = OSDynamicCast(OSDictionary, reg->getProperty("ACPI Tables"));
+    reg->release();
+    if (!dict)
+        return NULL;
+    OSData* data = OSDynamicCast(OSData, dict->getObject("DSDT"));
+    if (!data || data->getLength() < sizeof(DSDT_HEADER))
+        return NULL;
+    const DSDT_HEADER* pDSDT = (const DSDT_HEADER*)data->getBytesNoCopy();
+    if (!pDSDT || data->getLength() < sizeof(DSDT_HEADER) || pDSDT->tableSignature != DSDT_SIGNATURE)
+        return NULL;
+    return pDSDT;
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Remove spaces from OEM ID and Table ID fields if any. Normally, if maker name
+ * is shorther than 6 bytes it will be trail-spaced, for eg. "DELL  " and "QA09   "
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+static void stripTrailingSpaces(char* str)
+{
+    char* p = str;
+    for (; *p; p++)
+        ;
+    for (--p; p >= str && *p == ' '; --p)
+        *p = 0;
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Obtain information for make and model to match against config in Info.plist
+ * First, try to get data from Clover, it reads DMI and stores it in /efi/platform
+ * DMI data won't match DSDT header TableID used for model and if DSDT patcher in
+ * Clover is used it will be "Apple ".
+ *
+ * So, if you use Clover define your platform config based on DMI data
+ *  or if you use Chameleon define it based on DSDT Table ID
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+static OSString* getPlatformManufacturer()
+{
+    // try to get data from Clover first
+    // considering auto patching may be used, so OEM ID will be set to "Apple "
+    if (IORegistryEntry* platformNode = IORegistryEntry::fromPath("/efi/platform", gIODTPlane)) {
+        
+        if (OSData *data = OSDynamicCast(OSData, platformNode->getProperty("OEMVendor"))) {
+            if (OSString *vendor = OSString::withCString((char*)data->getBytesNoCopy())) {
+                if (OSString *manufacturer = getManufacturerNameFromOEMName(vendor)) {
+                    DEBUG_LOG("CodecCommander: cc: board make - %s\n", manufacturer->getCStringNoCopy());
+                    return manufacturer;
+                }
+            }
+        }
+    }
+    
+    // otherwise use DSDT header
+    const DSDT_HEADER* pDSDT = getDSDT();
+    if (!pDSDT)
+        return NULL;
+    // copy to static data, NUL terminate, strip trailing spaces, and return
+    static char oemID[sizeof(pDSDT->oemID)+1];
+    bcopy(pDSDT->oemID, oemID, sizeof(pDSDT->oemID));
+    oemID[sizeof(oemID)-1] = 0;
+    stripTrailingSpaces(oemID);
+    DEBUG_LOG("CodecCommander: cc: board make - %s\n", oemID);
+    return OSString::withCStringNoCopy(oemID);
+}
+
+static OSString* getPlatformProduct()
+{
+    // try to get data from Clover first
+    if (IORegistryEntry* platformNode = IORegistryEntry::fromPath("/efi/platform", gIODTPlane)) {
+        
+        if (OSData *data = OSDynamicCast(OSData, platformNode->getProperty("OEMBoard"))) {
+            if (OSString *product = OSString::withCString((char*)data->getBytesNoCopy())) {
+                DEBUG_LOG("CodecCommander: cc: board model - %s\n", product->getCStringNoCopy());
+                return product;
+            }
+        }
+    }
+    
+    const DSDT_HEADER* pDSDT = getDSDT();
+    if (!pDSDT)
+        return NULL;
+    // copy to static data, NUL terminate, strip trailing spaces, and return
+    static char oemTableID[sizeof(pDSDT->oemTableID)+1];
+    bcopy(pDSDT->oemTableID, oemTableID, sizeof(pDSDT->oemTableID));
+    oemTableID[sizeof(oemTableID)-1] = 0;
+    stripTrailingSpaces(oemTableID);
+    DEBUG_LOG("CodecCommander: cc: board model - %s\n", oemTableID);
+    return OSString::withCStringNoCopy(oemTableID);
+}
+
+static OSDictionary* _getConfigurationNode(OSDictionary *root, const char *name);
+
 static OSDictionary* _getConfigurationNode(OSDictionary *root, OSString *name)
 {
     OSDictionary *configuration = NULL;
@@ -640,6 +813,22 @@ static OSDictionary* _getConfigurationNode(OSDictionary *root, const char *name)
     return configuration;
 }
 
+OSDictionary* CodecCommander::getConfigurationNode(OSDictionary* list, OSString *model)
+{
+    OSDictionary *configuration = NULL;
+    
+    if (OSString *manufacturer = getPlatformManufacturer())
+        if (OSDictionary *manufacturerNode = OSDynamicCast(OSDictionary, list->getObject(manufacturer)))
+            if (!(configuration = _getConfigurationNode(manufacturerNode, getPlatformProduct())))
+                if (!(configuration = _getConfigurationNode(manufacturerNode, model)))
+                    configuration = _getConfigurationNode(manufacturerNode, kDefault);
+    
+    if (!configuration && !(configuration = _getConfigurationNode(list, model)))
+        configuration = _getConfigurationNode(list, kDefault);
+    
+    return configuration;
+}
+
 OSDictionary* CodecCommander::makeConfigurationNode(OSDictionary* list, OSString* model)
 {
     if (!list)
@@ -647,8 +836,17 @@ OSDictionary* CodecCommander::makeConfigurationNode(OSDictionary* list, OSString
     
     OSDictionary* result = 0;
     OSDictionary* defaultNode = _getConfigurationNode(list, kDefault);
+    OSDictionary* platformNode = getConfigurationNode(list, model);
     if (defaultNode) {
+        // have default node, result is merge with platform node
         result = OSDictionary::withDictionary(defaultNode);
+        if (result && platformNode)
+            result->merge(platformNode);
     }
+    else if (platformNode) {
+        // no default node, try to use just platform node
+        result = OSDictionary::withDictionary(platformNode);
+    }
+
     return result;
 }
