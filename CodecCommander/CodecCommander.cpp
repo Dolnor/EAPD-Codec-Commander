@@ -50,11 +50,10 @@ char hdaDevicePath[0x3F];
 char hdaDriverPath[0xBA];
 char engineOutputPath[0xD8];
 
-int updateCount = 0; //update counter
 bool checkInfinite, generatePop, eapdPoweredDown, coldBoot;
 UInt8  codecNumber, outputNumber, spNodeNumber, hpNodeNumber, shpNodeNumber, extNodeNumber, hdaCurrentPowerState, hdaPrevPowerState, hdaEngineState;
 UInt16 updateInterval, streamDelay, status;
-UInt32 spCommandWrite, hpCommandWrite, spCommandRead, hpCommandRead, shpCommandEnable, shpCommandDisable, extCommandWrite, extCommandRead, response;
+UInt32 spCommandWrite, hpCommandWrite, spCommandRead, hpCommandRead, shpCommandEnable, shpCommandDisable, extCommandWrite, extCommandRead, response=-1;
 
 // Define usable power states
 static IOPMPowerState powerStateArray[ kPowerStateCount ] =
@@ -150,7 +149,6 @@ void CodecCommander::parseCodecPowerState()
                     DEBUG_LOG("CodecCommander: cc: --> hda codec lost power\n");
                     eapdPoweredDown = true;
                     coldBoot = false; //codec entered fugue state or sleep - no longer a cold boot
-                    updateCount = 0;
                 }
             }
         }
@@ -214,7 +212,7 @@ void CodecCommander::onTimerAction()
             createAudioStream();
         }
         // simulate headphone jack replug
-        simulateHedphoneJack(); // <------ makes sure this is needed?
+        simulateHedphoneJack();
     }
     
     // check if audio stream is up on given output
@@ -245,17 +243,6 @@ bool CodecCommander::start(IOService *provider)
 		return false;
 	}
     
-    // notify about extra feature requests
-    if (generatePop && checkInfinite) {
-        DEBUG_LOG("CodecCommander: cc: stream requested, will *pop* upon wake or fugue-wake\n");
-    }
-    if (checkInfinite) {
-        DEBUG_LOG("CodecCommander: cc: infinite workloop requested, will start now!\n");
-    }
-    if (generatePop && !checkInfinite) {
-        DEBUG_LOG("CodecCommander: cc: stream requested, will *pop* upon wake\n");
-    }
-    
     // start virtual keyboard device
     _keyboardDevice = new CCHIDKeyboardDevice;
     
@@ -268,25 +255,35 @@ bool CodecCommander::start(IOService *provider)
     }
     else
     {
-        DEBUG_LOG("CodecCommander: hi: keyboard device created\n");
-        _keyboardDevice->registerService();
+        // determine if HDEF device path exists in IORegistry and register CCHIDKeyboard IOService
+        IORegistryEntry *hdaDeviceEntry = IORegistryEntry::fromPath(hdaDevicePath);
+        if (hdaDeviceEntry != NULL) {
+            IOService *service = OSDynamicCast(IOService, hdaDeviceEntry);
+            
+            // get address field from IODeviceMemory
+            if (service != NULL && service->getDeviceMemoryCount() != 0) {
+                ioregEntry = service->getDeviceMemoryWithIndex(0);
+            }
+            hdaDeviceEntry->release();
+            // only register if HDEF device present, user may be trying voodoohda with renamed ACPI device
+            _keyboardDevice->registerService();
+            DEBUG_LOG("CodecCommander: hi: keyboard device created\n");
+        }
+        else {
+            DEBUG_LOG("CodecCommander: %s is unreachable\n",hdaDevicePath);
+            return false;
+        }
     }
     
-    // determine HDEF ACPI device path in IORegistry
-    IORegistryEntry *hdaDeviceEntry = IORegistryEntry::fromPath(hdaDevicePath);
-    if (hdaDeviceEntry != NULL) {
-        IOService *service = OSDynamicCast(IOService, hdaDeviceEntry);
-        
-        // get address field from IODeviceMemory
-        if (service != NULL && service->getDeviceMemoryCount() != 0) {
-            ioregEntry = service->getDeviceMemoryWithIndex(0);
-            
-        }
-        hdaDeviceEntry->release();
+    // notify about extra feature requests
+    if (generatePop && checkInfinite) {
+        DEBUG_LOG("CodecCommander: cc: stream requested, will *pop* upon wake or fugue-wake\n");
     }
-    else {
-        DEBUG_LOG("CodecCommander: %s is unreachable\n",hdaDevicePath);
-        return false;
+    if (checkInfinite) {
+        DEBUG_LOG("CodecCommander: cc: infinite workloop requested, will start now!\n");
+    }
+    if (generatePop && !checkInfinite) {
+        DEBUG_LOG("CodecCommander: cc: stream requested, will *pop* upon wake\n");
     }
     
     // init power state management & set state as PowerOn
@@ -416,6 +413,7 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
 
 void CodecCommander::setOutputs()
 {
+    IOSleep(100); // delay setting by 100ms, otherwise first immediate command won't be received
     if(spNodeNumber)
         setStatus(spCommandWrite);
     if (hpNodeNumber)
@@ -461,7 +459,6 @@ void CodecCommander::getStatus(UInt32 cmd)
     //DEBUG_LOG("CodecCommander:  r: IRR read -> %d\n", response);
     
     clearIRV(); // prepare for next command
-    
     if (response == 0x2) { // bit 1 will be cleared after 35 second!
         DEBUG_LOG("CodecCommander:  r: IRR is set, EAPD active\n");
         eapdPoweredDown = false;
@@ -510,18 +507,11 @@ void CodecCommander::setStatus(UInt32 cmd){
     }
  
 Success:
-    if(!coldBoot && (cmd == spCommandWrite || cmd == hpCommandWrite || cmd == extCommandWrite)) {
-        updateCount++;  // count the amount of times successfully enabling EAPD
-        DEBUG_LOG("CodecCommander: cc: --> PIO event #%d\n",  updateCount);
-    }
-    
     // mark EAPD bit as set
     eapdPoweredDown = false;
-    
-    DEBUG_LOG("CodecCommander: rw: IRV was set by hardware\n");
+    DEBUG_LOG("CodecCommander: w: IRV was set by hardware\n");
     clearIRV(); // prepare for next command
 }
-
 
 void CodecCommander::clearIRV()
 {
@@ -537,10 +527,14 @@ void CodecCommander::clearIRV()
 
 void CodecCommander::createAudioStream ()
 {
-    DEBUG_LOG("CodecCommander: cc: --> simulate mute-unmute event\n");
-    for (int i = 0; i < 2; i++) {
-        if (_keyboardDevice)
-            _keyboardDevice->keyPressed(0x20);
+    if (!coldBoot && generatePop){
+        DEBUG_LOG("CodecCommander: cc: --> simulate mute-unmute event\n");
+        IOSleep(streamDelay); // apply delay or it will not trigger a system event
+        for (int i = 0; i < 2; i++) {
+            if (_keyboardDevice)
+                ::IODelay(100);
+                _keyboardDevice->keyPressed(0x20);
+        }
     }
 }
 
@@ -553,7 +547,7 @@ void CodecCommander::simulateHedphoneJack()
     if (shpNodeNumber) {
         DEBUG_LOG("CodecCommander: cc: --> simulate headphone jack event\n");
         setStatus(shpCommandEnable);  // H-Phn PinCap Enable
-        IOSleep(500);
+        IOSleep(200);
         setStatus(shpCommandDisable); // H-Phn PinCap Disable
     }
 }
@@ -573,18 +567,11 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 	}
 	else if (kPowerStateNormal == powerStateOrdinal) {
         DEBUG_LOG("CodecCommander: cc: --> awake\n");
-        updateCount = 0;
-// This operation has to be performed right at wake or codec will enter power mode 0 immediately!
-// *****
         // set EAPD bit at wake or cold boot
         if (eapdPoweredDown) {
             DEBUG_LOG("CodecCommander: cc: --> hda codec power restored\n");
-            // delay setting by 100ms, otherwise immediate command won't be received
-            IOSleep(100);
             setOutputs();
         }
-        // only when this is done we can stars a check workloop!
-// *****
         
         // if infinite checking requested
         if (checkInfinite){
@@ -599,13 +586,8 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
             DEBUG_LOG("CodecCommander: cc: --> workloop started\n");
         }
         
-        // generate audio stream at wake if requested
-        if (!coldBoot && generatePop){
-            // apply delay or it will not trigger a system event
-            IOSleep(streamDelay);
-            createAudioStream();
-        }
-        
+        // generate audio stream at wake
+        createAudioStream();
         // simulate headphone jack replug
         simulateHedphoneJack();
     }
