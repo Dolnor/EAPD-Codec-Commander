@@ -92,7 +92,7 @@ protected:
     
     // get and set the state of EAPD on outputs
     void getOutputs();
-    void setOutputs();
+    void setOutputs(UInt8 logicLevel);
     
     void simulateHedphoneJack();
     

@@ -104,9 +104,9 @@ bool CodecCommander::init(OSDictionary *dict)
              hdaDevicePath,hdaLocation,hdaLocation,codecNumber,hdaLocation,codecNumber,hdaLocation, codecNumber,outputNumber);
     
     // set codec address and node number for EAPD status set
-    spCommandWrite = (codecNumber << 28) | (spNodeNumber << 20) | 0x70c02;
-    hpCommandWrite = (codecNumber << 28) | (hpNodeNumber << 20) | 0x70c02;
-    extCommandWrite = (codecNumber << 28) | (extNodeNumber << 20) | 0x70c02;
+    spCommandWrite = (codecNumber << 28) | (spNodeNumber << 20) | 0x70c00;
+    hpCommandWrite = (codecNumber << 28) | (hpNodeNumber << 20) | 0x70c00;
+    extCommandWrite =(codecNumber << 28) | (extNodeNumber << 20)| 0x70c00;
     
     // set codec address and node number for EAPD status get
     spCommandRead  = (codecNumber << 28) | (spNodeNumber << 20) | 0xf0c00;
@@ -206,7 +206,7 @@ void CodecCommander::onTimerAction()
     // if no power after semi-sleep (fugue) state and power was restored - set EAPD bit
     if (eapdPoweredDown && (hdaCurrentPowerState == 0x1 || hdaCurrentPowerState == 0x2)) {
         DEBUG_LOG("CodecCommander: cc: --> hda codec power restored\n");
-        setOutputs();
+        setOutputs(0x2);
         // if popping requested - generate stream at fugue-wake
         if (!coldBoot && generatePop){
             createAudioStream();
@@ -223,7 +223,7 @@ void CodecCommander::onTimerAction()
          // if engine output stream has started, but EAPD isn't up
         if(response == 0x0) {
             // set EAPD bit
-            setOutputs();
+            setOutputs(0x2);
         }
     }
 
@@ -411,15 +411,16 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
  * CodecCommander::getOutputs & setOutputs - get/set EAPD status on SP/HP
  ******************************************************************************/
 
-void CodecCommander::setOutputs()
+void CodecCommander::setOutputs(UInt8 logicLevel)
 {
     IOSleep(100); // delay setting by 100ms, otherwise first immediate command won't be received
+    // bit 1 in logicLevel defines EAPD logic state: 1 - enable, 0 - disable
     if(spNodeNumber)
-        setStatus(spCommandWrite);
+        setStatus(spCommandWrite | logicLevel);
     if (hpNodeNumber)
-        setStatus(hpCommandWrite);
+        setStatus(hpCommandWrite | logicLevel);
     if (extNodeNumber)
-        setStatus(extCommandWrite);
+        setStatus(extCommandWrite| logicLevel);
 }
 
 void CodecCommander::getOutputs()
@@ -538,13 +539,12 @@ void CodecCommander::createAudioStream ()
     }
 }
 
-
 /******************************************************************************
  * CodecCommander::simulateHeadphoneJack - plug and unplug headphones virtually
  ******************************************************************************/
 void CodecCommander::simulateHedphoneJack()
 {
-    if (shpNodeNumber) {
+    if (!coldBoot && shpNodeNumber) {
         DEBUG_LOG("CodecCommander: cc: --> simulate headphone jack event\n");
         setStatus(shpCommandEnable);  // H-Phn PinCap Enable
         IOSleep(200);
@@ -561,8 +561,9 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 
     if (kPowerStateSleep == powerStateOrdinal) {
         DEBUG_LOG("CodecCommander: cc: --> asleep\n");
-        eapdPoweredDown = true;
-        // though this probably has been determined after parsing codec power state, we set this as false again
+        DEBUG_LOG("CodecCommander: cc: --> amp assumed %s by now\n", eapdPoweredDown ? "disabled" : "enabled");
+        setOutputs(0x0); // set EAPD logic level 0 to cause EAPD to power off properly
+        eapdPoweredDown = true;  // now it's powered down for sure
         coldBoot = false;
 	}
 	else if (kPowerStateNormal == powerStateOrdinal) {
@@ -570,7 +571,7 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
         // set EAPD bit at wake or cold boot
         if (eapdPoweredDown) {
             DEBUG_LOG("CodecCommander: cc: --> hda codec power restored\n");
-            setOutputs();
+            setOutputs(0x2);
         }
         
         // if infinite checking requested
