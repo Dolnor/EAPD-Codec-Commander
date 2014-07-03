@@ -51,12 +51,14 @@
 			<string>IOResources</string>
 			<key>IOResourceMatch</key>
 			<string>IOKit</string>
-			<key>Configuration</key>
+			<key>Platform Profile</key>
 			<dict>
 				<key>Default</key>
 				<dict>
 					<key>Simulate Headphones</key>
 					<integer>33</integer>
+					<key>HDEF Device Location</key>
+					<string>1B</string>
 					<key>Codec Address Number</key>
 					<integer>0</integer>
 					<key>Engine Output Number</key>
@@ -64,9 +66,9 @@
 					<key>Update Speaker Node</key>
 					<integer>20</integer>
 					<key>Update Headphone Node</key>
-					<integer>33</integer>
-					<key>Update Alternate Node</key>
-					<integer>27</integer>
+					<integer>0</integer>
+					<key>Update Extra Node</key>
+					<string>0</string>
 					<key>Stream Delay</key>
 					<integer>500</integer>
 					<key>Generate Stream</key>
@@ -75,6 +77,42 @@
 					<integer>3000</integer>
 					<key>Check Infinitely</key>
 					<true/>
+				</dict>
+				<key>DELL</key>
+				<dict>
+					<key>0YW3P2</key>
+					<dict>
+						<key>Simulate Headphones</key>
+						<integer>33</integer>
+					</dict>
+				</dict>
+				<key>ASUS</key>
+				<dict>
+					<key>1201N</key>
+					<dict>
+						<key>HDEF Device Location</key>
+						<string>8</string>
+						<key>Stream Delay</key>
+						<integer>700</integer>
+						<key>Simulate Headphones</key>
+						<integer>0</integer>
+						<key>Update Headphone Node</key>
+						<integer>21</integer>
+					</dict>
+				</dict>
+				<key>Lenovo</key>
+				<dict>
+					<key>U430</key>
+					<dict>
+						<key>Update Speaker Node</key>
+						<integer>20</integer>
+						<key>Update Headphone Node</key>
+						<integer>33</integer>
+						<key>Update Extra Node</key>
+						<string>27</string>
+					</dict>
+					<key>Cherry 4A Touch</key>
+					<string>U430</string>
 				</dict>
 			</dict>
 		</dict>
