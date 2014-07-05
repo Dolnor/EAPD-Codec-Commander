@@ -54,7 +54,7 @@
 				<key>Default</key>
 				<dict>
 					<key>Simulate Headphones</key>
-					<integer>33</integer>
+					<integer>0</integer>
 					<key>HDEF Device Location</key>
 					<string>1B</string>
 					<key>Codec Address Number</key>
@@ -88,12 +88,14 @@
 				<dict>
 					<key>1201N</key>
 					<dict>
+						<key>MCP Workaround</key>
+						<true/>
+						<key>Generate Stream</key>
+						<false/>
 						<key>HDEF Device Location</key>
 						<string>8</string>
 						<key>Stream Delay</key>
-						<integer>700</integer>
-						<key>Simulate Headphones</key>
-						<integer>0</integer>
+						<integer>1100</integer>
 						<key>Update Headphone Node</key>
 						<integer>21</integer>
 					</dict>
