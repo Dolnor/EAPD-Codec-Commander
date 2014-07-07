@@ -59,10 +59,12 @@ char hdaDevicePath[0x3F];
 char hdaDriverPath[0xBA];
 char engineOutputPath[0xD8];
 
+int updateCount = 0;
+bool mcpWorkaround, shouldStop;
 bool checkInfinite, generatePop, eapdPoweredDown, coldBoot;
 UInt8  codecNumber, outputNumber, spNodeNumber, hpNodeNumber, shpNodeNumber, extNodeNumber, hdaCurrentPowerState, hdaPrevPowerState, hdaEngineState;
 UInt16 updateInterval, streamDelay, status;
-UInt32 spCommandWrite, hpCommandWrite, spCommandRead, hpCommandRead, shpCommandEnable, shpCommandDisable, extCommandWrite, extCommandRead, response=-1;
+UInt32 spCommandWrite, hpCommandWrite, spCommandRead, hpCommandRead, shpCommandEnable, shpCommandDisable, extCommandWrite, extCommandRead, response;
 
 // Define usable power states
 static IOPMPowerState powerStateArray[ kPowerStateCount ] =
@@ -93,6 +95,10 @@ bool CodecCommander::init(OSDictionary *dict)
     coldBoot = true; // assume booting from cold since hibernate is broken on most hacks
     hdaCurrentPowerState = 0x0; // assume hda codec has no power at cold boot
     hdaPrevPowerState = hdaCurrentPowerState; //and previous state was the same
+    
+    // mcp workaround
+    mcpWorkaround=false;
+    shouldStop=false;
     
     // get configuration
     OSDictionary* list = OSDynamicCast(OSDictionary, dict->getObject(kPlatformProfile));
@@ -158,6 +164,7 @@ void CodecCommander::parseCodecPowerState()
                     DEBUG_LOG("CodecCommander: cc: --> hda codec lost power\n");
                     eapdPoweredDown = true;
                     coldBoot = false; //codec entered fugue state or sleep - no longer a cold boot
+                    updateCount = 0;
                 }
             }
         }
@@ -217,7 +224,7 @@ void CodecCommander::onTimerAction()
         // simulate headphone jack replug
         simulateHedphoneJack();
     }
-    
+
     // check if audio stream is up on given output
     parseAudioEngineState();
     // get EAPD bit status from command response if audio stream went up
@@ -229,8 +236,26 @@ void CodecCommander::onTimerAction()
             setOutputs(0x2);
         }
     }
-
-    fTimer->setTimeoutMS(updateInterval);
+    
+    /* 
+       MCP79 chipset doesn't seem to report EAPD state properly when reading IRR response EAPD bit.
+       I'm unable to find a datasheet or a spec sheet that outlines how nVidia is different from Intel.
+     
+       To prevent false EAPD state detection and continious update, we limit loop to 4 PIOs, 
+       which is enough to keep it enabled after sleep in 10.9.2+. 
+       Since jacke sense is not a problem, we can sacrifice fugue wake EAPD updates for the better.
+     */
+    
+    if (mcpWorkaround && updateCount >= 4)
+        shouldStop=true;
+    
+    if(shouldStop){
+        DEBUG_LOG("CodecCommander: cc: workloop ended after %d PIOs\n",  updateCount);
+        shouldStop=false;
+        fTimer->cancelTimeout();
+    }
+    else
+        fTimer->setTimeoutMS(updateInterval);
 }
 
 /******************************************************************************
@@ -267,6 +292,30 @@ bool CodecCommander::start(IOService *provider)
             if (service != NULL && service->getDeviceMemoryCount() != 0) {
                 ioregEntry = service->getDeviceMemoryWithIndex(0);
             }
+            // determine HDA controller vendor from IOReg
+            if (OSData *ctrlr= OSDynamicCast(OSData, hdaDeviceEntry->getProperty("vendor-id")))
+            {
+                UInt32 vendor = 0;
+                unsigned length = ctrlr->getLength();
+                if (length <= sizeof(vendor))
+                    memcpy(&vendor, ctrlr->getBytesNoCopy(), length);
+                
+                DEBUG_LOG("CodecCommander: cc: chipset vendor - ");
+                switch (vendor) {
+                    case 0x8086:
+                        DEBUG_LOG("Intel\n");
+                        break;
+                    case 0x10de:
+                        DEBUG_LOG("nVidia\n");
+                        mcpWorkaround = true;
+                        break;
+                        
+                    default:
+                        DEBUG_LOG("Unknown\n");
+                        break;
+                }
+            }
+
             hdaDeviceEntry->release();
             // only register if HDEF device present, user may be trying voodoohda with renamed ACPI device
             _keyboardDevice->registerService();
@@ -279,15 +328,15 @@ bool CodecCommander::start(IOService *provider)
     }
     
     // notify about extra feature requests
-    if (generatePop && checkInfinite) {
+    if (generatePop && checkInfinite)
         DEBUG_LOG("CodecCommander: cc: stream requested, will *pop* upon wake or fugue-wake\n");
-    }
-    if (checkInfinite) {
+    if (checkInfinite)
         DEBUG_LOG("CodecCommander: cc: infinite workloop requested, will start now!\n");
-    }
-    if (generatePop && !checkInfinite) {
+
+    if (generatePop && !checkInfinite)
         DEBUG_LOG("CodecCommander: cc: stream requested, will *pop* upon wake\n");
-    }
+    if (mcpWorkaround)
+        DEBUG_LOG("CodecCommander: cc: running on MCP chipset, workloop limited to 4 PIOs\n");
     
     // init power state management & set state as PowerOn
     PMinit();
@@ -460,8 +509,6 @@ void CodecCommander::getStatus(UInt32 cmd)
         ioregEntry->readBytes(0x64, &response, sizeof(response));
     }
     
-    //DEBUG_LOG("CodecCommander:  r: IRR read -> %d\n", response);
-    
     clearIRV(); // prepare for next command
     if (response == 0x2) { // bit 1 will be cleared after 35 second!
         DEBUG_LOG("CodecCommander:  r: IRR is set, EAPD active\n");
@@ -511,6 +558,12 @@ void CodecCommander::setStatus(UInt32 cmd){
     }
  
 Success:
+    
+    if((cmd & 0x000000FF) == 0x2) { // xyy70c-02
+        updateCount++;  // count the amount of times successfully enabling EAPD
+        DEBUG_LOG("CodecCommander: cc: --> PIO event #%d\n",  updateCount);
+    }
+
     // mark EAPD bit as set
     eapdPoweredDown = false;
     DEBUG_LOG("CodecCommander: w: IRV was set by hardware\n");
@@ -568,6 +621,7 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
         setOutputs(0x0); // set EAPD logic level 0 to cause EAPD to power off properly
         eapdPoweredDown = true;  // now it's powered down for sure
         coldBoot = false;
+        updateCount = 0; // reset PIO counter
 	}
 	else if (kPowerStateNormal == powerStateOrdinal) {
         DEBUG_LOG("CodecCommander: cc: --> awake\n");
@@ -705,7 +759,7 @@ static void stripTrailingSpaces(char* str)
 
 static OSString* getPlatformManufacturer()
 {
-    // try to get data from Clover first
+    // try to get data from Clover/bareBoot first
     // considering auto patching may be used, so OEM ID will be set to "Apple "
     if (IORegistryEntry* platformNode = IORegistryEntry::fromPath("/efi/platform", gIODTPlane)) {
         
@@ -715,6 +769,17 @@ static OSString* getPlatformManufacturer()
                     DEBUG_LOG("CodecCommander: cc: board make - %s\n", manufacturer->getCStringNoCopy());
                     return manufacturer;
                 }
+            }
+        }
+    }
+    
+    // if not, then try from RehabMan OEM string on PS2K (useful chameleon/chimera)
+    if (IORegistryEntry* ps2KeyboardDevice = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PS2K")) {
+        
+        if (OSString *vendor = OSDynamicCast(OSString, ps2KeyboardDevice->getProperty("RM,oem-id"))) {
+            if (getManufacturerNameFromOEMName(vendor)) {
+                DEBUG_LOG("CodecCommander: cc: board make - %s\n", vendor->getCStringNoCopy());
+                return vendor;
             }
         }
     }
@@ -739,6 +804,17 @@ static OSString* getPlatformProduct()
         
         if (OSData *data = OSDynamicCast(OSData, platformNode->getProperty("OEMBoard"))) {
             if (OSString *product = OSString::withCString((char*)data->getBytesNoCopy())) {
+                DEBUG_LOG("CodecCommander: cc: board model - %s\n", product->getCStringNoCopy());
+                return product;
+            }
+        }
+    }
+    
+    // then from PS2K
+    if (IORegistryEntry* ps2KeyboardDevice = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PS2K")) {
+        
+        if (OSString *product = OSDynamicCast(OSString,ps2KeyboardDevice->getProperty("RM,oem-table-id"))) {
+            if (product) {
                 DEBUG_LOG("CodecCommander: cc: board model - %s\n", product->getCStringNoCopy());
                 return product;
             }
