@@ -88,8 +88,6 @@
 				<dict>
 					<key>1201N</key>
 					<dict>
-						<key>MCP Workaround</key>
-						<true/>
 						<key>Generate Stream</key>
 						<false/>
 						<key>HDEF Device Location</key>

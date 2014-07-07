@@ -42,8 +42,6 @@
 #define kCheckInterval             "Check Interval"
 #define kSimulateHeadphoneJack     "Simulate Headphones"
 
-#define kMCPWorkaround             "MCP Workaround"
-
 // Define variables for EAPD state updating
 IOMemoryDescriptor *ioregEntry;
 
@@ -291,6 +289,30 @@ bool CodecCommander::start(IOService *provider)
             if (service != NULL && service->getDeviceMemoryCount() != 0) {
                 ioregEntry = service->getDeviceMemoryWithIndex(0);
             }
+            // determine HDA controller vendor from IOReg
+            if (OSData *ctrlr= OSDynamicCast(OSData, hdaDeviceEntry->getProperty("vendor-id")))
+            {
+                UInt32 vendor = 0;
+                unsigned length = ctrlr->getLength();
+                if (length <= sizeof(vendor))
+                    memcpy(&vendor, ctrlr->getBytesNoCopy(), length);
+                
+                DEBUG_LOG("CodecCommander: cc: chipset vendor - ");
+                switch (vendor) {
+                    case 0x8086:
+                        DEBUG_LOG("Intel\n");
+                        break;
+                    case 0x10de:
+                        DEBUG_LOG("nVidia\n");
+                        mcpWorkaround = true;
+                        break;
+                        
+                    default:
+                        DEBUG_LOG("Unknown\n");
+                        break;
+                }
+            }
+
             hdaDeviceEntry->release();
             // only register if HDEF device present, user may be trying voodoohda with renamed ACPI device
             _keyboardDevice->registerService();
@@ -431,11 +453,6 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
                 updateInterval = num->unsigned16BitValue();
             }
         }
-    }
-    
-    // is MCP workaround needed?
-    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kMCPWorkaround))) {
-        mcpWorkaround = (int)bl->getValue();
     }
 }
 
