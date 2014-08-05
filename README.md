@@ -73,7 +73,11 @@ There are versions of ALC269 that mute speaker after 30 sec if DISABLED mixer at
 					<key>Generate Stream</key>
 					<true/>
 
-This will produce a popping sound (by issuing mute/resume), ensuring an audio stream is active during wake. If it doesn’t happen for you then try adjusting the delay value.
+This will produce a popping sound (by issuing mute/resume), ensuring an audio stream is active during wake. 
+
+NB: Make sure "Play feedback when volume is changed" is enabled in Sound preferences! 
+
+If it doesn’t happen for you then try adjusting the delay value.
 
 					<key>Stream Delay</key>
 					<integer>500</integer>
