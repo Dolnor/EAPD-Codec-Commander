@@ -7,7 +7,7 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2013-2014 TimeWalker/RehabMan. All rights reserved.</string>
 	<key>CFBundleGetInfoString</key>
-	<string>2.1.2, Copyright © 2013-2014 TimeWalker/RehabMan. All rights reserved.</string>
+	<string>2.1.2, Copyright © 2013-2014 TimeWalker. All rights reserved.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
@@ -56,7 +56,7 @@
 				<key>Default</key>
 				<dict>
 					<key>Simulate Headphones</key>
-					<integer>33</integer>
+					<integer>0</integer>
 					<key>HDEF Device Location</key>
 					<string>1B</string>
 					<key>Codec Address Number</key>
@@ -90,12 +90,10 @@
 				<dict>
 					<key>1201N</key>
 					<dict>
+						<key>Generate Stream</key>
+						<false/>
 						<key>HDEF Device Location</key>
 						<string>8</string>
-						<key>Stream Delay</key>
-						<integer>700</integer>
-						<key>Simulate Headphones</key>
-						<integer>0</integer>
 						<key>Update Headphone Node</key>
 						<integer>21</integer>
 					</dict>
