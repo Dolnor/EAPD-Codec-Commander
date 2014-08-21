@@ -54,15 +54,17 @@ This kext is intended to take care of this.
 ### How is this useful over patched IOAudioFamily?
 People used to rely on custom IOAudioFamily - Apple's open source files were altered, incorporating a method (originally coded by km9) to update the EAPD after sleep. What's bad about this kind of approach is that it required sources for modification to happen… and as everyone probably knows by now, Apple tends to delay the release of sources for 3 weeks to 2 month after OS updates get released. 
 
-No more waiting for sources, no need to be searching for a kext that matches your node layout and no need to have different kexts for different OS X versions (generations, if you will). This kext has OS X Target set to 10.6, so you are good for 10.6 throughout 10.9.
+No more waiting for sources, no need to be searching for a kext that matches your node layout and no need to have different kexts for different OS X versions (generations, if you will). 
 
 ### How do I enable it?
-You have to edit settings inside Info.plist. There are four Default settings defined there which have default values of:
+You have to edit settings inside Info.plist. There are multiple Default settings defined which have values of:
 
 				<key>Default</key>
 				<dict>
-                	<key>Simulate Headphones</key>
-					<integer>33</integer>
+					<key>HDEF Device Location</key>
+					<string>1B</string>
+                			<key>Simulate Headphones</key>
+					<integer>0</integer>
 					<key>Codec Address Number</key>
 					<integer>0</integer>
 					<key>Engine Output Number</key>
@@ -71,11 +73,13 @@ You have to edit settings inside Info.plist. There are four Default settings def
 					<integer>20</integer>
 					<key>Update Headphone Node</key>
 					<integer>0</integer>
+					<key>Update Extra Node</key>
+					<integer>0</integer>
 					<key>Stream Delay</key>
 					<integer>500</integer>
 					<key>Generate Stream</key>
 					<true/>
-					<key>Update Interval</key>
+					<key>Check Interval</key>
 					<integer>3000</integer>
 					<key>Check Infinitely</key>
 					<true/>
@@ -105,7 +109,7 @@ To determine the node numbers for speaker/headphones or both just search in the 
   				Connection: 2
      				    0x0c 0x0d*
 
-As you can see from the example above, the speaker node where EAPD amp resides is 0x14, which translates into 20 in decimal. This is the number you have to put in for 'Update Speaker Node'... if this is the only EAPD occurrence for your codec leave 'Update Headphone Node' as 0.  If your codec only has EAPD on Headphone node set 'Update Speaker Node' to 0 and adjust the 'Update Headphone Node' number accordingly. If EAPD is present on both - set both.
+As you can see from the example above, the speaker node where EAPD amp resides is 0x14, which translates into 20 in decimal. This is the number you have to put in for 'Update Speaker Node'... if this is the only EAPD occurrence for your codec leave 'Update Headphone Node' as 0.  If your codec only has EAPD on Headphone node set 'Update Speaker Node' to 0 and adjust the 'Update Headphone Node' number accordingly. If EAPD is present on both - set both. If you have 3 EAPDs then use “Update Extra Node” and define a decimal node number to update.
 
 ### Upon wake I lose audio from speaker, why is that?
 There are versions of ALC269 that mute speaker after 30 sec if DISABLED mixer at node 0x0f is muted and no audio stream is passed through EAPD Amp-Out. Codec incorrectly reports internal connections. Chances are, headphone and mic jack sensing won’t work either. To fix this set: 
@@ -113,7 +117,11 @@ There are versions of ALC269 that mute speaker after 30 sec if DISABLED mixer at
 					<key>Generate Stream</key>
 					<true/>
 
-This will produce a popping sound (by issuing mute/resume), ensuring an audio stream is active during wake. If it doesn’t happen for you then try adjusting the delay value.
+This will produce a popping sound (by issuing mute/resume), ensuring an audio stream is active during wake. 
+
+NB: Make sure "Play feedback when volume is changed" is enabled in Sound preferences! 
+
+If it doesn’t happen for you then try adjusting the delay value.
 
 					<key>Stream Delay</key>
 					<integer>500</integer>
@@ -129,12 +137,12 @@ What will happen is that the kext will still send a command verb at wake, then p
 
 Sometimes behavior is random, it could take more than two PIO operations for EAPD to reenable. Also, after sending PIO and enabling EAPD for the second time your jack sense will stop working… If you lose jack sense (autodetect) with 10.9.2 and above just go to Apple menu and select Sleep… wait for 5 seconds and press any key on the keyboard. The machine will start the screen again, send PIO to enable EAPD and will *pop* if requested, allowing you to plug in the headphones or an external mike.
 
-Additional feature request will be displayed in the console log:
+Additional feature request will be displayed in the console log if debug kext is used:
 
 					CodecCommander: cc: stream requested, will *pop* upon wake
 					CodecCommander: cc: infinite workloop requested, will start now!
                     
-Additional setting was added for testing purposes. It seems like setting headphone node certain PinCaps really helps the EAPD status to stick. Set the node number (in decimal, again) of your headphones here even if you don't have EAPD on there..
+Additional setting was added for testing purposes. It seems like setting headphone node certain PinCaps really helps the EAPD status to stick on Intel chipset. Set the node number (in decimal, again) of your headphones here even if you don't have EAPD on there..
 
                 	<key>Simulate Headphones</key>
 					<integer>33</integer>
@@ -154,11 +162,35 @@ The output will look similar to this:
 
 Here @1B is HDEF device location, 0 - Codec Address Number (you will have to have it set in config already), 1 - Function Group Number (will usually be 1, no setting present), 2 - Engine Output Number. So the last number is the one you are going to put in config if you see the aforementioned message.
 
+Other reason for this message to appear can be different HDEF device location (address), for example MCP79 chipset uses @8 instead of default @1B for Intel. Specify the location in config:
+
+			<key>HDEF Device Location</key>
+                        <string>8</string>
+
 ### Changelog
 
-Feb 06, 2013 v2.1.1:
+July 13, 2014 v2.1.2:
 
-- Add a *test* procedure to set PinCaps on headphone node to Hpone enable, then Hphone disable to trigger a jack insertion event. Helps with audio loss, or so it seems..
+- Add a procedure to set PinCaps on headphone node to Hpone enable, then Hphone disable to trigger a jack insertion event. Helps with audio loss on Intel controllers
+
+- Add extra node to update in case codec utilizes more than 2x EAPDs on output nodes
+
+- Add an ability to specify HDEF device address (location), Default Intel location is @1B
+
+- Platform Profiles are brought back to support multiple machines with a signle kext. Default config serves as a base, OEM config overrides default config. See examples…
+
+- CodecCommander will first try to read OEM data reported to IODeviceTree by Clover/bareBoot, if none are reported it will try to get OEM info from IOService on PS2K device (RM,oem-id\RM,oem-table-id) and only then from DSDT header.
+
+- Detect HDEF Controller chipset based on vendor-id data reported from IORegistry
+
+- Properly power down EAPDs across sleep on Intel chipset
+
+- Add support for nVidia MCP79/MCP7A HDA controllers that do not report EAPD state when reading response from IRR. A workaround is applied if such a chipset is detected to limit PIO count to 4, which is enough to keep speaker and headphone EAPDs enabled in 10.9.2+
+
+- Remove unnecessary probing in order to prevent unresolved symbols when compiling with earlier SDKs for newer system version.
+
+
+Feb 06, 2014 v2.1.1:
 
 - Now monitoring codec power state from HDADriver, EAPD will re-enable after fugue-sleep state now too!
 

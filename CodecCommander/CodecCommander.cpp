@@ -136,15 +136,6 @@ bool CodecCommander::init(OSDictionary *dict)
 }
 
 /******************************************************************************
- * CodecCommander::probe - check if there is something to attach to
- ******************************************************************************/
-IOService *CodecCommander::probe(IOService *provider, SInt32 *score)
-{
-    DEBUG_LOG("CodecCommander: cc: commander probing\n");
-    return this;
-}
-
-/******************************************************************************
  * CodecCommander::parseCodecPowerState - get codec power state from IOReg
  ******************************************************************************/
 void CodecCommander::parseCodecPowerState()
