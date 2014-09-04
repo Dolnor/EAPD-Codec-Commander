@@ -77,12 +77,12 @@
 				<dict>
 					<key>U430</key>
 					<dict>
-						<key>Update Speaker Node</key>
-						<integer>20</integer>
-						<key>Update Headphone Node</key>
-						<integer>33</integer>
-						<key>Update Extra Node</key>
-						<string>27</string>
+						<key>Check Infinitely</key>
+						<true/>
+						<key>Check Interval</key>
+						<integer>1000</integer>
+						<key>Send Delay</key>
+						<integer>100</integer>
 					</dict>
 					<key>Cherry 4A Touch</key>
 					<string>U430</string>
