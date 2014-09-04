@@ -11,25 +11,17 @@
 		0C4B238814598AD20080D960 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 0C4B238614598AD20080D960 /* InfoPlist.strings */; };
 		849921901600F4FC00CCDF3B /* CodecCommander.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8499218E1600F4FC00CCDF3B /* CodecCommander.cpp */; };
 		849921911600F4FC00CCDF3B /* CodecCommander.h in Headers */ = {isa = PBXBuildFile; fileRef = 8499218F1600F4FC00CCDF3B /* CodecCommander.h */; };
-		F53FFAF2189C494E009EA51D /* CCHIDKeyboard.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F53FFAEE189C494E009EA51D /* CCHIDKeyboard.cpp */; };
-		F53FFAF3189C494E009EA51D /* CCHIDKeyboard.h in Headers */ = {isa = PBXBuildFile; fileRef = F53FFAEF189C494E009EA51D /* CCHIDKeyboard.h */; };
-		F53FFAF4189C494E009EA51D /* CCHIDKeyboardDevice.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F53FFAF0189C494E009EA51D /* CCHIDKeyboardDevice.cpp */; };
-		F53FFAF5189C494E009EA51D /* CCHIDKeyboardDevice.h in Headers */ = {isa = PBXBuildFile; fileRef = F53FFAF1189C494E009EA51D /* CCHIDKeyboardDevice.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0ABE527A189976190069716A /* PIOReadme */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = PIOReadme; sourceTree = "<group>"; };
+		0AE84D9919B8306F00968A53 /* Kernel.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Kernel.framework; path = System/Library/Frameworks/Kernel.framework; sourceTree = SDKROOT; };
 		0C4B237E14598AD20080D960 /* CodecCommander.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodecCommander.kext; sourceTree = BUILT_PRODUCTS_DIR; };
-		0C4B238214598AD20080D960 /* Kernel.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Kernel.framework; path = System/Library/Frameworks/Kernel.framework; sourceTree = SDKROOT; };
 		0C4B238514598AD20080D960 /* CodecCommander-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "CodecCommander-Info.plist"; sourceTree = "<group>"; };
 		0C4B238714598AD20080D960 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		0C4B238D14598AD20080D960 /* CodecCommander-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = "CodecCommander-Prefix.pch"; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		8499218E1600F4FC00CCDF3B /* CodecCommander.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = CodecCommander.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		8499218F1600F4FC00CCDF3B /* CodecCommander.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = CodecCommander.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		F53FFAEE189C494E009EA51D /* CCHIDKeyboard.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CCHIDKeyboard.cpp; path = CCHIDKeyboard/CCHIDKeyboard.cpp; sourceTree = "<group>"; };
-		F53FFAEF189C494E009EA51D /* CCHIDKeyboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CCHIDKeyboard.h; path = CCHIDKeyboard/CCHIDKeyboard.h; sourceTree = "<group>"; };
-		F53FFAF0189C494E009EA51D /* CCHIDKeyboardDevice.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CCHIDKeyboardDevice.cpp; path = CCHIDKeyboard/CCHIDKeyboardDevice.cpp; sourceTree = "<group>"; };
-		F53FFAF1189C494E009EA51D /* CCHIDKeyboardDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CCHIDKeyboardDevice.h; path = CCHIDKeyboard/CCHIDKeyboardDevice.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -43,21 +35,9 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		0A86A428189B87CC0050DBCF /* CCHIDKeyboard */ = {
-			isa = PBXGroup;
-			children = (
-				F53FFAEE189C494E009EA51D /* CCHIDKeyboard.cpp */,
-				F53FFAEF189C494E009EA51D /* CCHIDKeyboard.h */,
-				F53FFAF0189C494E009EA51D /* CCHIDKeyboardDevice.cpp */,
-				F53FFAF1189C494E009EA51D /* CCHIDKeyboardDevice.h */,
-			);
-			name = CCHIDKeyboard;
-			sourceTree = "<group>";
-		};
 		0C4B237114598AD10080D960 = {
 			isa = PBXGroup;
 			children = (
-				0A86A428189B87CC0050DBCF /* CCHIDKeyboard */,
 				0C4B238314598AD20080D960 /* CodecCommander */,
 				0C4B238014598AD20080D960 /* Frameworks */,
 				0C4B237F14598AD20080D960 /* Products */,
@@ -75,17 +55,9 @@
 		0C4B238014598AD20080D960 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				0C4B238114598AD20080D960 /* Other Frameworks */,
+				0AE84D9919B8306F00968A53 /* Kernel.framework */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		0C4B238114598AD20080D960 /* Other Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				0C4B238214598AD20080D960 /* Kernel.framework */,
-			);
-			name = "Other Frameworks";
 			sourceTree = "<group>";
 		};
 		0C4B238314598AD20080D960 /* CodecCommander */ = {
@@ -117,8 +89,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				849921911600F4FC00CCDF3B /* CodecCommander.h in Headers */,
-				F53FFAF5189C494E009EA51D /* CCHIDKeyboardDevice.h in Headers */,
-				F53FFAF3189C494E009EA51D /* CCHIDKeyboard.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -196,9 +166,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F53FFAF2189C494E009EA51D /* CCHIDKeyboard.cpp in Sources */,
 				849921901600F4FC00CCDF3B /* CodecCommander.cpp in Sources */,
-				F53FFAF4189C494E009EA51D /* CCHIDKeyboardDevice.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -240,7 +208,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-fno-stack-protector";
 				"OTHER_LDFLAGS[arch=x86_64]" = "-dead_strip";
-				SDKROOT = macosx;
+				SDKROOT = macosx10.9;
 				STRIP_STYLE = "non-global";
 			};
 			name = Debug;
@@ -262,7 +230,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				OTHER_CFLAGS = "-fno-stack-protector";
 				"OTHER_LDFLAGS[arch=x86_64]" = "-dead_strip";
-				SDKROOT = macosx;
+				SDKROOT = macosx10.9;
 				STRIP_STYLE = "non-global";
 			};
 			name = Release;

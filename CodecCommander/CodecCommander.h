@@ -33,9 +33,6 @@
 #include <IOKit/IOTimerEventSource.h>
 #include <IOKit/IODeviceTreeSupport.h>
 
-#include  "CCHIDKeyboardDevice.h"
-
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 // define & enumerate power states
@@ -61,9 +58,6 @@ public:
 	virtual void stop(IOService *provider);
     virtual void free(void);
     
-    // generate a stream
-    void createAudioStream ();
-    
     // workloop parameters
     bool startWorkLoop(IOService *provider);
     void onTimerAction();
@@ -80,26 +74,22 @@ private:
     void setParamPropertiesGated(OSDictionary* dict);
     
 protected:
-    // parse audio engine state and codec power state from ioreg
+    // parse codec power state from ioreg
     void parseCodecPowerState();
-    void parseAudioEngineState();
     
     // handle codec verb command and read response
     void setStatus(UInt32 cmd);
     void getStatus(UInt32 cmd);
     void clearIRV();
     
-    // get and set the state of EAPD on outputs
-    void getOutputs();
+    // set the state of EAPD on outputs
     void setOutputs(UInt8 logicLevel);
     
-    void simulateHedphoneJack();
+    // reset codec
+    void performCodecReset ();
     
     IOWorkLoop*			fWorkLoop;		// our workloop
     IOTimerEventSource* fTimer;	// used to simulate capture hardware
-    
-    //virtual keyboard
-    CCHIDKeyboardDevice * _keyboardDevice;
 };
 
 #endif // __CodecCommander__
