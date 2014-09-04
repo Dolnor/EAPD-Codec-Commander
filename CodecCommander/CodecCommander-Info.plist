@@ -7,7 +7,7 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2013-2014 TimeWalker/RehabMan. All rights reserved.</string>
 	<key>CFBundleGetInfoString</key>
-	<string>2.1.2, Copyright © 2013-2014 TimeWalker. All rights reserved.</string>
+	<string>2.2.0, Copyright © 2013-2014 TimeWalker. All rights reserved.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
@@ -23,22 +23,11 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>2.1.2</string>
+	<string>2.2.0</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.1.2</string>
+	<string>2.2.0</string>
 	<key>IOKitPersonalities</key>
 	<dict>
-		<key>CCHIDKeyboard</key>
-		<dict>
-			<key>CFBundleIdentifier</key>
-			<string>${MODULE_NAME}</string>
-			<key>IOClass</key>
-			<string>CCHIDKeyboard</string>
-			<key>IONameMatch</key>
-			<string>CCHIDKeyboardDevice</string>
-			<key>IOProviderClass</key>
-			<string>CCHIDKeyboardDevice</string>
-		</dict>
 		<key>CodecCommander</key>
 		<dict>
 			<key>CFBundleIdentifier</key>
@@ -55,47 +44,33 @@
 			<dict>
 				<key>Default</key>
 				<dict>
-					<key>Simulate Headphones</key>
-					<integer>0</integer>
 					<key>HDEF Device Location</key>
 					<string>1B</string>
 					<key>Codec Address Number</key>
 					<integer>0</integer>
-					<key>Engine Output Number</key>
-					<integer>1</integer>
-					<key>Update Speaker Node</key>
-					<integer>20</integer>
-					<key>Update Headphone Node</key>
-					<integer>0</integer>
-					<key>Update Extra Node</key>
-					<string>0</string>
-					<key>Stream Delay</key>
-					<integer>500</integer>
-					<key>Generate Stream</key>
-					<false/>
+					<key>Send Delay</key>
+					<integer>300</integer>
 					<key>Check Interval</key>
-					<integer>3000</integer>
+					<integer>5000</integer>
 					<key>Check Infinitely</key>
 					<true/>
-				</dict>
-				<key>DELL</key>
-				<dict>
-					<key>0YW3P2</key>
-					<dict>
-						<key>Simulate Headphones</key>
-						<integer>33</integer>
-					</dict>
 				</dict>
 				<key>ASUS</key>
 				<dict>
 					<key>1201N</key>
 					<dict>
-						<key>Generate Stream</key>
-						<false/>
 						<key>HDEF Device Location</key>
 						<string>8</string>
-						<key>Update Headphone Node</key>
-						<integer>21</integer>
+					</dict>
+				</dict>
+				<key>Gigabyte</key>
+				<dict>
+					<key>H87-HD3</key>
+					<dict>
+						<key>Codec Address Number</key>
+						<integer>2</integer>
+						<key>Check Infinitely</key>
+						<false/>
 					</dict>
 				</dict>
 				<key>Lenovo</key>
