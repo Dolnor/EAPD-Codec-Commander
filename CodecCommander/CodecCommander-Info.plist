@@ -23,13 +23,15 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>2.2.0</string>
+	<string>${MODULE_VERSION}</string>
 	<key>CFBundleShortVersionString</key>
 	<string>2.2.0</string>
 	<key>IOKitPersonalities</key>
 	<dict>
 		<key>CodecCommander</key>
 		<dict>
+			<key>RM,Version</key>
+			<string>${PRODUCT_NAME} ${MODULE_VERSION}</string>
 			<key>CFBundleIdentifier</key>
 			<string>${MODULE_NAME}</string>
 			<key>IOClass</key>
