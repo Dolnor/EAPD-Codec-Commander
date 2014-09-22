@@ -32,6 +32,7 @@
 // Workloop requred and Workloop timer aka update interval, ms
 #define kCheckInfinitely            "Check Infinitely"
 #define kCheckInterval              "Check Interval"
+#define kUpdateNodes                "Update Nodes"
 
 // Define variables for EAPD state updating
 IOMemoryDescriptor *ioregEntry;
@@ -43,7 +44,7 @@ char hdaDriverPath[0xBA];
 UInt8 eapdCapableNodes[5];
 
 int updateCount = 0;
-bool checkInfinite, eapdPoweredDown, coldBoot;
+bool checkInfinite, updateNodes, eapdPoweredDown, coldBoot;
 UInt8  codecNumber, hdaCurrentPowerState, hdaPrevPowerState;
 UInt16 updateInterval, sendDelay, status;
 UInt32 resetCommand, psCommand, response;
@@ -73,7 +74,8 @@ bool CodecCommander::init(OSDictionary *dict)
     
     checkInfinite = false;
     eapdPoweredDown = true;
-    coldBoot = true; // assume booting from cold since hibernate is broken on most hacks
+    updateNodes = true; // updating EAPD status on nodes if user doesn't define otherwise
+    coldBoot = true;
     hdaCurrentPowerState = 0x0; // assume hda codec has no power at cold boot
     hdaPrevPowerState = hdaCurrentPowerState; //and previous state was the same
     
@@ -112,6 +114,7 @@ void CodecCommander::parseCodecPowerState()
             hdaCurrentPowerState = powerState->unsigned8BitValue();
             // if hda codec changed power state
             if (hdaCurrentPowerState != hdaPrevPowerState) {
+                DEBUG_LOG("CodecCommander: cc - power state transition from %d to %d recorded\n", hdaPrevPowerState, hdaCurrentPowerState);
                 // store current power state as previous state for next workloop cycle
                 hdaPrevPowerState = hdaCurrentPowerState;
                 // notify about codec power loss state
@@ -146,7 +149,7 @@ void CodecCommander::onTimerAction()
     // check if hda codec is powered - we are monitoring ocurrences of fugue state
     parseCodecPowerState();
     // if no power after semi-sleep (fugue) state and power was restored - set EAPD bit
-    if (eapdPoweredDown && (hdaCurrentPowerState == 0x1 || hdaCurrentPowerState == 0x2)) {
+    if (eapdPoweredDown && hdaCurrentPowerState != 0x0 ) {
         DEBUG_LOG("CodecCommander: cc: --> hda codec power restored\n");
         setOutputs(0x2);
     }
@@ -159,7 +162,7 @@ void CodecCommander::onTimerAction()
  ******************************************************************************/
 bool CodecCommander::start(IOService *provider)
 {
-    IOLog("CodecCommander: version 2.2.0 starting\n");
+    IOLog("CodecCommander: version 2.2.1 starting\n");
 
     if(!provider || !super::start( provider ))
 	{
@@ -180,36 +183,40 @@ bool CodecCommander::start(IOService *provider)
         hdaDeviceEntry->release();
     }
     else {
-        DEBUG_LOG("CodecCommander: %s is unreachable\n",hdaDevicePath);
+        DEBUG_LOG("CodecCommander: %s is unreachable, start aborted\n",hdaDevicePath);
         return false;
     }
     
-    IOSleep(300); // need to wait a bit until codec can actually respond to immediate verbs
-    int k = 0; // array index
-    UInt8 startingNode;
-    UInt8 totalNodes;
+    if (updateNodes) {
+        IOSleep(sendDelay); // need to wait a bit until codec can actually respond to immediate verbs
+        int k = 0; // array index
+        UInt8 startingNode;
+        UInt8 totalNodes;
     
-    //get start node number and node count
-    getStatus((codecNumber << 28) | (0x01 << 20) | 0xf0004);
-    if (response != 0) {
-        startingNode = (response & 0xFF0000) >> 16;
-        totalNodes =   ((response & 0x0000FF) >>  0) + 1;
-        DEBUG_LOG("CodecCommander: start node 0x%x, total 0x%x\n", startingNode, totalNodes);
-    }
-    else
-        DEBUG_LOG("CodecCommander: unable to determine node count\n");
+        //get start node number and node count
+        getStatus((codecNumber << 28) | (0x01 << 20) | 0xf0004);
+        if (response != 0) {
+            startingNode = (response & 0xFF0000) >> 16;
+            totalNodes =   ((response & 0x0000FF) >>  0) + 1;
+            DEBUG_LOG("CodecCommander: start node 0x%x, total 0x%x\n", startingNode, totalNodes);
+        }
+        else {
+            IOLog("CodecCommander: unable to determine node count, start aborted\n");
+            return false;
+        }
 
-    //fetch Pin Capabilities from the range of nodes
-    DEBUG_LOG("CodecCommander: cc: --> getting EAPD supported node list (limited to 5)\n");
-    for (int i = startingNode; i <= totalNodes; i++)
-    {
-        getStatus((codecNumber << 28) | (i << 20) | 0xf000c);
-        //if bit 16 is set in pincap - node supports EAPD
-        if (((response & 0xFF0000) >> 16) == 1)
+        //fetch Pin Capabilities from the range of nodes
+        DEBUG_LOG("CodecCommander: cc: --> getting EAPD supported node list (limited to 5)\n");
+        for (int i = startingNode; i <= totalNodes; i++)
         {
-            eapdCapableNodes[k] = i;
-            k++;
-            IOLog("CodecCommander: NID=0x%02x supports EAPD, will update state after sleep\n", i);
+            getStatus((codecNumber << 28) | (i << 20) | 0xf000c);
+            //if bit 16 is set in pincap - node supports EAPD
+            if (((response & 0xFF0000) >> 16) == 1)
+            {
+                eapdCapableNodes[k] = i;
+                k++;
+                IOLog("CodecCommander: NID=0x%02x supports EAPD, will update state after sleep\n", i);
+            }
         }
     }
     
@@ -289,6 +296,11 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
         sendDelay = num->unsigned16BitValue();
     }
     
+    // Determine if EAPD update is needed (for Desktops requiring reset only)
+    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kUpdateNodes))) {
+        updateNodes = (int)bl->getValue();
+    }
+    
     // Determine if infinite check is needed (for 10.9 and up)
     if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCheckInfinitely))) {
         checkInfinite = (int)bl->getValue();
@@ -308,16 +320,18 @@ void CodecCommander::setParamPropertiesGated(OSDictionary * dict)
 
 void CodecCommander::setOutputs(UInt8 logicLevel)
 {
-    // delay by at least 100ms, otherwise first immediate command won't be received
-    // some codecs will produce loud pop when EAPD is enabled too soon, need custom delay until codec inits
-    if (sendDelay < 100)
+    if (updateNodes) {
+        // delay by at least 100ms, otherwise first immediate command won't be received
+        // some codecs will produce loud pop when EAPD is enabled too soon, need custom delay until codec inits
+        if (sendDelay < 100)
         IOSleep(100);
-    else
-        IOSleep(sendDelay);
-    // for nodes supporting EAPD bit 1 in logicLevel defines EAPD logic state: 1 - enable, 0 - disable
-    for (int i = 0; i <= sizeof(eapdCapableNodes)/sizeof(eapdCapableNodes[0]); i++) {
-        if (eapdCapableNodes[i] != 0) {
-            setStatus((codecNumber << 28) | eapdCapableNodes[i] << 20 | 0x70c00 | logicLevel);
+        else
+            IOSleep(sendDelay);
+        // for nodes supporting EAPD bit 1 in logicLevel defines EAPD logic state: 1 - enable, 0 - disable
+        for (int i = 0; i <= sizeof(eapdCapableNodes)/sizeof(eapdCapableNodes[0]); i++) {
+            if (eapdCapableNodes[i] != 0) {
+                setStatus((codecNumber << 28) | eapdCapableNodes[i] << 20 | 0x70c00 | logicLevel);
+            }
         }
     }
 }
@@ -455,7 +469,7 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 	else if (kPowerStateNormal == powerStateOrdinal) {
         DEBUG_LOG("CodecCommander: cc: --> awake\n");
 
-        // issue codec reset at wake
+        // issue codec reset at wake and cold boot
         performCodecReset();
         
         if (eapdPoweredDown){
