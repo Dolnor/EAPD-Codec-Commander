@@ -133,7 +133,6 @@ class IntelHDA
 	// Read-once parameters
 	unsigned int mVendor = -1;
 	unsigned int mNodes = -1;
-	unsigned int *mPinCapabilities;
 	
 	public:
 		// Constructor
@@ -146,15 +145,16 @@ class IntelHDA
 		// 4-bit verb and 16-bit payload
 		unsigned int SendCommand(unsigned int nodeId, unsigned int verb, unsigned short payload);
 	
+		// Send a raw command (verb and payload combined)
+		unsigned int SendCommand(unsigned int command);
+	
 		unsigned short getVendorId();
 		unsigned short getDeviceId();
 	
 		unsigned char getTotalNodes();
 		unsigned char getStartingNode();
 	private:
-		unsigned int SendCommand(unsigned int command);
 		unsigned int ExecutePIO(unsigned int command);
-
 };
 
 

@@ -51,13 +51,8 @@ IntelHDA::IntelHDA(IORegistryEntry *ioRegistryEntry, char codecAddress)
 
 IntelHDA::~IntelHDA()
 {
-    delete [] mPinCapabilities;
-    
-    if (mDeviceMemory)
-        mDeviceMemory->release();
-    
-    if (mService)
-        mService->release();
+    //if (mService)
+    //    mService->release();
 }
 
 unsigned short IntelHDA::getVendorId()
@@ -94,29 +89,31 @@ unsigned char IntelHDA::getStartingNode()
 
 unsigned int IntelHDA::SendCommand(unsigned int nodeId, unsigned int verb, unsigned char payload)
 {
-    DEBUG_LOG("IntelHDA::SendCommand: 12-bit verb, 4-bit payload ");
-    return this->SendCommand((mCodecAddress << 28) | (nodeId << 20) | (verb << 8) | payload);
+    DEBUG_LOG("IntelHDA::SendCommand: verb 0x%06x, payload 0x%02x.\n", verb, payload);
+    return this->SendCommand((nodeId << 20) | (verb << 8) | payload);
 }
 
 unsigned int IntelHDA::SendCommand(unsigned int nodeId, unsigned int verb, unsigned short payload)
 {
-    DEBUG_LOG("IntelHDA::SendCommand: 4-bit verb, 16-bit payload ");
-    return this->SendCommand((mCodecAddress << 28) | (nodeId << 20) | (verb << 12) | payload);
+    DEBUG_LOG("IntelHDA::SendCommand: verb 0x%02x, payload 0x%08x.\n", verb, payload);
+    return this->SendCommand((nodeId << 20) | (verb << 12) | payload);
 }
 
 unsigned int IntelHDA::SendCommand(unsigned int command)
 {
+    unsigned int fullCommand = (mCodecAddress << 28) | (command & 0x0FFFFFFF);
+    
     if (mDeviceMemory == NULL)
         return -1;
     
-    DEBUG_LOG("0x%08x\n", command);
+    DEBUG_LOG("IntelHDA::SendCommand: 0x%08x\n", fullCommand);
     
-    return this->ExecutePIO(command);
+    return this->ExecutePIO(fullCommand);
     
     switch (mCommandMode)
     {
         PIO:
-            return this->ExecutePIO(command);
+            return this->ExecutePIO(fullCommand);
         default:
             return -1;
     }
@@ -145,7 +142,7 @@ unsigned int IntelHDA::ExecutePIO(unsigned int command)
         return -1;
     }
     
-    DEBUG_LOG("IntelHDA::ExecutePIO ICB bit clear.\n");
+    //DEBUG_LOG("IntelHDA::ExecutePIO ICB bit clear.\n");
     
     // Queue the verb for the HDA controller
     mDeviceMemory->writeBytes(HDA_REG_ICOI, &command, sizeof(command));
@@ -154,7 +151,7 @@ unsigned int IntelHDA::ExecutePIO(unsigned int command)
     hdaICS.CommandBusy = 1;
     mDeviceMemory->writeBytes(HDA_REG_ICS, &hdaICS, sizeof(HDA_ICS));
     
-    DEBUG_LOG("IntelHDA::ExecutePIO Wrote verb and set ICB bit.\n");
+    //DEBUG_LOG("IntelHDA::ExecutePIO Wrote verb and set ICB bit.\n");
     
     // Wait for HDA controller to return with a response
     for (int i = 0; i < 1000; i++)

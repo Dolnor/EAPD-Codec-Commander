@@ -27,6 +27,7 @@
 #define kHDEFLocation               "HDEF Device Location"
 #define kCodecAddressNumber         "Codec Address Number"
 #define kSendDelay                  "Send Delay"
+#define kCustomVerbs                "Custom Verbs"
 
 // Workloop requred and Workloop timer aka update interval, ms
 #define kCheckInfinitely            "Check Infinitely"
@@ -89,6 +90,25 @@ Configuration::Configuration(OSDictionary* dictionary)
             if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kCheckInterval)))
                 mUpdateInterval = num->unsigned16BitValue();
         }
+    }
+    
+    if (OSArray* list = OSDynamicCast(OSArray, config->getObject(kCustomVerbs)))
+    {
+        OSCollectionIterator* iterator = OSCollectionIterator::withCollection(list);
+        
+        iterator->reset();
+        int k = 0;
+        
+        while (OSNumber* number = (OSNumber *)iterator->getNextObject())
+        {
+            if (!OSDynamicCast(OSNumber, number))
+                continue;
+            
+            mCustomVerbs[k] = number->unsigned32BitValue();
+            k++;
+        }
+        
+        OSSafeRelease(iterator);
     }
     
     OSSafeRelease(config);
@@ -156,9 +176,24 @@ unsigned char Configuration::getCodecNumber()
     return mCodecNumber;
 }
 
+unsigned short Configuration::getSendDelay()
+{
+    return mSendDelay;
+}
+
 bool Configuration::getCheckInfinite()
 {
     return mCheckInfinite;
+}
+
+unsigned short Configuration::getInterval()
+{
+    return mUpdateInterval;
+}
+
+unsigned int* Configuration::getCustomVerbs()
+{
+    return mCustomVerbs;
 }
 
 /******************************************************************************

@@ -48,6 +48,10 @@
 			<dict>
 				<key>Default</key>
 				<dict>
+					<key>Custom Verbs</key>
+					<array>
+						<integer>983040</integer>
+					</array>
 					<key>HDEF Device Location</key>
 					<string>1B</string>
 					<key>Codec Address Number</key>

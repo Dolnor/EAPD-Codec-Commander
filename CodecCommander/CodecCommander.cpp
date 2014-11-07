@@ -29,15 +29,10 @@ void* _org_rehabman_dontstrip_[] =
 };
 
 // Define variables for EAPD state updating
-IOMemoryDescriptor *ioregEntry;
-
 UInt8 eapdCapableNodes[5];
 
-int updateCount = 0;
 bool eapdPoweredDown, coldBoot;
-UInt8  hdaCurrentPowerState, hdaPrevPowerState;
-UInt16 updateInterval, sendDelay, status;
-UInt32 resetCommand, psCommand, response;
+unsigned char hdaCurrentPowerState, hdaPrevPowerState;
 
 // Define usable power states
 static IOPMPowerState powerStateArray[ kPowerStateCount ] =
@@ -69,10 +64,6 @@ bool CodecCommander::init(OSDictionary *dictionary)
     hdaCurrentPowerState = 0x0; // assume hda codec has no power at cold boot
     hdaPrevPowerState = hdaCurrentPowerState; //and previous state was the same
 	
-    // assume default Function Group number is 1
-    resetCommand = (mConfiguration->getCodecNumber() << 28) | (0x01 << 20) | 0x7ff00;
-    psCommand    = (mConfiguration->getCodecNumber() << 28) | (0x01 << 20) | 0x70503; // PS-Set in bits 0:3, (011) D3 (or D3hot)
-    
     return true;
 }
 
@@ -95,13 +86,6 @@ bool CodecCommander::start(IOService *provider)
     if (hdaDeviceEntry != NULL)
     {
 		mIntelHDA = new IntelHDA(hdaDeviceEntry, mConfiguration->getCodecNumber());
-		
-		IOService *service = OSDynamicCast(IOService, hdaDeviceEntry);
-        
-        // get address field from IODeviceMemory
-        if (service != NULL && service->getDeviceMemoryCount() != 0)
-            ioregEntry = service->getDeviceMemoryWithIndex(0);
-		
 		OSSafeRelease(hdaDeviceEntry);
     }
     else
@@ -172,12 +156,11 @@ void CodecCommander::stop(IOService *provider)
     OSSafeReleaseNULL(fTimer);// disable outstanding calls
     OSSafeReleaseNULL(fWorkLoop);
 
-    updateCount = 0;
-    PMstop();
-    super::stop(provider);
-	
 	// Free IntelHDA engine
 	mIntelHDA->~IntelHDA();
+	
+    PMstop();
+    super::stop(provider);
 }
 
 #ifdef DEBUG
@@ -215,7 +198,6 @@ void CodecCommander::parseCodecPowerState()
 					setOutputs(0x0); // power down EAPDs properly
 					eapdPoweredDown = true;
 					coldBoot = false; //codec entered fugue state or sleep - no longer a cold boot
-					updateCount = 0;
 				}
 			}
 		}
@@ -243,21 +225,20 @@ void CodecCommander::onTimerAction()
         setOutputs(0x2);
     }
     
-    fTimer->setTimeoutMS(updateInterval);
+    fTimer->setTimeoutMS(mConfiguration->getInterval());
 }
 
 /******************************************************************************
  * CodecCommander::setOutputs - set EAPD status bit on SP/HP
  ******************************************************************************/
-
 void CodecCommander::setOutputs(unsigned char logicLevel)
 {
     // delay by at least 100ms, otherwise first immediate command won't be received
     // some codecs will produce loud pop when EAPD is enabled too soon, need custom delay until codec inits
-    if (sendDelay < 100)
+    if (mConfiguration->getSendDelay() < 100)
         IOSleep(100);
     else
-        IOSleep(sendDelay);
+        IOSleep(mConfiguration->getSendDelay());
 	
     // for nodes supporting EAPD bit 1 in logicLevel defines EAPD logic state: 1 - enable, 0 - disable
     for (int i = 0; i <= sizeof(eapdCapableNodes) / sizeof(eapdCapableNodes[0]); i++)
@@ -265,6 +246,16 @@ void CodecCommander::setOutputs(unsigned char logicLevel)
         if (eapdCapableNodes[i] != 0)
 			mIntelHDA->SendCommand(eapdCapableNodes[i], HDA_VERB_EAPDBTL_SET, logicLevel);
     }
+	
+	unsigned int* customVerbs = mConfiguration->getCustomVerbs();
+	
+	for (int i = 0; i < 32; i++)
+	{
+		if (customVerbs[i] == 0)
+			break;
+		
+		mIntelHDA->SendCommand(customVerbs[i]);
+	}
 	
 	eapdPoweredDown = false;
 }
@@ -312,7 +303,6 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
         setOutputs(0x0); // set EAPD logic level 0 to cause EAPD to power off properly
         eapdPoweredDown = true;  // now it's powered down for sure
         coldBoot = false;
-        updateCount = 0; // reset PIO counter
 	}
 	else if (kPowerStateNormal == powerStateOrdinal)
 	{

@@ -27,6 +27,7 @@ class Configuration
     char mHDALocation[0x03];
     char mHDADevicePath[0x3F];
     char mHDADriverPath[0xBA];
+    unsigned int mCustomVerbs[32];
     
     bool mCheckInfinite;
     unsigned char mCodecNumber;
@@ -39,6 +40,8 @@ class Configuration
         unsigned short getSendDelay();
         bool getCheckInfinite();
         unsigned short getInterval();
+    
+        unsigned int* getCustomVerbs();
     
         // Constructor
         Configuration(OSDictionary* dictionary);    
