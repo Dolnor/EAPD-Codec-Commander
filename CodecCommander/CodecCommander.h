@@ -22,16 +22,9 @@
 
 #define CodecCommander CodecCommander
 
-#ifdef DEBUG_MSG
-#define DEBUG_LOG(args...)  IOLog(args)
-#else
-#define DEBUG_LOG(args...)
-#endif
-
-#include <IOKit/IOService.h>
-#include <IOKit/IOWorkLoop.h>
-#include <IOKit/IOTimerEventSource.h>
-#include <IOKit/IODeviceTreeSupport.h>
+#include "Common.h"
+#include "Configuration.h"
+#include "IntelHDA.h"
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -44,10 +37,11 @@ enum
 	kPowerStateCount
 };
 
-OSString* getManufacturerNameFromOEMName(OSString *name);
-
 class CodecCommander : public IOService
 {
+	Configuration *mConfiguration = NULL;
+	IntelHDA *mIntelHDA = NULL;
+	
     typedef IOService super;
 	OSDeclareDefaultStructors(CodecCommander)
 
@@ -66,29 +60,16 @@ public:
     
     //power management event
     virtual IOReturn setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker);
-    
-    // get confing and make config dictionary by parsing plist
-    static OSDictionary* getConfigurationNode(OSDictionary* list, OSString* model = 0);
-    static OSDictionary* makeConfigurationNode(OSDictionary* list, OSString* model = 0);
-
-private:   
-    // set plist dictionary parameters
-    void setParamPropertiesGated(OSDictionary* dict);
-    
+private:
 protected:
     // parse codec power state from ioreg
     void parseCodecPowerState();
-    
-    // handle codec verb command and read response
-    void setStatus(UInt32 cmd);
-    void getStatus(UInt32 cmd);
-    void clearIRV();
-    
+	
     // set the state of EAPD on outputs
-    void setOutputs(UInt8 logicLevel);
+    void setOutputs(unsigned char logicLevel);
     
     // reset codec
-    void performCodecReset ();
+    void performCodecReset();
     
     IOWorkLoop*			fWorkLoop;		// our workloop
     IOTimerEventSource* fTimer;	// used to simulate capture hardware
