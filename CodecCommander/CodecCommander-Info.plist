@@ -7,7 +7,7 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2013-2014 TimeWalker/RehabMan. All rights reserved.</string>
 	<key>CFBundleGetInfoString</key>
-	<string>2.2.0, Copyright © 2013-2014 TimeWalker. All rights reserved.</string>
+	<string>${MODULE_VERSION}, Copyright © 2013-2014 TimeWalker. All rights reserved.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
@@ -48,6 +48,8 @@
 			<dict>
 				<key>Default</key>
 				<dict>
+					<key>Update Nodes</key>
+					<true/>
 					<key>Custom Commands</key>
 					<array>
 						<dict>

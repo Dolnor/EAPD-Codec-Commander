@@ -72,7 +72,7 @@ bool CodecCommander::init(OSDictionary *dictionary)
  ******************************************************************************/
 bool CodecCommander::start(IOService *provider)
 {
-    IOLog("CodecCommander: Version 2.2.0 starting.\n");
+    IOLog("CodecCommander: Version 2.2.1 starting.\n");
 
     if (!provider || !super::start(provider))
 	{
@@ -90,32 +90,53 @@ bool CodecCommander::start(IOService *provider)
     }
     else
     {
-        DEBUG_LOG("CodecCommander: Device \"%s\" is unreachable.\n", mConfiguration->getHDADevicePath());
+        DEBUG_LOG("CodecCommander: Device \"%s\" is unreachable, start aborted.\n", mConfiguration->getHDADevicePath());
         return false;
     }
 	
-    IOSleep(300); // need to wait a bit until codec can actually respond to immediate verbs
-    int k = 0; // array index
-	
-    // Fetch Pin Capabilities from the range of nodes
-    DEBUG_LOG("CodecCommander: Getting EAPD supported node list (limited to %d)\n", MAX_EAPD_NODES);
-	
-	for (int nodeId = mIntelHDA->getStartingNode(); nodeId <= mIntelHDA->getTotalNodes(); nodeId++)
+	if (mConfiguration->getUpdateNodes())
 	{
-		unsigned int response = mIntelHDA->SendCommand(nodeId, HDA_VERB_GET_PARAM, HDA_PARM_PINCAP);
+		IOSleep(mConfiguration->getSendDelay()); // need to wait a bit until codec can actually respond to immediate verbs
+		int k = 0; // array index
+	
+		// Fetch Pin Capabilities from the range of nodes
+		DEBUG_LOG("CodecCommander: Getting EAPD supported node list (limited to %d)\n", MAX_EAPD_NODES);
+	
+		for (int nodeId = mIntelHDA->getStartingNode(); nodeId <= mIntelHDA->getTotalNodes(); nodeId++)
+		{
+			unsigned int response = mIntelHDA->SendCommand(nodeId, HDA_VERB_GET_PARAM, HDA_PARM_PINCAP);
 		
-		if (response == -1)
-		{
-			DEBUG_LOG("Failed to retrieve pin capabilities for node 0x%02x.\n", nodeId);
-			continue;
-		}
+			if (response == -1)
+			{
+				DEBUG_LOG("CodecCommander: Failed to retrieve pin capabilities for node 0x%02x.\n", nodeId);
+				continue;
+			}
 
-		// if bit 16 is set in pincap - node supports EAPD
-		if (HDA_PINCAP_IS_EAPD_CAPABLE(response))
+			// if bit 16 is set in pincap - node supports EAPD
+			if (HDA_PINCAP_IS_EAPD_CAPABLE(response))
+			{
+				eapdCapableNodes[k] = nodeId;
+				k++;
+				IOLog("CodecCommander: NID=0x%02x supports EAPD, will update state after sleep\n", nodeId);
+			}
+		}
+	
+		IOLog("CodecCommander:: Set 0x0A result: 0x%08x\n", mIntelHDA->SendCommand(0x0A, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
+		IOLog("CodecCommander:: Set 0x0B result: 0x%08x\n", mIntelHDA->SendCommand(0x0B, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
+		IOLog("CodecCommander:: Set 0x0C result: 0x%08x\n", mIntelHDA->SendCommand(0x0C, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
+	
+		for (int nodeId = mIntelHDA->getStartingNode(); nodeId <= mIntelHDA->getTotalNodes(); nodeId++)
 		{
-			eapdCapableNodes[k] = nodeId;
-			k++;
-			IOLog("CodecCommander: NID=0x%02x supports EAPD, will update state after sleep\n", nodeId);
+			unsigned short payload = HDA_PARM_AMP_GAIN_GET(0, 1, 1);//AC_AMP_GET_OUTPUT | AC_AMP_GET_LEFT;
+			unsigned int response = mIntelHDA->SendCommand(nodeId, HDA_VERB_GET_AMP_GAIN, payload);
+		
+			if (response == -1)
+			{
+				DEBUG_LOG("Failed to retrieve amp gain settings for node 0x%02x.\n", nodeId);
+				continue;
+			}
+		
+			IOLog("CodecCommander:: [Amp Gain] Node: 0x%04x, Response: 0x%08x\n", nodeId, response);
 		}
 	}
 	
@@ -192,6 +213,8 @@ void CodecCommander::parseCodecPowerState()
 			// if hda codec changed power state
 			if (hdaCurrentPowerState != hdaPrevPowerState)
 			{
+				DEBUG_LOG("CodecCommander: cc - power state transition from %d to %d recorded\n", hdaPrevPowerState, hdaCurrentPowerState);
+				
 				// store current power state as previous state for next workloop cycle
 				hdaPrevPowerState = hdaCurrentPowerState;
 				// notify about codec power loss state
@@ -222,7 +245,7 @@ void CodecCommander::onTimerAction()
     parseCodecPowerState();
 	
     // if no power after semi-sleep (fugue) state and power was restored - set EAPD bit
-    if (eapdPoweredDown && (hdaCurrentPowerState == 0x1 || hdaCurrentPowerState == 0x2))
+	if (eapdPoweredDown && hdaCurrentPowerState != 0x0)
     {
         DEBUG_LOG("CodecCommander: cc: --> hda codec power restored\n");
 		handleStateChange(kStateWake);
@@ -239,12 +262,16 @@ void CodecCommander::handleStateChange(CodecCommanderState newState)
 	switch (newState)
 	{
 		case kStateSleep:
-			setEAPD(0x0);
+			if (mConfiguration->getUpdateNodes())
+				setEAPD(0x0);
+			
 			customCommands(newState);
 			break;
 		case kStateWake:
+			if (mConfiguration->getUpdateNodes())
+				setEAPD(0x02);
+			
 			customCommands(newState);
-			setEAPD(0x02);
 			break;
 		case kStateInit:
 			customCommands(newState);
@@ -347,7 +374,7 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 	{
         DEBUG_LOG("CodecCommander: cc: --> awake\n");
 
-        // issue codec reset at wake
+        // issue codec reset at wake and cold boot
         performCodecReset();
         
         if (eapdPoweredDown)

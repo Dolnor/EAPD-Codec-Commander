@@ -38,6 +38,7 @@ class Configuration
     CustomCommand mCustomCommands[MAX_CUSTOM_COMMANDS];
     
     bool mCheckInfinite;
+    bool mUpdateNodes;
     unsigned char mCodecNumber;
     unsigned short mSendDelay, mUpdateInterval;
     
@@ -45,6 +46,7 @@ class Configuration
         const char * getHDADevicePath();
         const char * getHDADriverPath();
         unsigned char getCodecNumber();
+        bool getUpdateNodes();
         unsigned short getSendDelay();
         bool getCheckInfinite();
         unsigned short getInterval();

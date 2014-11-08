@@ -28,6 +28,7 @@
 #define kCodecAddressNumber         "Codec Address Number"
 
 // Constants for EAPD command verb sending
+#define kUpdateNodes                "Update Nodes"
 #define kSendDelay                  "Send Delay"
 
 // Workloop required and Workloop timer aka update interval, ms
@@ -49,10 +50,6 @@ Configuration::Configuration(OSDictionary* dictionary)
     // Retrieve platform profile configuration
     OSDictionary* list = OSDynamicCast(OSDictionary, dictionary->getObject(kPlatformProfile));
     OSDictionary* config = Configuration::loadConfiguration(list);
-    
-    // Initialize default values
-    mCheckInfinite = false;
-    mCodecNumber = 1;
    
     // Get HDA device location address
     if (OSString* str = OSDynamicCast(OSString, config->getObject(kHDEFLocation)))
@@ -69,6 +66,9 @@ Configuration::Configuration(OSDictionary* dictionary)
     // Get codec address number
     if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kCodecAddressNumber)))
         mCodecNumber = num->unsigned8BitValue();
+    else
+        // Default to codec number 0
+        mCodecNumber = 0;
     
     // set path for ioreg entries
     snprintf(mHDADevicePath, sizeof(mHDADevicePath),
@@ -86,6 +86,15 @@ Configuration::Configuration(OSDictionary* dictionary)
     // Get delay for sending the verb
     if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kSendDelay)))
         mSendDelay = num->unsigned16BitValue();
+    else
+        // Default to 3000
+        mSendDelay = 3000;
+    
+    if (OSBoolean* bl = OSDynamicCast(OSBoolean, config->getObject(kUpdateNodes)))
+        mUpdateNodes = bl->getValue();
+    else
+        // Default to true
+        mUpdateNodes = true;
     
     // Determine if infinite check is needed (for 10.9 and up)
     if (OSBoolean* bl = OSDynamicCast(OSBoolean, config->getObject(kCheckInfinitely)))
@@ -99,6 +108,9 @@ Configuration::Configuration(OSDictionary* dictionary)
                 mUpdateInterval = num->unsigned16BitValue();
         }
     }
+    else
+        // Default to false
+        mCheckInfinite = false;
     
     if (OSArray* list = OSDynamicCast(OSArray, config->getObject(kCustomCommands)))
     {
@@ -202,6 +214,11 @@ const char * Configuration::getHDADriverPath()
 unsigned char Configuration::getCodecNumber()
 {
     return mCodecNumber;
+}
+
+bool Configuration::getUpdateNodes()
+{
+    return mUpdateNodes;
 }
 
 unsigned short Configuration::getSendDelay()
