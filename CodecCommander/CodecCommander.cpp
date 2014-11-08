@@ -111,7 +111,7 @@ bool CodecCommander::start(IOService *provider)
 		}
 
 		// if bit 16 is set in pincap - node supports EAPD
-		if (((response & 0xFF0000) >> 16) == 1)
+		if (HDA_PINCAP_IS_EAPD_CAPABLE(response))
 		{
 			eapdCapableNodes[k] = nodeId;
 			k++;

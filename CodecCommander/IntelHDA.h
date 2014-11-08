@@ -93,15 +93,18 @@
 #define HDA_PARM_PS_D3_HOT	(unsigned char)0x03 // Powerstate D3Hot
 #define HDA_PARM_PS_D3_COLD (unsignec char)0x04	// Powerstate D3Cold
 
-#define HDA_ICS_IS_BUSY(status) ((status & 0x01) == 1)
-#define HDA_ICS_IS_VALID(status) (((status & 0x02) >> 1) == 1)
+// Dynamic payload parameters
+#define HDA_PARM_AMP_GAIN_GET(Index, Left, Output) \
+	(unsigned short)((Output & 0x1) << 15 | (Left & 0x01) << 13 | Index & 0xF) // Get Amp gain / mute
 
-#define HDA_CMD_AMP_GAIN_GET(Index, Left, Output) \
-	(unsigned short)((Output & 0x1) << 15 | (Left & 0x01) << 13 | Index & 0xF)
-
-#define HDA_CMD_AMP_GAIN_SET(Gain, Mute, Index, SetRight, SetLeft, SetInput, SetOutput) \
+#define HDA_PARM_AMP_GAIN_SET(Gain, Mute, Index, SetRight, SetLeft, SetInput, SetOutput) \
 	(unsigned short)((SetOutput & 0x01) << 15 | (SetInput & 0x01) << 14 | (SetLeft & 0x01) << 13 | (SetRight & 0x01) << 12 | \
-    (Index & 0xF) << 8 | (Mute & 0x1) << 7 | Gain & 0x7F)
+    (Index & 0xF) << 8 | (Mute & 0x1) << 7 | Gain & 0x7F) // Set Amp gain / mute
+
+#define HDA_ICS_IS_BUSY(status) ((status & 0x01) == 1) // Determine Immediate Command Busy (ICB) of Immediate Command Status (ICS)
+#define HDA_ICS_IS_VALID(status) (((status & 0x02) >> 1) == 1) // Determine Immediate Result Valid (IRV) of Immediate Command Status (ICS)
+
+#define HDA_PINCAP_IS_EAPD_CAPABLE(capabilities) (((capabilities & 0xFF0000) >> 16) == 1) // Determine if this Pin widget capabilities is marked EAPD capable
 
 // Global Capabilities response
 struct HDA_GCAP
