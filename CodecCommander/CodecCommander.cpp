@@ -120,24 +120,6 @@ bool CodecCommander::start(IOService *provider)
 				IOLog("CodecCommander: NID=0x%02x supports EAPD, will update state after sleep\n", nodeId);
 			}
 		}
-	
-		IOLog("CodecCommander:: Set 0x0A result: 0x%08x\n", mIntelHDA->SendCommand(0x0A, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
-		IOLog("CodecCommander:: Set 0x0B result: 0x%08x\n", mIntelHDA->SendCommand(0x0B, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
-		IOLog("CodecCommander:: Set 0x0C result: 0x%08x\n", mIntelHDA->SendCommand(0x0C, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
-	
-		for (int nodeId = mIntelHDA->getStartingNode(); nodeId <= mIntelHDA->getTotalNodes(); nodeId++)
-		{
-			unsigned short payload = HDA_PARM_AMP_GAIN_GET(0, 1, 1);//AC_AMP_GET_OUTPUT | AC_AMP_GET_LEFT;
-			unsigned int response = mIntelHDA->SendCommand(nodeId, HDA_VERB_GET_AMP_GAIN, payload);
-		
-			if (response == -1)
-			{
-				DEBUG_LOG("Failed to retrieve amp gain settings for node 0x%02x.\n", nodeId);
-				continue;
-			}
-		
-			IOLog("CodecCommander:: [Amp Gain] Node: 0x%04x, Response: 0x%08x\n", nodeId, response);
-		}
 	}
 	
 	// Execute any custom commands registered for initialization
