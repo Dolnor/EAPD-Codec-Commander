@@ -85,7 +85,7 @@ bool CodecCommander::start(IOService *provider)
 	
     if (hdaDeviceEntry != NULL)
     {
-		mIntelHDA = new IntelHDA(hdaDeviceEntry, mConfiguration->getCodecNumber());
+		mIntelHDA = new IntelHDA(hdaDeviceEntry, PIO, mConfiguration->getCodecNumber());
 		OSSafeRelease(hdaDeviceEntry);
     }
     else
@@ -290,7 +290,7 @@ void CodecCommander::setEAPD(unsigned char logicLevel)
         IOSleep(mConfiguration->getSendDelay());
 	
     // for nodes supporting EAPD bit 1 in logicLevel defines EAPD logic state: 1 - enable, 0 - disable
-    for (int i = 0; i <= sizeof(eapdCapableNodes) / sizeof(eapdCapableNodes[0]); i++)
+    for (int i = 0; i < MAX_EAPD_NODES; i++)
 	{
         if (eapdCapableNodes[i] != 0)
 			mIntelHDA->SendCommand(eapdCapableNodes[i], HDA_VERB_EAPDBTL_SET, logicLevel);

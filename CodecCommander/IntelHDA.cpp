@@ -19,8 +19,9 @@
 
 #include "IntelHDA.h"
 
-IntelHDA::IntelHDA(IORegistryEntry *ioRegistryEntry, char codecAddress)
+IntelHDA::IntelHDA(IORegistryEntry *ioRegistryEntry, HDACommandMode commandMode, char codecAddress)
 {
+    mCommandMode = commandMode;
     mCodecAddress = codecAddress;
     
     if (ioRegistryEntry == NULL)
@@ -51,8 +52,8 @@ IntelHDA::IntelHDA(IORegistryEntry *ioRegistryEntry, char codecAddress)
 
 IntelHDA::~IntelHDA()
 {
-    //if (mService)
-    //    mService->release();
+    //OSSafeReleaseNULL(mDeviceMemory);
+    //OSSafeReleaseNULL(mService);
 }
 
 unsigned short IntelHDA::getVendorId()
@@ -107,13 +108,14 @@ unsigned int IntelHDA::SendCommand(unsigned int command)
         return -1;
     
     DEBUG_LOG("IntelHDA::SendCommand: 0x%08x\n", fullCommand);
-    
-    return this->ExecutePIO(fullCommand);
-    
+  
     switch (mCommandMode)
     {
-        PIO:
+        case PIO:
             return this->ExecutePIO(fullCommand);
+        case DMA:
+            IOLog("IntelHDA: Unsupported command mode DMA requested.\n");
+            return -1;
         default:
             return -1;
     }

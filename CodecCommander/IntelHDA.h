@@ -119,8 +119,7 @@ struct HDA_ICS
 enum HDACommandMode
 {
 	PIO,
-	DMA,
-	RingBuffer
+	DMA	
 };
 
 class IntelHDA
@@ -136,7 +135,7 @@ class IntelHDA
 	
 	public:
 		// Constructor
-		IntelHDA(IORegistryEntry *ioRegistryEntry, char codecAddress);
+		IntelHDA(IORegistryEntry *ioRegistryEntry, HDACommandMode commandMode, char codecAddress);
 		// Destructor
 		~IntelHDA();
 	
