@@ -37,16 +37,26 @@ enum
 	kPowerStateCount
 };
 
+enum CodecCommanderState
+{
+	kStateSleep,
+	kStateWake,
+	kStateInit
+};
+
 class CodecCommander : public IOService
 {
 	Configuration *mConfiguration = NULL;
 	IntelHDA *mIntelHDA = NULL;
 	
+	IOWorkLoop*			mWorkLoop = NULL;
+	IOTimerEventSource* mTimer = NULL;
+	
     typedef IOService super;
 	OSDeclareDefaultStructors(CodecCommander)
 
 public:
-    // standart IOKit methods
+    // standard IOKit methods
 	virtual bool init(OSDictionary *dictionary = 0);
     virtual bool start(IOService *provider);
 	virtual void stop(IOService *provider);
@@ -61,18 +71,19 @@ public:
     //power management event
     virtual IOReturn setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker);
 private:
-protected:
-    // parse codec power state from ioreg
-    void parseCodecPowerState();
+	void handleStateChange(CodecCommanderState newState);
 	
-    // set the state of EAPD on outputs
-    void setOutputs(unsigned char logicLevel);
-    
-    // reset codec
-    void performCodecReset();
-    
-    IOWorkLoop*			fWorkLoop;		// our workloop
-    IOTimerEventSource* fTimer;	// used to simulate capture hardware
+	// parse codec power state from ioreg
+	void parseCodecPowerState();
+	
+	// set the state of EAPD on outputs
+	void setEAPD(unsigned char logicLevel);
+	
+	// reset codec
+	void performCodecReset();
+	
+	// execute configured custom commands
+	void customCommands(CodecCommanderState newState);
 };
 
 #endif // __CodecCommander__

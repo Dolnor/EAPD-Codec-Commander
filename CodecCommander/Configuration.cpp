@@ -23,15 +23,23 @@
 #define kPlatformProfile            "Platform Profile"
 #define kDefault                    "Default"
 
-// Constants for EAPD command verb sending
+// Constants for Intel HDA
 #define kHDEFLocation               "HDEF Device Location"
 #define kCodecAddressNumber         "Codec Address Number"
-#define kSendDelay                  "Send Delay"
-#define kCustomVerbs                "Custom Verbs"
 
-// Workloop requred and Workloop timer aka update interval, ms
+// Constants for EAPD command verb sending
+#define kSendDelay                  "Send Delay"
+
+// Workloop required and Workloop timer aka update interval, ms
 #define kCheckInfinitely            "Check Infinitely"
 #define kCheckInterval              "Check Interval"
+
+// Constants for custom commands
+#define kCustomCommands             "Custom Commands"
+#define kCustomCommand              "Command"
+#define kCommandOnInit              "On Init"
+#define kCommandOnSleep             "On Sleep"
+#define kCommandOnWake              "On Wake"
 
 Configuration::Configuration(OSDictionary* dictionary)
 {
@@ -92,20 +100,40 @@ Configuration::Configuration(OSDictionary* dictionary)
         }
     }
     
-    if (OSArray* list = OSDynamicCast(OSArray, config->getObject(kCustomVerbs)))
+    if (OSArray* list = OSDynamicCast(OSArray, config->getObject(kCustomCommands)))
     {
         OSCollectionIterator* iterator = OSCollectionIterator::withCollection(list);
         
         iterator->reset();
         int k = 0;
         
-        while (OSNumber* number = (OSNumber *)iterator->getNextObject())
+        while (OSDictionary* dict = OSDynamicCast(OSDictionary, iterator->getNextObject()))
         {
-            if (!OSDynamicCast(OSNumber, number))
-                continue;
+            if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kCustomCommand)))
+            {
+                // Command should be != 0
+                if (num->unsigned32BitValue() > 0)
+                {
+                    mCustomCommands[k].Command = num->unsigned32BitValue();
             
-            mCustomVerbs[k] = number->unsigned32BitValue();
-            k++;
+                    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCommandOnInit)))
+                        mCustomCommands[k].OnInit = bl->getValue();
+                    else
+                        mCustomCommands[k].OnInit = false;
+                    
+                    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCommandOnSleep)))
+                        mCustomCommands[k].OnSleep = bl->getValue();
+                    else
+                        mCustomCommands[k].OnSleep = false;
+            
+                    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCommandOnWake)))
+                        mCustomCommands[k].OnWake = bl->getValue();
+                    else
+                        mCustomCommands[k].OnWake = false;
+                
+                    k++;
+                }
+            }
         }
         
         OSSafeRelease(iterator);
@@ -191,9 +219,9 @@ unsigned short Configuration::getInterval()
     return mUpdateInterval;
 }
 
-unsigned int* Configuration::getCustomVerbs()
+CustomCommand* Configuration::getCustomCommands()
 {
-    return mCustomVerbs;
+    return mCustomCommands;
 }
 
 /******************************************************************************

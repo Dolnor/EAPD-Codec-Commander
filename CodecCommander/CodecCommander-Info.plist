@@ -48,9 +48,20 @@
 			<dict>
 				<key>Default</key>
 				<dict>
-					<key>Custom Verbs</key>
+					<key>Custom Commands</key>
 					<array>
-						<integer>983040</integer>
+						<dict>
+							<key>Command</key>
+							<integer>983040</integer>
+							<key>Comment</key>
+							<string>Test command (Vendor Info)</string>
+							<key>On Init</key>
+							<true/>
+							<key>On Sleep</key>
+							<true/>
+							<key>On Wake</key>
+							<true/>
+						</dict>
 					</array>
 					<key>HDEF Device Location</key>
 					<string>1B</string>

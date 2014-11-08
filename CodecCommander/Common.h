@@ -32,4 +32,7 @@
 #include <IOKit/IODeviceTreeSupport.h>
 #include <IOKit/IOCommandGate.h>
 
+#define MAX_EAPD_NODES 5
+#define MAX_CUSTOM_COMMANDS 32
+
 #endif

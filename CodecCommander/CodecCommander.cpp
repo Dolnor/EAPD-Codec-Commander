@@ -29,7 +29,7 @@ void* _org_rehabman_dontstrip_[] =
 };
 
 // Define variables for EAPD state updating
-UInt8 eapdCapableNodes[5];
+UInt8 eapdCapableNodes[MAX_EAPD_NODES];
 
 bool eapdPoweredDown, coldBoot;
 unsigned char hdaCurrentPowerState, hdaPrevPowerState;
@@ -56,8 +56,8 @@ bool CodecCommander::init(OSDictionary *dictionary)
 	
 	mConfiguration = new Configuration(dictionary);
 	
-    fWorkLoop = 0;
-    fTimer = 0;
+    mWorkLoop = NULL;
+    mTimer = NULL;
     
     eapdPoweredDown = true;
     coldBoot = true; // assume booting from cold since hibernate is broken on most hacks
@@ -98,7 +98,7 @@ bool CodecCommander::start(IOService *provider)
     int k = 0; // array index
 	
     // Fetch Pin Capabilities from the range of nodes
-    DEBUG_LOG("CodecCommander: Getting EAPD supported node list (limited to 5)\n");
+    DEBUG_LOG("CodecCommander: Getting EAPD supported node list (limited to %d)\n", MAX_EAPD_NODES);
 	
 	for (int nodeId = mIntelHDA->getStartingNode(); nodeId <= mIntelHDA->getTotalNodes(); nodeId++)
 	{
@@ -119,6 +119,9 @@ bool CodecCommander::start(IOService *provider)
 		}
 	}
 	
+	// Execute any custom commands registered for initialization
+	handleStateChange(kStateInit);
+	
     // notify about extra feature requests
     if (mConfiguration->getCheckInfinite())
         DEBUG_LOG("CodecCommander: Infinite workloop requested, will start now!\n");
@@ -129,14 +132,14 @@ bool CodecCommander::start(IOService *provider)
 	provider->joinPMtree(this);
     
     // setup workloop and timer
-    fWorkLoop = IOWorkLoop::workLoop();
-    fTimer = IOTimerEventSource::timerEventSource(this,
+    mWorkLoop = IOWorkLoop::workLoop();
+    mTimer = IOTimerEventSource::timerEventSource(this,
                                                   OSMemberFunctionCast(IOTimerEventSource::Action, this,
                                                   &CodecCommander::onTimerAction));
-    if (!fWorkLoop || !fTimer)
+    if (!mWorkLoop || !mTimer)
         stop(provider);;
     
-    if (fWorkLoop->addEventSource(fTimer) != kIOReturnSuccess)
+    if (mWorkLoop->addEventSource(mTimer) != kIOReturnSuccess)
         stop(provider);
     
 	this->registerService(0);
@@ -151,10 +154,10 @@ void CodecCommander::stop(IOService *provider)
     DEBUG_LOG("CodecCommander: Stopping...\n");
     
     // if workloop is active - release it
-    fTimer->cancelTimeout();
-    fWorkLoop->removeEventSource(fTimer);
-    OSSafeReleaseNULL(fTimer);// disable outstanding calls
-    OSSafeReleaseNULL(fWorkLoop);
+    mTimer->cancelTimeout();
+    mWorkLoop->removeEventSource(mTimer);
+    OSSafeReleaseNULL(mTimer);// disable outstanding calls
+    OSSafeReleaseNULL(mWorkLoop);
 
 	// Free IntelHDA engine
 	mIntelHDA->~IntelHDA();
@@ -195,7 +198,7 @@ void CodecCommander::parseCodecPowerState()
 				if (hdaCurrentPowerState == 0x0)
 				{
 					DEBUG_LOG("CodecCommander: HDA codec lost power\n");
-					setOutputs(0x0); // power down EAPDs properly
+					handleStateChange(kStateSleep); // power down EAPDs properly
 					eapdPoweredDown = true;
 					coldBoot = false; //codec entered fugue state or sleep - no longer a cold boot
 				}
@@ -222,16 +225,62 @@ void CodecCommander::onTimerAction()
     if (eapdPoweredDown && (hdaCurrentPowerState == 0x1 || hdaCurrentPowerState == 0x2))
     {
         DEBUG_LOG("CodecCommander: cc: --> hda codec power restored\n");
-        setOutputs(0x2);
+		handleStateChange(kStateWake);
     }
     
-    fTimer->setTimeoutMS(mConfiguration->getInterval());
+    mTimer->setTimeoutMS(mConfiguration->getInterval());
+}
+
+/******************************************************************************
+ * CodecCommander::handleStateChange - handles transitioning from one state to another, i.e. sleep --> wake
+ ******************************************************************************/
+void CodecCommander::handleStateChange(CodecCommanderState newState)
+{
+	switch (newState)
+	{
+		case kStateSleep:
+			setEAPD(0x0);
+			customCommands(newState);
+			break;
+		case kStateWake:
+			customCommands(newState);
+			setEAPD(0x02);
+			break;
+		case kStateInit:
+			customCommands(newState);
+			break;
+	}
+	
+}
+
+/******************************************************************************
+ * CodecCommander::customCommands - fires all configured custom commands
+ ******************************************************************************/
+void CodecCommander::customCommands(CodecCommanderState newState)
+{
+	CustomCommand* customCommands = mConfiguration->getCustomCommands();
+	
+	for (int i = 0; i < MAX_CUSTOM_COMMANDS; i++)
+	{
+		CustomCommand customCommand = customCommands[i];
+		
+		if (customCommand.Command == 0)
+			break;
+		
+		if ((customCommand.OnInit == (newState == kStateInit)) ||
+		   (customCommand.OnWake == (newState == kStateWake)) ||
+		   (customCommand.OnSleep == (newState == kStateSleep)))
+		{
+			DEBUG_LOG("CodecCommander: cc: --> custom command 0x%08x\n", customCommand.Command);
+			mIntelHDA->SendCommand(customCommand.Command);
+		}
+	}
 }
 
 /******************************************************************************
  * CodecCommander::setOutputs - set EAPD status bit on SP/HP
  ******************************************************************************/
-void CodecCommander::setOutputs(unsigned char logicLevel)
+void CodecCommander::setEAPD(unsigned char logicLevel)
 {
     // delay by at least 100ms, otherwise first immediate command won't be received
     // some codecs will produce loud pop when EAPD is enabled too soon, need custom delay until codec inits
@@ -246,16 +295,6 @@ void CodecCommander::setOutputs(unsigned char logicLevel)
         if (eapdCapableNodes[i] != 0)
 			mIntelHDA->SendCommand(eapdCapableNodes[i], HDA_VERB_EAPDBTL_SET, logicLevel);
     }
-	
-	unsigned int* customVerbs = mConfiguration->getCustomVerbs();
-	
-	for (int i = 0; i < 32; i++)
-	{
-		if (customVerbs[i] == 0)
-			break;
-		
-		mIntelHDA->SendCommand(customVerbs[i]);
-	}
 	
 	eapdPoweredDown = false;
 }
@@ -300,7 +339,7 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
     if (kPowerStateSleep == powerStateOrdinal)
 	{
         DEBUG_LOG("CodecCommander: cc: --> asleep\n");
-        setOutputs(0x0); // set EAPD logic level 0 to cause EAPD to power off properly
+		handleStateChange(kStateSleep); // set EAPD logic level 0 to cause EAPD to power off properly
         eapdPoweredDown = true;  // now it's powered down for sure
         coldBoot = false;
 	}
@@ -313,17 +352,17 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
         
         if (eapdPoweredDown)
             // set EAPD bit at wake or cold boot
-            setOutputs(0x2);
+			handleStateChange(kStateWake);
 
         // if infinite checking requested
         if (mConfiguration->getCheckInfinite())
 		{
             // if checking infinitely then make sure to delay workloop
             if (coldBoot)
-                fTimer->setTimeoutMS(20000); // create a nasty 20sec delay for AudioEngineOutput to initialize
+                mTimer->setTimeoutMS(20000); // create a nasty 20sec delay for AudioEngineOutput to initialize
             // if we are waking it will be already initialized
             else
-                fTimer->setTimeoutMS(100); // so fire timer for workLoop almost immediately
+                mTimer->setTimeoutMS(100); // so fire timer for workLoop almost immediately
 
             DEBUG_LOG("CodecCommander: cc: --> workloop started\n");
         }

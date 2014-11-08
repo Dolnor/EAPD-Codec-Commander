@@ -22,12 +22,20 @@
 
 #include "Common.h"
 
+struct CustomCommand
+{
+    unsigned int Command; // 32-bit verb to execute (Codec Address will be filled in)
+    bool OnInit;          // Execute command on initialization
+    bool OnSleep;         // Execute command on sleep
+    bool OnWake;          // Execute command on wake
+};
+
 class Configuration
 {
     char mHDALocation[0x03];
     char mHDADevicePath[0x3F];
     char mHDADriverPath[0xBA];
-    unsigned int mCustomVerbs[32];
+    CustomCommand mCustomCommands[MAX_CUSTOM_COMMANDS];
     
     bool mCheckInfinite;
     unsigned char mCodecNumber;
@@ -41,7 +49,7 @@ class Configuration
         bool getCheckInfinite();
         unsigned short getInterval();
     
-        unsigned int* getCustomVerbs();
+        CustomCommand* getCustomCommands();
     
         // Constructor
         Configuration(OSDictionary* dictionary);    
