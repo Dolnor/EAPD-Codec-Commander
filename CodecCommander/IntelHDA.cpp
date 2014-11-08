@@ -91,54 +91,63 @@ unsigned char IntelHDA::getStartingNode()
 unsigned int IntelHDA::SendCommand(unsigned int nodeId, unsigned int verb, unsigned char payload)
 {
     DEBUG_LOG("IntelHDA::SendCommand: verb 0x%06x, payload 0x%02x.\n", verb, payload);
-    return this->SendCommand((nodeId << 20) | (verb << 8) | payload);
+    return this->SendCommand((nodeId & 0xFF) << 20 | (verb & 0xFFF) << 8 | payload);
 }
 
 unsigned int IntelHDA::SendCommand(unsigned int nodeId, unsigned int verb, unsigned short payload)
 {
-    DEBUG_LOG("IntelHDA::SendCommand: verb 0x%02x, payload 0x%08x.\n", verb, payload);
-    return this->SendCommand((nodeId << 20) | (verb << 12) | payload);
+    DEBUG_LOG("IntelHDA::SendCommand: verb 0x%02x, payload 0x%04x.\n", verb, payload);
+    return this->SendCommand((nodeId & 0xFF) << 20 | (verb & 0xF) << 16 | payload);
 }
 
 unsigned int IntelHDA::SendCommand(unsigned int command)
 {
-    unsigned int fullCommand = (mCodecAddress << 28) | (command & 0x0FFFFFFF);
+    unsigned int fullCommand = (mCodecAddress & 0xF) << 28 | (command & 0x0FFFFFFF);
     
     if (mDeviceMemory == NULL)
         return -1;
     
-    DEBUG_LOG("IntelHDA::SendCommand: 0x%08x\n", fullCommand);
+    DEBUG_LOG("IntelHDA::SendCommand: (w) --> 0x%08x\n", fullCommand);
   
+    unsigned int response = -1;
+    
     switch (mCommandMode)
     {
         case PIO:
-            return this->ExecutePIO(fullCommand);
+            response = this->ExecutePIO(fullCommand);
+            break;
         case DMA:
             IOLog("IntelHDA: Unsupported command mode DMA requested.\n");
-            return -1;
+            response = -1;
+            break;
         default:
-            return -1;
+            response = -1;
+            break;
     }
+    
+    DEBUG_LOG("IntelHDA::SendCommand: (r) <-- 0x%08x\n", response);
+    
+    return response;
 }
 
 unsigned int IntelHDA::ExecutePIO(unsigned int command)
 {
-    HDA_ICS hdaICS;
+    unsigned short status;
     
-    hdaICS.CommandBusy = 1;
+    status = 0x1; // Busy status
     
     for (int i = 0; i < 1000; i++)
     {
-        mDeviceMemory->readBytes(HDA_REG_ICS, &hdaICS, sizeof(HDA_ICS));
+        mDeviceMemory->readBytes(HDA_REG_ICS, &status, sizeof(status));
         
-        if (hdaICS.CommandBusy == 0)
+        if (!HDA_ICS_IS_BUSY(status))
             break;
         
         ::IODelay(100);
     }
     
     // HDA controller was not ready to receive PIO commands
-    if (hdaICS.CommandBusy == 1)
+    if (HDA_ICS_IS_BUSY(status))
     {
         DEBUG_LOG("IntelHDA::ExecutePIO timed out waiting for ICS readiness.\n");
         return -1;
@@ -149,25 +158,24 @@ unsigned int IntelHDA::ExecutePIO(unsigned int command)
     // Queue the verb for the HDA controller
     mDeviceMemory->writeBytes(HDA_REG_ICOI, &command, sizeof(command));
     
-    memset(&hdaICS, 0, sizeof(HDA_ICS));
-    hdaICS.CommandBusy = 1;
-    mDeviceMemory->writeBytes(HDA_REG_ICS, &hdaICS, sizeof(HDA_ICS));
+    status = 0x1; // Busy status
+    mDeviceMemory->writeBytes(HDA_REG_ICS, &status, sizeof(status));
     
     //DEBUG_LOG("IntelHDA::ExecutePIO Wrote verb and set ICB bit.\n");
     
     // Wait for HDA controller to return with a response
     for (int i = 0; i < 1000; i++)
     {
-        mDeviceMemory->readBytes(HDA_REG_ICS, &hdaICS, sizeof(HDA_ICS));
+        mDeviceMemory->readBytes(HDA_REG_ICS, &status, sizeof(status));
         
-        if (hdaICS.CommandBusy == 0)
+        if (!HDA_ICS_IS_BUSY(status))
             break;
         
         ::IODelay(100);
     }
     
     // Store the result validity while IRV is cleared
-    bool validResult = (hdaICS.ResultValid == 1);
+    bool validResult = HDA_ICS_IS_VALID(status);
     
     unsigned int response;
     
@@ -175,17 +183,14 @@ unsigned int IntelHDA::ExecutePIO(unsigned int command)
         mDeviceMemory->readBytes(HDA_REG_IRII, &response, sizeof(response));
     
     // Reset IRV
-    memset(&hdaICS, 0, sizeof(HDA_ICS));
-    hdaICS.ResultValid = 1;
-    mDeviceMemory->writeBytes(HDA_REG_ICS, &hdaICS, sizeof(HDA_ICS));
+    status = 0x02; // Valid, Non-busy status
+    mDeviceMemory->writeBytes(HDA_REG_ICS, &status, sizeof(status));
     
     if (!validResult)
     {
         DEBUG_LOG("IntelHDA::ExecutePIO Invalid result received.\n");
         return -1;
     }
-    
-    DEBUG_LOG("IntelHDA::ExecutePIO Command response 0x%08x\n", response);
     
     return response;
 }

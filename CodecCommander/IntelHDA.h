@@ -75,6 +75,9 @@
 #define HDA_VERB_EAPDBTL_SET	0x70C	// EAPD/BTL Enable Set
 #define HDA_VERB_RESET			0x7FF	// Function Reset Execute
 
+#define HDA_VERB_SET_AMP_GAIN	0x3		// Set Amp Gain / Mute
+#define HDA_VERB_GET_AMP_GAIN	0xB		// Get Amp Gain / Mute
+
 #define HDA_PARM_NULL		(unsigned char)0x00	// Empty or NULL payload
 
 #define HDA_PARM_VENDOR		(unsigned char)0x00 // Vendor ID
@@ -89,6 +92,16 @@
 #define HDA_PARM_PS_D2		(unsigned char)0x02 // Powerstate D2
 #define HDA_PARM_PS_D3_HOT	(unsigned char)0x03 // Powerstate D3Hot
 #define HDA_PARM_PS_D3_COLD (unsignec char)0x04	// Powerstate D3Cold
+
+#define HDA_ICS_IS_BUSY(status) ((status & 0x01) == 1)
+#define HDA_ICS_IS_VALID(status) (((status & 0x02) >> 1) == 1)
+
+#define HDA_CMD_AMP_GAIN_GET(Index, Left, Output) \
+	(unsigned short)((Output & 0x1) << 15 | (Left & 0x01) << 13 | Index & 0xF)
+
+#define HDA_CMD_AMP_GAIN_SET(Gain, Mute, Index, SetRight, SetLeft, SetInput, SetOutput) \
+	(unsigned short)((SetOutput & 0x01) << 15 | (SetInput & 0x01) << 14 | (SetLeft & 0x01) << 13 | (SetRight & 0x01) << 12 | \
+    (Index & 0xF) << 8 | (Mute & 0x1) << 7 | Gain & 0x7F)
 
 // Global Capabilities response
 struct HDA_GCAP
@@ -105,15 +118,6 @@ struct HDA_GCAP_EXT : HDA_GCAP
 {
 	unsigned char MinorVersion;
 	unsigned char MajorVersion;	
-};
-
-struct HDA_ICS
-{
-	unsigned short CommandBusy : 1;
-	unsigned short ResultValid : 1;
-	unsigned short CommandVersion : 1;
-	unsigned short ResponseUnsolicited : 1;
-	unsigned short ResponseAddress : 4;
 };
 
 enum HDACommandMode
