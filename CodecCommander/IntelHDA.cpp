@@ -56,65 +56,65 @@ IntelHDA::~IntelHDA()
     //OSSafeReleaseNULL(mService);
 }
 
-unsigned short IntelHDA::getVendorId()
+UInt16 IntelHDA::getVendorId()
 {
     if (mVendor == -1)
-        mVendor = this->SendCommand(0, HDA_VERB_GET_PARAM, HDA_PARM_VENDOR);
+        mVendor = this->sendCommand(0, HDA_VERB_GET_PARAM, HDA_PARM_VENDOR);
     
     return mVendor >> 16;
 }
 
-unsigned short IntelHDA::getDeviceId()
+UInt16 IntelHDA::getDeviceId()
 {
     if (mVendor == -1)
-        mVendor = this->SendCommand(0, HDA_VERB_GET_PARAM, HDA_PARM_VENDOR);
+        mVendor = this->sendCommand(0, HDA_VERB_GET_PARAM, HDA_PARM_VENDOR);
     
     return mVendor & 0xFFFF;
 }
 
-unsigned char IntelHDA::getTotalNodes()
+UInt8 IntelHDA::getTotalNodes()
 {
     if (mNodes == -1)
-        mNodes = this->SendCommand(1, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
+        mNodes = this->sendCommand(1, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
     
     return ((mNodes & 0x0000FF) >>  0) + 1;
 }
 
-unsigned char IntelHDA::getStartingNode()
+UInt8 IntelHDA::getStartingNode()
 {
     if (mNodes == -1)
-        mNodes = this->SendCommand(1, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
+        mNodes = this->sendCommand(1, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
     
     return (mNodes & 0xFF0000) >> 16;
 }
 
-unsigned int IntelHDA::SendCommand(unsigned int nodeId, unsigned int verb, unsigned char payload)
+UInt32 IntelHDA::sendCommand(UInt32 nodeId, UInt32 verb, UInt8 payload)
 {
     DEBUG_LOG("IntelHDA::SendCommand: verb 0x%06x, payload 0x%02x.\n", verb, payload);
-    return this->SendCommand((nodeId & 0xFF) << 20 | (verb & 0xFFF) << 8 | payload);
+    return this->sendCommand((nodeId & 0xFF) << 20 | (verb & 0xFFF) << 8 | payload);
 }
 
-unsigned int IntelHDA::SendCommand(unsigned int nodeId, unsigned int verb, unsigned short payload)
+UInt32 IntelHDA::sendCommand(UInt32 nodeId, UInt32 verb, UInt16 payload)
 {
     DEBUG_LOG("IntelHDA::SendCommand: verb 0x%02x, payload 0x%04x.\n", verb, payload);
-    return this->SendCommand((nodeId & 0xFF) << 20 | (verb & 0xF) << 16 | payload);
+    return this->sendCommand((nodeId & 0xFF) << 20 | (verb & 0xF) << 16 | payload);
 }
 
-unsigned int IntelHDA::SendCommand(unsigned int command)
+UInt32 IntelHDA::sendCommand(UInt32 command)
 {
-    unsigned int fullCommand = (mCodecAddress & 0xF) << 28 | (command & 0x0FFFFFFF);
+    UInt32 fullCommand = (mCodecAddress & 0xF) << 28 | (command & 0x0FFFFFFF);
     
     if (mDeviceMemory == NULL)
         return -1;
     
     DEBUG_LOG("IntelHDA::SendCommand: (w) --> 0x%08x\n", fullCommand);
   
-    unsigned int response = -1;
+    UInt32 response = -1;
     
     switch (mCommandMode)
     {
         case PIO:
-            response = this->ExecutePIO(fullCommand);
+            response = this->executePIO(fullCommand);
             break;
         case DMA:
             IOLog("IntelHDA: Unsupported command mode DMA requested.\n");
@@ -130,9 +130,9 @@ unsigned int IntelHDA::SendCommand(unsigned int command)
     return response;
 }
 
-unsigned int IntelHDA::ExecutePIO(unsigned int command)
+UInt32 IntelHDA::executePIO(UInt32 command)
 {
-    unsigned short status;
+    UInt16 status;
     
     status = 0x1; // Busy status
     
@@ -177,7 +177,7 @@ unsigned int IntelHDA::ExecutePIO(unsigned int command)
     // Store the result validity while IRV is cleared
     bool validResult = HDA_ICS_IS_VALID(status);
     
-    unsigned int response;
+    UInt32 response;
     
     if (validResult)
         mDeviceMemory->readBytes(HDA_REG_IRII, &response, sizeof(response));

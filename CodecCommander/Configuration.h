@@ -24,7 +24,7 @@
 
 struct CustomCommand
 {
-    unsigned int Command; // 32-bit verb to execute (Codec Address will be filled in)
+    UInt32 Command; // 32-bit verb to execute (Codec Address will be filled in)
     bool OnInit;          // Execute command on initialization
     bool OnSleep;         // Execute command on sleep
     bool OnWake;          // Execute command on wake
@@ -39,17 +39,17 @@ class Configuration
     
     bool mCheckInfinite;
     bool mUpdateNodes;
-    unsigned char mCodecNumber;
-    unsigned short mSendDelay, mUpdateInterval;
+    UInt8 mCodecNumber;
+    UInt16 mSendDelay, mUpdateInterval;
     
     public:
         const char * getHDADevicePath();
         const char * getHDADriverPath();
-        unsigned char getCodecNumber();
+        UInt8 getCodecNumber();
         bool getUpdateNodes();
-        unsigned short getSendDelay();
+        UInt16 getSendDelay();
         bool getCheckInfinite();
-        unsigned short getInterval();
+        UInt16 getInterval();
     
         CustomCommand* getCustomCommands();
     

@@ -78,27 +78,27 @@
 #define HDA_VERB_SET_AMP_GAIN	0x3		// Set Amp Gain / Mute
 #define HDA_VERB_GET_AMP_GAIN	0xB		// Get Amp Gain / Mute
 
-#define HDA_PARM_NULL		(unsigned char)0x00	// Empty or NULL payload
+#define HDA_PARM_NULL		(UInt8)0x00	// Empty or NULL payload
 
-#define HDA_PARM_VENDOR		(unsigned char)0x00 // Vendor ID
-#define HDA_PARM_REVISION	(unsigned char)0x02	// Revision ID
-#define HDA_PARM_NODECOUNT	(unsigned char)0x04	// Subordinate Node Count
-#define HDA_PARM_FUNCGRP	(unsigned char)0x05	// Function Group Type
-#define HDA_PARM_PINCAP		(unsigned char)0x0C	// Pin Capabilities
-#define HDA_PARM_PWRSTS		(unsigned char)0x0F	// Supported Power States
+#define HDA_PARM_VENDOR		(UInt8)0x00 // Vendor ID
+#define HDA_PARM_REVISION	(UInt8)0x02	// Revision ID
+#define HDA_PARM_NODECOUNT	(UInt8)0x04	// Subordinate Node Count
+#define HDA_PARM_FUNCGRP	(UInt8)0x05	// Function Group Type
+#define HDA_PARM_PINCAP		(UInt8)0x0C	// Pin Capabilities
+#define HDA_PARM_PWRSTS		(UInt8)0x0F	// Supported Power States
 
-#define HDA_PARM_PS_D0		(unsigned char)0x00 // Powerstate D0: Fully on
-#define HDA_PARM_PS_D1		(unsigned char)0x01 // Powerstate D1
-#define HDA_PARM_PS_D2		(unsigned char)0x02 // Powerstate D2
-#define HDA_PARM_PS_D3_HOT	(unsigned char)0x03 // Powerstate D3Hot
-#define HDA_PARM_PS_D3_COLD (unsignec char)0x04	// Powerstate D3Cold
+#define HDA_PARM_PS_D0		(UInt8)0x00 // Powerstate D0: Fully on
+#define HDA_PARM_PS_D1		(UInt8)0x01 // Powerstate D1
+#define HDA_PARM_PS_D2		(UInt8)0x02 // Powerstate D2
+#define HDA_PARM_PS_D3_HOT	(UInt8)0x03 // Powerstate D3Hot
+#define HDA_PARM_PS_D3_COLD (UInt8)0x04	// Powerstate D3Cold
 
 // Dynamic payload parameters
 #define HDA_PARM_AMP_GAIN_GET(Index, Left, Output) \
-	(unsigned short)((Output & 0x1) << 15 | (Left & 0x01) << 13 | Index & 0xF) // Get Amp gain / mute
+	(UInt16)((Output & 0x1) << 15 | (Left & 0x01) << 13 | Index & 0xF) // Get Amp gain / mute
 
 #define HDA_PARM_AMP_GAIN_SET(Gain, Mute, Index, SetRight, SetLeft, SetInput, SetOutput) \
-	(unsigned short)((SetOutput & 0x01) << 15 | (SetInput & 0x01) << 14 | (SetLeft & 0x01) << 13 | (SetRight & 0x01) << 12 | \
+	(UInt16)((SetOutput & 0x01) << 15 | (SetInput & 0x01) << 14 | (SetLeft & 0x01) << 13 | (SetRight & 0x01) << 12 | \
     (Index & 0xF) << 8 | (Mute & 0x1) << 7 | Gain & 0x7F) // Set Amp gain / mute
 
 #define HDA_ICS_IS_BUSY(status) ((status & 0x01) == 1) // Determine Immediate Command Busy (ICB) of Immediate Command Status (ICS)
@@ -109,18 +109,18 @@
 // Global Capabilities response
 struct HDA_GCAP
 {
-	unsigned short NumOutputStreamsSupported : 4;
-	unsigned short NumInputStreamsSupported : 4;
-	unsigned short NumBidirectionalStreamsSupported : 5;
-	unsigned short NumSerialDataOutSignals : 2;
-	unsigned short Supports64bits : 1;
+	UInt16 NumOutputStreamsSupported : 4;
+	UInt16 NumInputStreamsSupported : 4;
+	UInt16 NumBidirectionalStreamsSupported : 5;
+	UInt16 NumSerialDataOutSignals : 2;
+	UInt16 Supports64bits : 1;
 };
 
 // Global Capabilities & HDA Version response
 struct HDA_GCAP_EXT : HDA_GCAP
 {
-	unsigned char MinorVersion;
-	unsigned char MajorVersion;	
+	UInt8 MinorVersion;
+	UInt8 MajorVersion;	
 };
 
 enum HDACommandMode
@@ -137,8 +137,8 @@ class IntelHDA
 	char mCodecAddress;
 
 	// Read-once parameters
-	unsigned int mVendor = -1;
-	unsigned int mNodes = -1;
+	UInt32 mVendor = -1;
+	UInt32 mNodes = -1;
 	
 	public:
 		// Constructor
@@ -147,20 +147,20 @@ class IntelHDA
 		~IntelHDA();
 	
 		// 12-bit verb and 8-bit payload
-		unsigned int SendCommand(unsigned int nodeId, unsigned int verb, unsigned char payload);
+		UInt32 sendCommand(UInt32 nodeId, UInt32 verb, UInt8 payload);
 		// 4-bit verb and 16-bit payload
-		unsigned int SendCommand(unsigned int nodeId, unsigned int verb, unsigned short payload);
+		UInt32 sendCommand(UInt32 nodeId, UInt32 verb, UInt16 payload);
 	
 		// Send a raw command (verb and payload combined)
-		unsigned int SendCommand(unsigned int command);
+		UInt32 sendCommand(UInt32 command);
 	
-		unsigned short getVendorId();
-		unsigned short getDeviceId();
+		UInt16 getVendorId();
+		UInt16 getDeviceId();
 	
-		unsigned char getTotalNodes();
-		unsigned char getStartingNode();
+		UInt8 getTotalNodes();
+		UInt8 getStartingNode();
 	private:
-		unsigned int ExecutePIO(unsigned int command);
+		UInt32 executePIO(UInt32 command);
 };
 
 

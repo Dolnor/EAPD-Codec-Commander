@@ -32,7 +32,7 @@ void* _org_rehabman_dontstrip_[] =
 UInt8 eapdCapableNodes[MAX_EAPD_NODES];
 
 bool eapdPoweredDown, coldBoot;
-unsigned char hdaCurrentPowerState, hdaPrevPowerState;
+UInt8 hdaCurrentPowerState, hdaPrevPowerState;
 
 // Define usable power states
 static IOPMPowerState powerStateArray[ kPowerStateCount ] =
@@ -53,7 +53,7 @@ bool CodecCommander::init(OSDictionary *dictionary)
     
     if (!super::init(dictionary))
         return false;
-	
+		
 	mConfiguration = new Configuration(dictionary);
 	
     mWorkLoop = NULL;
@@ -104,7 +104,7 @@ bool CodecCommander::start(IOService *provider)
 	
 		for (int nodeId = mIntelHDA->getStartingNode(); nodeId <= mIntelHDA->getTotalNodes(); nodeId++)
 		{
-			unsigned int response = mIntelHDA->SendCommand(nodeId, HDA_VERB_GET_PARAM, HDA_PARM_PINCAP);
+			UInt32 response = mIntelHDA->sendCommand(nodeId, HDA_VERB_GET_PARAM, HDA_PARM_PINCAP);
 		
 			if (response == -1)
 			{
@@ -119,6 +119,24 @@ bool CodecCommander::start(IOService *provider)
 				k++;
 				IOLog("CodecCommander: NID=0x%02x supports EAPD, will update state after sleep\n", nodeId);
 			}
+		}
+	
+		IOLog("CodecCommander:: Set 0x0A result: 0x%08x\n", mIntelHDA->sendCommand(0x0A, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
+		IOLog("CodecCommander:: Set 0x0B result: 0x%08x\n", mIntelHDA->sendCommand(0x0B, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
+		IOLog("CodecCommander:: Set 0x0C result: 0x%08x\n", mIntelHDA->sendCommand(0x0C, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
+	
+		for (int nodeId = mIntelHDA->getStartingNode(); nodeId <= mIntelHDA->getTotalNodes(); nodeId++)
+		{
+			UInt16 payload = HDA_PARM_AMP_GAIN_GET(0, 1, 1);//AC_AMP_GET_OUTPUT | AC_AMP_GET_LEFT;
+			UInt32 response = mIntelHDA->sendCommand(nodeId, HDA_VERB_GET_AMP_GAIN, payload);
+		
+			if (response == -1)
+			{
+				DEBUG_LOG("Failed to retrieve amp gain settings for node 0x%02x.\n", nodeId);
+				continue;
+			}
+		
+			IOLog("CodecCommander:: [Amp Gain] Node: 0x%04x, Response: 0x%08x\n", nodeId, response);
 		}
 	}
 	
@@ -281,7 +299,7 @@ void CodecCommander::customCommands(CodecCommanderState newState)
 		   (customCommand.OnSleep == (newState == kStateSleep)))
 		{
 			DEBUG_LOG("CodecCommander: cc: --> custom command 0x%08x\n", customCommand.Command);
-			mIntelHDA->SendCommand(customCommand.Command);
+			mIntelHDA->sendCommand(customCommand.Command);
 		}
 	}
 }
@@ -289,7 +307,7 @@ void CodecCommander::customCommands(CodecCommanderState newState)
 /******************************************************************************
  * CodecCommander::setOutputs - set EAPD status bit on SP/HP
  ******************************************************************************/
-void CodecCommander::setEAPD(unsigned char logicLevel)
+void CodecCommander::setEAPD(UInt8 logicLevel)
 {
     // delay by at least 100ms, otherwise first immediate command won't be received
     // some codecs will produce loud pop when EAPD is enabled too soon, need custom delay until codec inits
@@ -302,7 +320,7 @@ void CodecCommander::setEAPD(unsigned char logicLevel)
     for (int i = 0; i < MAX_EAPD_NODES; i++)
 	{
         if (eapdCapableNodes[i] != 0)
-			mIntelHDA->SendCommand(eapdCapableNodes[i], HDA_VERB_EAPDBTL_SET, logicLevel);
+			mIntelHDA->sendCommand(eapdCapableNodes[i], HDA_VERB_EAPDBTL_SET, logicLevel);
     }
 	
 	eapdPoweredDown = false;
@@ -312,7 +330,7 @@ void CodecCommander::setEAPD(unsigned char logicLevel)
  * CodecCommander::performCodecReset - reset function group and set power to D3
  *****************************************************************************/
 
-void CodecCommander::performCodecReset ()
+void CodecCommander::performCodecReset()
 {
     /*
      Reset is created by sending two Function Group resets, potentially separated 
@@ -327,12 +345,12 @@ void CodecCommander::performCodecReset ()
     if (!coldBoot)
 	{
         DEBUG_LOG("CodecCommander: cc: --> resetting codec\n");
-		mIntelHDA->SendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
+		mIntelHDA->sendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
         IOSleep(100); // define smaller delays ????
-		mIntelHDA->SendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
+		mIntelHDA->sendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
         IOSleep(100);
         // forcefully set power state to D3
-		mIntelHDA->SendCommand(1, HDA_VERB_SET_PSTATE, HDA_PARM_PS_D3_HOT);
+		mIntelHDA->sendCommand(1, HDA_VERB_SET_PSTATE, HDA_PARM_PS_D3_HOT);
 		
         eapdPoweredDown = true;
         DEBUG_LOG("CodecCommander: cc: --> hda codec power restored\n");
@@ -378,4 +396,15 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
     }
     
     return IOPMAckImplied;
+}
+
+/******************************************************************************
+ * CodecCommander::executeCommand - Execute an external command
+ ******************************************************************************/
+UInt32 CodecCommander::executeCommand(UInt32 command)
+{
+	if (mIntelHDA)
+		return mIntelHDA->sendCommand(command);
+	
+	return -1;
 }

@@ -37,11 +37,19 @@ enum
 	kPowerStateCount
 };
 
+// Track audio codec state transitions
 enum CodecCommanderState
 {
 	kStateSleep,
 	kStateWake,
 	kStateInit
+};
+
+// External client methods
+enum
+{
+	kClientExecuteVerb = 0,
+	kClientNumMethods
 };
 
 class CodecCommander : public IOService
@@ -70,6 +78,8 @@ public:
     
     //power management event
     virtual IOReturn setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker);
+	
+	UInt32 executeCommand(UInt32 command);
 private:
 	void handleStateChange(CodecCommanderState newState);
 	
@@ -77,7 +87,7 @@ private:
 	void parseCodecPowerState();
 	
 	// set the state of EAPD on outputs
-	void setEAPD(unsigned char logicLevel);
+	void setEAPD(UInt8 logicLevel);
 	
 	// reset codec
 	void performCodecReset();
@@ -86,4 +96,34 @@ private:
 	void customCommands(CodecCommanderState newState);
 };
 
+class CodecCommanderClient : public IOUserClient
+{
+	/*
+	 * Declare the metaclass information that is used for runtime
+	 * typechecking of IOKit objects.
+	 */
+	OSDeclareDefaultStructors(CodecCommanderClient);
+	
+	private:
+		CodecCommander* mDriver;
+		task_t mTask;
+		SInt32 mOpenCount;
+	
+		static const IOExternalMethodDispatch sMethods[kClientNumMethods];
+	public:
+		/* IOService overrides */
+		virtual bool start(IOService* provider);
+		virtual void stop(IOService* provider);
+	
+		/* IOUserClient overrides */
+		virtual bool initWithTask(task_t owningTask, void * securityID, UInt32 type, OSDictionary* properties);
+		virtual IOReturn clientClose(void);
+	
+		virtual IOReturn externalMethod(uint32_t selector, IOExternalMethodArguments *arguments, IOExternalMethodDispatch* dispatch = 0,
+										OSObject* target = 0, void* reference = 0);
+	
+	
+		/* External methods */
+		static IOReturn executeVerb(CodecCommander* target, void* reference, IOExternalMethodArguments* arguments);
+};
 #endif // __CodecCommander__

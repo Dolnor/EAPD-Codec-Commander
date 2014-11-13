@@ -211,7 +211,7 @@ const char * Configuration::getHDADriverPath()
     return mHDADriverPath;
 }
 
-unsigned char Configuration::getCodecNumber()
+UInt8 Configuration::getCodecNumber()
 {
     return mCodecNumber;
 }
@@ -221,7 +221,7 @@ bool Configuration::getUpdateNodes()
     return mUpdateNodes;
 }
 
-unsigned short Configuration::getSendDelay()
+UInt16 Configuration::getSendDelay()
 {
     return mSendDelay;
 }
@@ -231,7 +231,7 @@ bool Configuration::getCheckInfinite()
     return mCheckInfinite;
 }
 
-unsigned short Configuration::getInterval()
+UInt16 Configuration::getInterval()
 {
     return mUpdateInterval;
 }
