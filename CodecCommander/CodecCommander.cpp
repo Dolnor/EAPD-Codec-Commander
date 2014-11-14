@@ -121,6 +121,7 @@ bool CodecCommander::start(IOService *provider)
 			}
 		}
 	
+/*
 		IOLog("CodecCommander:: Set 0x0A result: 0x%08x\n", mIntelHDA->sendCommand(0x0A, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
 		IOLog("CodecCommander:: Set 0x0B result: 0x%08x\n", mIntelHDA->sendCommand(0x0B, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
 		IOLog("CodecCommander:: Set 0x0C result: 0x%08x\n", mIntelHDA->sendCommand(0x0C, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
@@ -138,6 +139,7 @@ bool CodecCommander::start(IOService *provider)
 		
 			IOLog("CodecCommander:: [Amp Gain] Node: 0x%04x, Response: 0x%08x\n", nodeId, response);
 		}
+ */
 	}
 	
 	// Execute any custom commands registered for initialization
