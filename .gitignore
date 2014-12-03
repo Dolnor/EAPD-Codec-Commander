@@ -1,7 +1,9 @@
 Build
 DerivedData
 Distribute
-CodecCommander.xcodeproj/project.xcworkspace/xcuserdata
-CodecCommander.xcodeproj/xcuserdata
+CodecCommander/CodecCommander.xcodeproj/project.xcworkspace/xcuserdata
+CodecCommander/CodecCommander.xcodeproj/xcuserdata
+CodecCommanderClient/CodecCommanderClient.xcodeproj/project.xcworkspace/xcuserdata
+CodecCommanderClient/CodecCommanderClient.xcodeproj/xcuserdata
 *.xccheckout
 .DS_Store
