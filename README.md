@@ -90,6 +90,13 @@ Here:
 
 1 - Engine Output Number.
 
+Since codec can report EAPD capability for certain nodes, but EAPD may not actually physically be there (common case for most of desktop codecs) and your codec only needs to be reset, you can specify:
+
+					<key>Update Nodes</key>
+					<false/>
+
+in order to only cause codec reset at wake and prevent the kext from sending invalid verbs to nodes that don't really do anything useful. 
+
 ### Upon resuming from semi-sleep I lose audio
 
 Settings below help for fugue sleep introduced in 10.9, which you could break during 25 second delay and end up with disabled EAPD. Enable this setting if you find yourself interrupting fugue sleeps frequently :D 
@@ -103,6 +110,13 @@ Codec Commander will keep monitoring the codec power state transitions. If it’
 
 
 ### Changelog
+
+September 22, 2014 v2.2.1
+
+- Added customizable delay before getting node count from codec, adjust it if kext fails to start, especially on slower hardware (Intel Core 2 or Atoms)
+
+- Added the ability to cancel updating EAPD status on nodes, because even though node may report EAPD capability it doesn't mean EAPD is actually there - common case for most of desktop codecs that would report 0x14 and 0x1b as being EAPD capable..
+
 
 September 4, 2014 v2.2.0
 
