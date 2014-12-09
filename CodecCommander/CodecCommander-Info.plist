@@ -44,10 +44,29 @@
 			<string>IOResources</string>
 			<key>IOResourceMatch</key>
 			<string>IOKit</string>
+			<key>IOUserClientClass</key>
+			<string>CodecCommanderClient</string>
 			<key>Platform Profile</key>
 			<dict>
 				<key>Default</key>
 				<dict>
+					<key>Update Nodes</key>
+					<true/>
+					<key>Custom Commands</key>
+					<array>
+						<dict>
+							<key>Command</key>
+							<integer>983040</integer>
+							<key>Comment</key>
+							<string>Test command (Vendor Info)</string>
+							<key>On Init</key>
+							<true/>
+							<key>On Sleep</key>
+							<true/>
+							<key>On Wake</key>
+							<true/>
+						</dict>
+					</array>
 					<key>HDEF Device Location</key>
 					<string>1B</string>
 					<key>Codec Address Number</key>
