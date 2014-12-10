@@ -1,0 +1,7 @@
+Build
+DerivedData
+Distribute
+CodecCommander.xcodeproj/project.xcworkspace/xcuserdata
+CodecCommander.xcodeproj/xcuserdata
+*.xccheckout
+.DS_Store

@@ -1,3 +1,47 @@
+## RehabMan Fork of TimeWalker's CodecCommander.kext
+
+This repo contains a fork of TimeWalker's original here: https://github.com/Dolnor/EAPD-Codec-Commander
+
+
+The main changes are:
+
+- Modified Info.plist for the Lenovo U430.  See original README below if your codec is not configured the same.
+
+- Added the ability to define another node in addition to speaker/headphone ("Update Alternate Node").  This is because the U430 has three nodes with the EAPD amp.
+
+- Other minor build process changes
+
+- Some minor code cleanup (mostly defensive measures)
+
+Note: Do not expect it to work for your computer unless your codec is configured exactly as my Lenovo U430.
+
+
+Future ideas:
+
+- Bring back Platform Profile based configuration?
+
+- Or as an alternate, configure via DSDT patches...
+
+
+### Download location
+
+Downloads are available on Bitbucket:
+
+https://bitbucket.org/RehabMan/os-x-eapd-codec-commander/downloads
+
+
+### Source Code:
+
+The source code is maintained at the following sites:
+
+https://github.com/RehabMan/OS-X-EAPD-Codec-Commander
+
+https://bitbucket.org/RehabMan/os-x-eapd-codec-commander
+
+
+### Original README.md follows...
+
+
 ## Codec Commander
 
 ### What is the purpose of this?

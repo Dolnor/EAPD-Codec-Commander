@@ -2,8 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>Source Code</key>
+	<string>https://github.com/RehabMan/EAPD-Codec-Commander</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2013-2014 TimeWalker. All rights reserved.</string>
+	<string>Copyright © 2013-2014 TimeWalker/RehabMan. All rights reserved.</string>
 	<key>CFBundleGetInfoString</key>
 	<string>${MODULE_VERSION}, Copyright © 2013-2014 TimeWalker. All rights reserved.</string>
 	<key>CFBundleDevelopmentRegion</key>
@@ -28,6 +30,10 @@
 	<dict>
 		<key>CodecCommander</key>
 		<dict>
+			<key>RM,Version</key>
+			<string>${PRODUCT_NAME} ${MODULE_VERSION}</string>
+			<key>RM,Build</key>
+			<string>${CONFIGURATION}-${LOGNAME}</string>
 			<key>CFBundleIdentifier</key>
 			<string>${MODULE_NAME}</string>
 			<key>IOClass</key>
@@ -38,10 +44,29 @@
 			<string>IOResources</string>
 			<key>IOResourceMatch</key>
 			<string>IOKit</string>
+			<key>IOUserClientClass</key>
+			<string>CodecCommanderClient</string>
 			<key>Platform Profile</key>
 			<dict>
 				<key>Default</key>
 				<dict>
+					<key>Update Nodes</key>
+					<true/>
+					<key>Custom Commands</key>
+					<array>
+						<dict>
+							<key>Command</key>
+							<integer>983040</integer>
+							<key>Comment</key>
+							<string>Test command (Vendor Info)</string>
+							<key>On Init</key>
+							<true/>
+							<key>On Sleep</key>
+							<true/>
+							<key>On Wake</key>
+							<true/>
+						</dict>
+					</array>
 					<key>HDEF Device Location</key>
 					<string>1B</string>
 					<key>Codec Address Number</key>
@@ -72,6 +97,20 @@
 						<key>Check Infinitely</key>
 						<false/>
 					</dict>
+				</dict>
+				<key>Lenovo</key>
+				<dict>
+					<key>U430</key>
+					<dict>
+						<key>Check Infinitely</key>
+						<true/>
+						<key>Check Interval</key>
+						<integer>1000</integer>
+						<key>Send Delay</key>
+						<integer>100</integer>
+					</dict>
+					<key>Cherry 4A Touch</key>
+					<string>U430</string>
 				</dict>
 			</dict>
 		</dict>
