@@ -65,7 +65,7 @@ class CodecCommander : public IOService
 
 public:
     // standard IOKit methods
-	virtual bool init(OSDictionary *dictionary = NULL);
+	virtual bool init(OSDictionary *dictionary = 0);
     virtual bool start(IOService *provider);
 	virtual void stop(IOService *provider);
 #ifdef DEBUG

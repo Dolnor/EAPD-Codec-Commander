@@ -4,15 +4,15 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
-		<key>CodecCommanderClient.xcscheme</key>
+		<key>CodecCommander.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>1</integer>
+			<integer>0</integer>
 		</dict>
 	</dict>
 	<key>SuppressBuildableAutocreation</key>
 	<dict>
-		<key>D402225F1A14F03600800AA7</key>
+		<key>0C4B237D14598AD20080D960</key>
 		<dict>
 			<key>primary</key>
 			<true/>
