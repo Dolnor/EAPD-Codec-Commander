@@ -74,7 +74,7 @@
 					<key>Send Delay</key>
 					<integer>300</integer>
 					<key>Check Interval</key>
-					<integer>5000</integer>
+					<integer>3000</integer>
 					<key>Check Infinitely</key>
 					<true/>
 				</dict>
@@ -92,6 +92,8 @@
 					<dict>
 						<key>Codec Address Number</key>
 						<integer>2</integer>
+						<key>Update Nodes</key>
+						<false/>
 						<key>Check Infinitely</key>
 						<false/>
 					</dict>

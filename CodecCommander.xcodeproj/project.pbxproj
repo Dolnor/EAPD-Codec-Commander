@@ -309,6 +309,7 @@
 				GCC_PREFIX_HEADER = "CodecCommander/CodecCommander-Prefix.pch";
 				INFOPLIST_FILE = "CodecCommander/CodecCommander-Info.plist";
 				MODULE_NAME = org.tw.CodecCommander;
+				MODULE_VERSION = 2.2.1;
 				PRODUCT_NAME = CodecCommander;
 				STRIP_INSTALLED_PRODUCT = YES;
 			};
@@ -323,6 +324,7 @@
 				GCC_PREFIX_HEADER = "CodecCommander/CodecCommander-Prefix.pch";
 				INFOPLIST_FILE = "CodecCommander/CodecCommander-Info.plist";
 				MODULE_NAME = org.tw.CodecCommander;
+				MODULE_VERSION = 2.2.1;
 				PRODUCT_NAME = CodecCommander;
 				STRIP_INSTALLED_PRODUCT = YES;
 			};
