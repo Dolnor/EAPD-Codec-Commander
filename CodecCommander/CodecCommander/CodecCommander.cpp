@@ -19,6 +19,8 @@
 
 #include "CodecCommander.h"
 
+#define kPlatformProfile            "Platform Profile"
+
 //REVIEW: avoids problem with Xcode 5.1.0 where -dead_strip eliminates these required symbols
 #include <libkern/OSKextLib.h>
 void* _org_rehabman_dontstrip_[] =
@@ -53,8 +55,6 @@ bool CodecCommander::init(OSDictionary *dictionary)
     
     if (!super::init(dictionary))
         return false;
-		
-	mConfiguration = new Configuration(dictionary);
 	
     mWorkLoop = NULL;
     mTimer = NULL;
@@ -68,31 +68,35 @@ bool CodecCommander::init(OSDictionary *dictionary)
 }
 
 /******************************************************************************
+ * CodecCommander::probe - Determine if the attached device is supported
+ ******************************************************************************/
+IOService* CodecCommander::probe(IOService* provider, SInt32* score)
+{
+	DEBUG_LOG("%s::probe\n", this->getName());
+	
+	mIntelHDA = new IntelHDA(provider, PIO);
+	
+	if (mIntelHDA->initialize())
+		return this;
+	
+	return NULL;
+}
+
+/******************************************************************************
  * CodecCommander::start - start kernel extension and init PM
  ******************************************************************************/
 bool CodecCommander::start(IOService *provider)
 {
-    IOLog("CodecCommander: Version 2.2.1 starting.\n");
+    IOLog("%s: Version 2.2.1 starting.\n", this->getName());
 
     if (!provider || !super::start(provider))
 	{
-		DEBUG_LOG("CodecCommander: Error loading kernel extension.\n");
+		DEBUG_LOG("%s: Error loading kernel extension.\n", this->getName());
 		return false;
 	}
-    
-    // Retrieve HDEF device from IORegistry
-	IORegistryEntry *hdaDeviceEntry = IORegistryEntry::fromPath(mConfiguration->getHDADevicePath());
 	
-    if (hdaDeviceEntry != NULL)
-    {
-		mIntelHDA = new IntelHDA(hdaDeviceEntry, PIO, mConfiguration->getCodecNumber());
-		OSSafeRelease(hdaDeviceEntry);
-    }
-    else
-    {
-        DEBUG_LOG("CodecCommander: Device \"%s\" is unreachable, start aborted.\n", mConfiguration->getHDADevicePath());
-        return false;
-    }
+	mConfiguration = new Configuration(this->getProperty(kPlatformProfile));
+	
 	
 	if (mConfiguration->getUpdateNodes())
 	{
@@ -100,7 +104,7 @@ bool CodecCommander::start(IOService *provider)
 		int k = 0; // array index
 	
 		// Fetch Pin Capabilities from the range of nodes
-		DEBUG_LOG("CodecCommander: Getting EAPD supported node list (limited to %d)\n", MAX_EAPD_NODES);
+		DEBUG_LOG("%s: Getting EAPD supported node list (limited to %d)\n", this->getName(), MAX_EAPD_NODES);
 	
 		for (int nodeId = mIntelHDA->getStartingNode(); nodeId <= mIntelHDA->getTotalNodes(); nodeId++)
 		{
@@ -108,7 +112,7 @@ bool CodecCommander::start(IOService *provider)
 		
 			if (response == -1)
 			{
-				DEBUG_LOG("CodecCommander: Failed to retrieve pin capabilities for node 0x%02x.\n", nodeId);
+				DEBUG_LOG("%s: Failed to retrieve pin capabilities for node 0x%02x.\n", this->getName(), nodeId);
 				continue;
 			}
 
@@ -117,29 +121,9 @@ bool CodecCommander::start(IOService *provider)
 			{
 				eapdCapableNodes[k] = nodeId;
 				k++;
-				IOLog("CodecCommander: NID=0x%02x supports EAPD, will update state after sleep\n", nodeId);
+				IOLog("%s: NID=0x%02x supports EAPD, will update state after sleep\n", this->getName(), nodeId);
 			}
 		}
-	
-/*
-		IOLog("CodecCommander:: Set 0x0A result: 0x%08x\n", mIntelHDA->sendCommand(0x0A, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
-		IOLog("CodecCommander:: Set 0x0B result: 0x%08x\n", mIntelHDA->sendCommand(0x0B, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
-		IOLog("CodecCommander:: Set 0x0C result: 0x%08x\n", mIntelHDA->sendCommand(0x0C, HDA_VERB_SET_AMP_GAIN, HDA_PARM_AMP_GAIN_SET(0x80, 0, 1, 1, 1, 0, 1)));
-	
-		for (int nodeId = mIntelHDA->getStartingNode(); nodeId <= mIntelHDA->getTotalNodes(); nodeId++)
-		{
-			UInt16 payload = HDA_PARM_AMP_GAIN_GET(0, 1, 1);//AC_AMP_GET_OUTPUT | AC_AMP_GET_LEFT;
-			UInt32 response = mIntelHDA->sendCommand(nodeId, HDA_VERB_GET_AMP_GAIN, payload);
-		
-			if (response == -1)
-			{
-				DEBUG_LOG("Failed to retrieve amp gain settings for node 0x%02x.\n", nodeId);
-				continue;
-			}
-		
-			IOLog("CodecCommander:: [Amp Gain] Node: 0x%04x, Response: 0x%08x\n", nodeId, response);
-		}
- */
 	}
 	
 	// Execute any custom commands registered for initialization
@@ -147,7 +131,7 @@ bool CodecCommander::start(IOService *provider)
 	
     // notify about extra feature requests
     if (mConfiguration->getCheckInfinite())
-        DEBUG_LOG("CodecCommander: Infinite workloop requested, will start now!\n");
+        DEBUG_LOG("%s: Infinite workloop requested, will start now!\n", this->getName());
     
     // init power state management & set state as PowerOn
     PMinit();
@@ -174,7 +158,7 @@ bool CodecCommander::start(IOService *provider)
  ******************************************************************************/
 void CodecCommander::stop(IOService *provider)
 {
-    DEBUG_LOG("CodecCommander: Stopping...\n");
+    DEBUG_LOG("%s: Stopping...\n", this->getName());
     
     // if workloop is active - release it
     mTimer->cancelTimeout();
@@ -202,7 +186,7 @@ void CodecCommander::free(void)
 void CodecCommander::parseCodecPowerState()
 {
 	// monitor power state of hda audio codec
-	IORegistryEntry *hdaDriverEntry = IORegistryEntry::fromPath(mConfiguration->getHDADriverPath());
+	IORegistryEntry *hdaDriverEntry = mIntelHDA->getHDADriver();
 	
 	if (hdaDriverEntry != NULL)
 	{
@@ -215,14 +199,14 @@ void CodecCommander::parseCodecPowerState()
 			// if hda codec changed power state
 			if (hdaCurrentPowerState != hdaPrevPowerState)
 			{
-				DEBUG_LOG("CodecCommander: cc - power state transition from %d to %d recorded\n", hdaPrevPowerState, hdaCurrentPowerState);
+				DEBUG_LOG("%s: power state transition from %d to %d recorded\n", this->getName(), hdaPrevPowerState, hdaCurrentPowerState);
 				
 				// store current power state as previous state for next workloop cycle
 				hdaPrevPowerState = hdaCurrentPowerState;
 				// notify about codec power loss state
 				if (hdaCurrentPowerState == 0x0)
 				{
-					DEBUG_LOG("CodecCommander: HDA codec lost power\n");
+					DEBUG_LOG("%s: HDA codec lost power\n", this->getName());
 					handleStateChange(kStateSleep); // power down EAPDs properly
 					eapdPoweredDown = true;
 					coldBoot = false; //codec entered fugue state or sleep - no longer a cold boot
@@ -230,12 +214,10 @@ void CodecCommander::parseCodecPowerState()
 			}
 		}
 		else
-			DEBUG_LOG("CodecCommander: IOAudioPowerState unknown\n");
-		
-		hdaDriverEntry->release();
+			DEBUG_LOG("%s: IOAudioPowerState unknown\n", this->getName());
 	}
 	else
-		DEBUG_LOG("CodecCommander: %s is unreachable\n", mConfiguration->getHDADriverPath());
+		DEBUG_LOG("%s: AppleHDADriver is unreachable\n", this->getName());
 }
 
 /******************************************************************************
@@ -249,7 +231,7 @@ void CodecCommander::onTimerAction()
     // if no power after semi-sleep (fugue) state and power was restored - set EAPD bit
 	if (eapdPoweredDown && hdaCurrentPowerState != 0x0)
     {
-        DEBUG_LOG("CodecCommander: cc: --> hda codec power restored\n");
+        DEBUG_LOG("%s: --> hda codec power restored\n", this->getName());
 		handleStateChange(kStateWake);
     }
     
@@ -300,7 +282,7 @@ void CodecCommander::customCommands(CodecCommanderState newState)
 		   (customCommand.OnWake == (newState == kStateWake)) ||
 		   (customCommand.OnSleep == (newState == kStateSleep)))
 		{
-			DEBUG_LOG("CodecCommander: cc: --> custom command 0x%08x\n", customCommand.Command);
+			DEBUG_LOG("%s: --> custom command 0x%08x\n", this->getName(), customCommand.Command);
 			mIntelHDA->sendCommand(customCommand.Command);
 		}
 	}
@@ -346,7 +328,7 @@ void CodecCommander::performCodecReset()
 
     if (!coldBoot)
 	{
-        DEBUG_LOG("CodecCommander: cc: --> resetting codec\n");
+        DEBUG_LOG("%s: --> resetting codec\n", this->getName());
 		mIntelHDA->sendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
         IOSleep(100); // define smaller delays ????
 		mIntelHDA->sendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
@@ -355,7 +337,7 @@ void CodecCommander::performCodecReset()
 		mIntelHDA->sendCommand(1, HDA_VERB_SET_PSTATE, HDA_PARM_PS_D3_HOT);
 		
         eapdPoweredDown = true;
-        DEBUG_LOG("CodecCommander: cc: --> hda codec power restored\n");
+		DEBUG_LOG("%s: --> hda codec power restored\n", this->getName());
     }
 }
 
@@ -367,14 +349,14 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 
     if (kPowerStateSleep == powerStateOrdinal)
 	{
-        DEBUG_LOG("CodecCommander: cc: --> asleep\n");
+        DEBUG_LOG("%s: --> asleep\n", this->getName());
 		handleStateChange(kStateSleep); // set EAPD logic level 0 to cause EAPD to power off properly
         eapdPoweredDown = true;  // now it's powered down for sure
         coldBoot = false;
 	}
 	else if (kPowerStateNormal == powerStateOrdinal)
 	{
-        DEBUG_LOG("CodecCommander: cc: --> awake\n");
+        DEBUG_LOG("%s: --> awake\n", this->getName());
 
         // issue codec reset at wake and cold boot
         performCodecReset();
@@ -393,7 +375,7 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
             else
                 mTimer->setTimeoutMS(100); // so fire timer for workLoop almost immediately
 
-            DEBUG_LOG("CodecCommander: cc: --> workloop started\n");
+            DEBUG_LOG("%s: --> workloop started\n", this->getName());
         }
     }
     

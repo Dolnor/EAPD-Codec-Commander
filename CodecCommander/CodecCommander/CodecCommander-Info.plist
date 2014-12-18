@@ -41,11 +41,13 @@
 			<key>IOMatchCategory</key>
 			<string>CodecCommander</string>
 			<key>IOProviderClass</key>
-			<string>IOResources</string>
+			<string>IOPCIDevice</string>
 			<key>IOResourceMatch</key>
 			<string>IOKit</string>
 			<key>IOUserClientClass</key>
 			<string>CodecCommanderClient</string>
+			<key>IOPCIClassMatch</key>
+			<string>0x04020000&amp;0xFFFE0000</string>
 			<key>Platform Profile</key>
 			<dict>
 				<key>Default</key>
@@ -67,8 +69,6 @@
 							<true/>
 						</dict>
 					</array>
-					<key>HDEF Device Location</key>
-					<string>1B</string>
 					<key>Codec Address Number</key>
 					<integer>0</integer>
 					<key>Send Delay</key>
@@ -77,14 +77,6 @@
 					<integer>3000</integer>
 					<key>Check Infinitely</key>
 					<true/>
-				</dict>
-				<key>ASUS</key>
-				<dict>
-					<key>1201N</key>
-					<dict>
-						<key>HDEF Device Location</key>
-						<string>8</string>
-					</dict>
 				</dict>
 				<key>Gigabyte</key>
 				<dict>
@@ -117,8 +109,8 @@
 	</dict>
 	<key>OSBundleLibraries</key>
 	<dict>
-		<key>com.apple.iokit.IOHIDSystem</key>
-		<string>1.1</string>
+		<key>com.apple.iokit.IOPCIFamily</key>
+		<string>2.0</string>
 		<key>com.apple.iokit.IOAudioFamily</key>
 		<string>1.1fc9</string>
 		<key>com.apple.kpi.iokit</key>

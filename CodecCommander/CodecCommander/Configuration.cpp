@@ -20,11 +20,9 @@
 #include "Configuration.h"
 
 // Constants for Configuration
-#define kPlatformProfile            "Platform Profile"
 #define kDefault                    "Default"
 
 // Constants for Intel HDA
-#define kHDEFLocation               "HDEF Device Location"
 #define kCodecAddressNumber         "Codec Address Number"
 
 // Constants for EAPD command verb sending
@@ -42,47 +40,24 @@
 #define kCommandOnSleep             "On Sleep"
 #define kCommandOnWake              "On Wake"
 
-Configuration::Configuration(OSDictionary* dictionary)
+Configuration::Configuration(OSObject* platformProfile)
 {
-    if (NULL == dictionary)
+    OSDictionary* list = OSDynamicCast(OSDictionary, platformProfile);
+    
+    if (list == NULL)
         return;
     
     // Retrieve platform profile configuration
-    OSDictionary* list = OSDynamicCast(OSDictionary, dictionary->getObject(kPlatformProfile));
+
     OSDictionary* config = Configuration::loadConfiguration(list);
    
-    // Get HDA device location address
-    if (OSString* str = OSDynamicCast(OSString, config->getObject(kHDEFLocation)))
-    {
-        if (str->getLength() > 1)
-        {
-            for (int i = 0; i <= 1; i++)
-                mHDALocation[i] = str->getChar(i);
-        }
-        else
-            mHDALocation[0] = str->getChar(0);
-    }
-  
     // Get codec address number
     if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kCodecAddressNumber)))
         mCodecNumber = num->unsigned8BitValue();
     else
         // Default to codec number 0
         mCodecNumber = 0;
-    
-    // set path for ioreg entries
-    snprintf(mHDADevicePath, sizeof(mHDADevicePath),
-             "IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/HDEF@%s", mHDALocation);
-
-    snprintf(mHDADriverPath, sizeof(mHDADriverPath),
-             "%s/AppleHDAController@%s/IOHDACodecDevice@%s,%d/IOHDACodecDriver/IOHDACodecFunction@%s,%d,1/AppleHDACodecGeneric/AppleHDADriver",
-             mHDADevicePath,
-             mHDALocation,
-             mHDALocation,
-             mCodecNumber,
-             mHDALocation,
-             mCodecNumber);
-    
+   
     // Get delay for sending the verb
     if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kSendDelay)))
         mSendDelay = num->unsigned16BitValue();
@@ -155,8 +130,6 @@ Configuration::Configuration(OSDictionary* dictionary)
     
     // Dump parsed configuration
     DEBUG_LOG("CodecCommander::Configuration\n");
-    DEBUG_LOG("...HDA Location:\t%s\n", mHDALocation);
-    DEBUG_LOG("...HDA Device:\t\t%s\n", mHDADevicePath);
     DEBUG_LOG("...Codec Number:\t%d\n", mCodecNumber);
     DEBUG_LOG("...Send Delay:\t\t%d\n", mSendDelay);
     DEBUG_LOG("...Check Infinite:\t%s\n", mCheckInfinite ? "true" : "false");
@@ -201,16 +174,6 @@ OSDictionary* Configuration::loadConfiguration(OSDictionary* list)
 /********************************************
  * Configuration Properties
  ********************************************/
-const char * Configuration::getHDADevicePath()
-{
-    return mHDADevicePath;
-}
-
-const char * Configuration::getHDADriverPath()
-{
-    return mHDADriverPath;
-}
-
 UInt8 Configuration::getCodecNumber()
 {
     return mCodecNumber;

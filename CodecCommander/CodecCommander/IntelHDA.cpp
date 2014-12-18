@@ -19,41 +19,97 @@
 
 #include "IntelHDA.h"
 
-IntelHDA::IntelHDA(IORegistryEntry *ioRegistryEntry, HDACommandMode commandMode, char codecAddress)
+IORegistryEntry* IntelHDA::getHDADriver(IORegistryEntry* registryEntry)
+{
+    IORegistryEntry* entry = registryEntry->getChildEntry(gIOServicePlane);
+    
+    if (entry != NULL)
+    {
+        if (strcasecmp(entry->getName(), "AppleHDADriver") == 0)
+            return entry;
+        
+        return getHDADriver(entry);
+    }
+    
+    return NULL;
+}
+
+IntelHDA::IntelHDA(IOService *service, HDACommandMode commandMode)
 {
     mCommandMode = commandMode;
-    mCodecAddress = codecAddress;
-    
-    if (ioRegistryEntry == NULL)
-        return;
-    
-    mService = OSDynamicCast(IOService, ioRegistryEntry);
-    
-    // get address field from IODeviceMemory
-    if (mService != NULL && mService->getDeviceMemoryCount() != 0)
-    {
-        mDeviceMemory = mService->getDeviceMemoryWithIndex(0);
-
-        // Determine codec global capabilities
-        HDA_GCAP_EXT globalCapabilities;
-        mDeviceMemory->readBytes(HDA_REG_GCAP, &globalCapabilities, sizeof(HDA_GCAP_EXT));
-        
-        IOLog("CodecCommander::IntelHDA\n");
-        IOLog("....Output Streams:\t%d\n", globalCapabilities.NumOutputStreamsSupported);
-        IOLog("....Input Streams:\t%d\n", globalCapabilities.NumInputStreamsSupported);
-        IOLog("....Bidi Streams:\t%d\n", globalCapabilities.NumBidirectionalStreamsSupported);
-        IOLog("....Serial Data:\t%d\n", globalCapabilities.NumSerialDataOutSignals);
-        IOLog("....x64 Support:\t%d\n", globalCapabilities.Supports64bits);
-        IOLog("....Codec Version:\t%d.%d\n", globalCapabilities.MajorVersion, globalCapabilities.MinorVersion);
-        IOLog("....Vendor Id:\t0x%04x\n", this->getVendorId());
-        IOLog("....Device Id:\t0x%04x\n", this->getDeviceId());
-    }
+    mDevice = OSDynamicCast(IOPCIDevice, service);
 }
 
 IntelHDA::~IntelHDA()
 {
     //OSSafeReleaseNULL(mDeviceMemory);
     //OSSafeReleaseNULL(mService);
+}
+
+bool IntelHDA::initialize()
+{
+    IOLog("CodecCommander::IntelHDA\n");
+    
+    // get address field from IODeviceMemory
+    if (mDevice != NULL && mDevice->getDeviceMemoryCount() != 0)
+    {
+        mDeviceMemory = mDevice->getDeviceMemoryWithIndex(0);
+        
+        // Determine codec global capabilities
+        HDA_GCAP_EXT globalCapabilities;
+        mDeviceMemory->readBytes(HDA_REG_GCAP, &globalCapabilities, sizeof(HDA_GCAP_EXT));
+        
+        char devicePath[1024];
+        int pathLen = sizeof(devicePath);
+        bzero(devicePath, sizeof(devicePath));
+        
+        uint32_t deviceInfo = mDevice->configRead32(0);
+        
+        if (mDevice->getPath(devicePath, &pathLen, gIOServicePlane))
+            DEBUG_LOG("IntelHDA: Evaluating device \"%s\" [%04x:%04x].\n",
+                      devicePath,
+                      deviceInfo >> 16,
+                      deviceInfo & 0x0000FFFF);
+        
+        if (globalCapabilities.MajorVersion == 1 &&
+            globalCapabilities.MinorVersion == 0 &&
+            this->getVendorId() != 0xFFFF)
+        {
+            IORegistryEntry* hdaDriver = getHDADriver(mDevice);
+            
+            if (hdaDriver != NULL)
+            {
+                pathLen = sizeof(devicePath);
+                bzero(devicePath, sizeof(devicePath));
+                
+                if (hdaDriver->getPath(devicePath, &pathLen, gIOServicePlane))
+                    DEBUG_LOG("IntelHDA: Located HDA driver at \"%s\".\n", devicePath);
+                
+                IOLog("....Output Streams:\t%d\n", globalCapabilities.NumOutputStreamsSupported);
+                IOLog("....Input Streams:\t%d\n", globalCapabilities.NumInputStreamsSupported);
+                IOLog("....Bidi Streams:\t%d\n", globalCapabilities.NumBidirectionalStreamsSupported);
+                IOLog("....Serial Data:\t%d\n", globalCapabilities.NumSerialDataOutSignals);
+                IOLog("....x64 Support:\t%d\n", globalCapabilities.Supports64bits);
+                IOLog("....Codec Version:\t%d.%d\n", globalCapabilities.MajorVersion, globalCapabilities.MinorVersion);
+                IOLog("....Vendor Id:\t0x%04x\n", this->getVendorId());
+                IOLog("....Device Id:\t0x%04x\n", this->getDeviceId());
+                
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
+void IntelHDA::SetCodecAddress(UInt8 codecAddress)
+{
+    mCodecAddress = codecAddress;
+}
+
+IORegistryEntry* IntelHDA::getHDADriver()
+{
+    return IntelHDA::getHDADriver(mDevice);
 }
 
 UInt16 IntelHDA::getVendorId()

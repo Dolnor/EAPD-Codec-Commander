@@ -32,9 +32,6 @@ struct CustomCommand
 
 class Configuration
 {
-    char mHDALocation[0x03];
-    char mHDADevicePath[0x3F];
-    char mHDADriverPath[0xBA];
     CustomCommand mCustomCommands[MAX_CUSTOM_COMMANDS];
     
     bool mCheckInfinite;
@@ -43,8 +40,6 @@ class Configuration
     UInt16 mSendDelay, mUpdateInterval;
     
     public:
-        const char * getHDADevicePath();
-        const char * getHDADriverPath();
         UInt8 getCodecNumber();
         bool getUpdateNodes();
         UInt16 getSendDelay();
@@ -54,7 +49,7 @@ class Configuration
         CustomCommand* getCustomCommands();
     
         // Constructor
-        Configuration(OSDictionary* dictionary);    
+        Configuration(OSObject* platformProfile);
     private:
         static OSDictionary* loadConfiguration(OSDictionary* list);
     
