@@ -42,60 +42,76 @@ IntelHDA::IntelHDA(IOService *service, HDACommandMode commandMode)
 
 IntelHDA::~IntelHDA()
 {
-    //OSSafeReleaseNULL(mDeviceMemory);
-    //OSSafeReleaseNULL(mService);
+    OSSafeReleaseNULL(mMemoryMap);
 }
 
 bool IntelHDA::initialize()
 {
     IOLog("CodecCommander::IntelHDA\n");
     
-    // get address field from IODeviceMemory
-    if (mDevice != NULL && mDevice->getDeviceMemoryCount() != 0)
+    if (mDevice == NULL || mDevice->getDeviceMemoryCount() == 0)
+        return false;
+    
+    mDevice->setMemoryEnable(true);
+    
+    mDeviceMemory = mDevice->getDeviceMemoryWithIndex(0);
+    
+    if (mDeviceMemory == NULL)
     {
-        mDeviceMemory = mDevice->getDeviceMemoryWithIndex(0);
+        IOLog("IntelHDA: Failed to access device memory.\n");
+        return false;
+    }
+    
+    DEBUG_LOG("IntelHDA: Device memory @ 0x%08llx, size 0x%08llx\n", mDeviceMemory->getPhysicalAddress(), mDeviceMemory->getLength());
         
-        // Determine codec global capabilities
-        HDA_GCAP_EXT globalCapabilities;
-        mDeviceMemory->readBytes(HDA_REG_GCAP, &globalCapabilities, sizeof(HDA_GCAP_EXT));
+    mMemoryMap = mDeviceMemory->map();
+
+    if (mMemoryMap == NULL)
+    {
+        IOLog("IntelHDA: Failed to map device memory.\n");
+        return false;
+    }
+    
+    DEBUG_LOG("IntelHDA: Memory mapped at @ 0x%08llx\n", mMemoryMap->getVirtualAddress());
         
-        char devicePath[1024];
-        int pathLen = sizeof(devicePath);
-        bzero(devicePath, sizeof(devicePath));
+    mRegMap = (pHDA_REG)mMemoryMap->getVirtualAddress();
+    
+    char devicePath[1024];
+    int pathLen = sizeof(devicePath);
+    bzero(devicePath, sizeof(devicePath));
+    
+    uint32_t deviceInfo = mDevice->configRead32(0);
+    
+    if (mDevice->getPath(devicePath, &pathLen, gIOServicePlane))
+        IOLog("IntelHDA: Evaluating device \"%s\" [%04x:%04x].\n",
+                  devicePath,
+                  deviceInfo >> 16,
+                  deviceInfo & 0x0000FFFF);
         
-        uint32_t deviceInfo = mDevice->configRead32(0);
+    if (mRegMap->VMAJ == 1 &&
+        mRegMap->VMIN == 0 &&
+        this->getVendorId() != 0xFFFF)
+    {
+        IORegistryEntry* hdaDriver = getHDADriver(mDevice);
         
-        if (mDevice->getPath(devicePath, &pathLen, gIOServicePlane))
-            DEBUG_LOG("IntelHDA: Evaluating device \"%s\" [%04x:%04x].\n",
-                      devicePath,
-                      deviceInfo >> 16,
-                      deviceInfo & 0x0000FFFF);
-        
-        if (globalCapabilities.MajorVersion == 1 &&
-            globalCapabilities.MinorVersion == 0 &&
-            this->getVendorId() != 0xFFFF)
+        if (hdaDriver != NULL)
         {
-            IORegistryEntry* hdaDriver = getHDADriver(mDevice);
+            pathLen = sizeof(devicePath);
+            bzero(devicePath, sizeof(devicePath));
             
-            if (hdaDriver != NULL)
-            {
-                pathLen = sizeof(devicePath);
-                bzero(devicePath, sizeof(devicePath));
-                
-                if (hdaDriver->getPath(devicePath, &pathLen, gIOServicePlane))
-                    DEBUG_LOG("IntelHDA: Located HDA driver at \"%s\".\n", devicePath);
-                
-                IOLog("....Output Streams:\t%d\n", globalCapabilities.NumOutputStreamsSupported);
-                IOLog("....Input Streams:\t%d\n", globalCapabilities.NumInputStreamsSupported);
-                IOLog("....Bidi Streams:\t%d\n", globalCapabilities.NumBidirectionalStreamsSupported);
-                IOLog("....Serial Data:\t%d\n", globalCapabilities.NumSerialDataOutSignals);
-                IOLog("....x64 Support:\t%d\n", globalCapabilities.Supports64bits);
-                IOLog("....Codec Version:\t%d.%d\n", globalCapabilities.MajorVersion, globalCapabilities.MinorVersion);
-                IOLog("....Vendor Id:\t0x%04x\n", this->getVendorId());
-                IOLog("....Device Id:\t0x%04x\n", this->getDeviceId());
-                
-                return true;
-            }
+            if (hdaDriver->getPath(devicePath, &pathLen, gIOServicePlane))
+                DEBUG_LOG("IntelHDA: Located HDA driver at \"%s\".\n", devicePath);
+            
+            IOLog("....Output Streams:\t%d\n", mRegMap->GCAP_OSS);
+            IOLog("....Input Streams:\t%d\n", mRegMap->GCAP_ISS);
+            IOLog("....Bidi Streams:\t%d\n", mRegMap->GCAP_BSS);
+            IOLog("....Serial Data:\t%d\n", mRegMap->GCAP_NSDO);
+            IOLog("....x64 Support:\t%d\n", mRegMap->GCAP_64OK);
+            IOLog("....Codec Version:\t%d.%d\n", mRegMap->VMAJ, mRegMap->VMIN);
+            IOLog("....Vendor Id:\t\t0x%04x\n", this->getVendorId());
+            IOLog("....Device Id:\t\t0x%04x\n", this->getDeviceId());
+
+            return true;
         }
     }
     
@@ -144,13 +160,13 @@ UInt8 IntelHDA::getStartingNode()
     return (mNodes & 0xFF0000) >> 16;
 }
 
-UInt32 IntelHDA::sendCommand(UInt32 nodeId, UInt32 verb, UInt8 payload)
+UInt32 IntelHDA::sendCommand(UInt8 nodeId, UInt16 verb, UInt8 payload)
 {
     DEBUG_LOG("IntelHDA::SendCommand: verb 0x%06x, payload 0x%02x.\n", verb, payload);
     return this->sendCommand((nodeId & 0xFF) << 20 | (verb & 0xFFF) << 8 | payload);
 }
 
-UInt32 IntelHDA::sendCommand(UInt32 nodeId, UInt32 verb, UInt16 payload)
+UInt32 IntelHDA::sendCommand(UInt8 nodeId, UInt8 verb, UInt16 payload)
 {
     DEBUG_LOG("IntelHDA::SendCommand: verb 0x%02x, payload 0x%04x.\n", verb, payload);
     return this->sendCommand((nodeId & 0xFF) << 20 | (verb & 0xF) << 16 | payload);
@@ -194,7 +210,7 @@ UInt32 IntelHDA::executePIO(UInt32 command)
     
     for (int i = 0; i < 1000; i++)
     {
-        mDeviceMemory->readBytes(HDA_REG_ICS, &status, sizeof(status));
+        status = mRegMap->ICS;
         
         if (!HDA_ICS_IS_BUSY(status))
             break;
@@ -212,17 +228,17 @@ UInt32 IntelHDA::executePIO(UInt32 command)
     //DEBUG_LOG("IntelHDA::ExecutePIO ICB bit clear.\n");
     
     // Queue the verb for the HDA controller
-    mDeviceMemory->writeBytes(HDA_REG_ICOI, &command, sizeof(command));
+    mRegMap->ICW = command;
     
     status = 0x1; // Busy status
-    mDeviceMemory->writeBytes(HDA_REG_ICS, &status, sizeof(status));
+    mRegMap->ICS = status;
     
     //DEBUG_LOG("IntelHDA::ExecutePIO Wrote verb and set ICB bit.\n");
     
     // Wait for HDA controller to return with a response
     for (int i = 0; i < 1000; i++)
     {
-        mDeviceMemory->readBytes(HDA_REG_ICS, &status, sizeof(status));
+        status = mRegMap->ICS;
         
         if (!HDA_ICS_IS_BUSY(status))
             break;
@@ -236,11 +252,11 @@ UInt32 IntelHDA::executePIO(UInt32 command)
     UInt32 response;
     
     if (validResult)
-        mDeviceMemory->readBytes(HDA_REG_IRII, &response, sizeof(response));
+        response = mRegMap->IRR;
     
     // Reset IRV
     status = 0x02; // Valid, Non-busy status
-    mDeviceMemory->writeBytes(HDA_REG_ICS, &status, sizeof(status));
+    mRegMap->ICS = status;
     
     if (!validResult)
     {

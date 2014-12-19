@@ -79,6 +79,9 @@ IOService* CodecCommander::probe(IOService* provider, SInt32* score)
 	if (mIntelHDA->initialize())
 		return this;
 	
+	mIntelHDA->~IntelHDA();
+	mIntelHDA = NULL;
+	
 	return NULL;
 }
 
@@ -96,8 +99,7 @@ bool CodecCommander::start(IOService *provider)
 	}
 	
 	mConfiguration = new Configuration(this->getProperty(kPlatformProfile));
-	
-	
+		
 	if (mConfiguration->getUpdateNodes())
 	{
 		IOSleep(mConfiguration->getSendDelay()); // need to wait a bit until codec can actually respond to immediate verbs
@@ -167,7 +169,8 @@ void CodecCommander::stop(IOService *provider)
     OSSafeReleaseNULL(mWorkLoop);
 
 	// Free IntelHDA engine
-	mIntelHDA->~IntelHDA();
+	if (mIntelHDA)
+		mIntelHDA->~IntelHDA();
 	
     PMstop();
     super::stop(provider);

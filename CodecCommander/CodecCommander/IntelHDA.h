@@ -22,61 +22,16 @@
 
 #include "Common.h"
 
-// Intel HDA Registers
-#define HDA_REG_GCAP		0x00	// Global Capabilities
-#define HDA_REG_VMIN		0x02	// Minor Version
-#define HDA_REG_VMAJ		0x03	// Major Version
-#define HDA_REG_OUTPAY		0x04	// Output Payload Capability
-#define HDA_REG_INPAY		0x06	// Input Payload Capability
-#define HDA_REG_GCTL		0x08	// Global Control
-#define HDA_REG_WAKEEN		0x0d	// Wake Enable
-#define HDA_REG_STATESTS	0x0e	// State Change Status
-#define HDA_REG_GSTS		0x10	// Global Status
-#define HDA_REG_OUTSTRMPAY	0x18	// Output Stream Payload Capability
-#define HDA_REG_INSTRMPAY	0x1a	// Input Stream Payload Capability
-#define HDA_REG_INTCTL		0x20	// Interrupt Control
-#define HDA_REG_INTSTS		0x24	// Interrupt Status
-#define HDA_REG_WALCLK		0x30	// Wall Clock Counter
-#define HDA_REG_SSYNC		0x38	// Stream Synchronization
-#define HDA_REG_CORBLBA		0x40	// CORB Lower Base Address
-#define HDA_REG_CORBUBA		0x44	// CORB Upper Base Address
-#define HDA_REG_CORBWP		0x48	// CORB Write Pointer
-#define HDA_REG_CORBRP		0x4a	// CORB Read Pointer
-#define HDA_REG_CORBCTL		0x4c	// CORB Control
-#define HDA_REG_CORBSTS		0x4d	// CORB Status
-#define HDA_REG_CORBSIZE	0x4e	// CORB Size
-#define HDA_REG_RIRBLBASE	0x50	// RIRB Lower Base Address
-#define HDA_REG_RIRBUBASE	0x54	// RIRB Upper Base Address
-#define HDA_REG_RIRBWP		0x58	// RIRB Write Pointer
-#define HDA_REG_RINTCNT		0x5a	// Response Interrupt Count
-#define HDA_REG_RIRBCTL		0x5c	// RIRB Control
-#define HDA_REG_RIRBSTS		0x5d	// RIRB Status
-#define HDA_REG_RIRBSIZE	0x5e	// RIRB Size
-#define HDA_REG_DPLBASE		0x70	// DMA Position Lower Base Address
-#define HDA_REG_DPUBASE		0x74	// DMA Position Upper Base Address
-#define HDA_REG_SDCTL		0x80	// Input / Output / Bidirectional Stream Descriptor Control
-#define HDA_REG_SDSTS		0x83	// Input / Output / Bidirectional Stream Descriptor Status
-#define HDA_REG_SDLPIB		0x84	// Input / Output / Bidirectional Stream Descriptor Link Position in Buffer
-#define HDA_REG_SDCBL		0x88	// Input / Output / Bidirectional Stream Descriptor Cyclic Buffer Length
-#define HDA_REG_SDLVI		0x8C	// Input / Output / Bidirectional Stream Descriptor Last Valid Index
-#define HDA_REG_SDFIFOS		0x90	// Input / Output / Bidirectional Stream Descriptor FIFO size
-#define HDA_REG_SDFMT		0x92	// Input / Output / Bidirectional Stream Descriptor Format
-#define HDA_REG_SDBDPL		0x98	// Input / Output / Bidirectional Stream Descriptor BDL Pointer Lower Base Address
-#define HDA_REG_SDBDPU		0x9C	// Input / Output / Bidirectional Stream Descriptor BDL Pointer Upper Base Address
-#define HDA_REG_WALCLKA		0x2030	// Wall Clock Counter Alias
-#define HDA_REG_ICOI		0x60	// Immediate Command Output Interface
-#define HDA_REG_IRII		0x64	// Immediate Reponse Input Interface
-#define HDA_REG_ICS			0x68	// Immediate Command Status
+// Intel HDA Verbs
+#define HDA_VERB_GET_PARAM		(UInt16)0xF00	// Get Parameter
+#define HDA_VERB_SET_PSTATE		(UInt16)0x705	// Set Power State
+#define HDA_VERB_GET_PSTATE		(UInt16)0xF05	// Get Power State
+#define HDA_VERB_EAPDBTL_GET	(UInt16)0xF0C	// EAPD/BTL Enable Get
+#define HDA_VERB_EAPDBTL_SET	(UInt16)0x70C	// EAPD/BTL Enable Set
+#define HDA_VERB_RESET			(UInt16)0x7FF	// Function Reset Execute
 
-#define HDA_VERB_GET_PARAM		0xF00	// Get Parameter
-#define HDA_VERB_SET_PSTATE		0x705	// Set Power State
-#define HDA_VERB_GET_PSTATE		0xF05	// Get Power State
-#define HDA_VERB_EAPDBTL_GET	0xF0C	// EAPD/BTL Enable Get
-#define HDA_VERB_EAPDBTL_SET	0x70C	// EAPD/BTL Enable Set
-#define HDA_VERB_RESET			0x7FF	// Function Reset Execute
-
-#define HDA_VERB_SET_AMP_GAIN	0x3		// Set Amp Gain / Mute
-#define HDA_VERB_GET_AMP_GAIN	0xB		// Get Amp Gain / Mute
+#define HDA_VERB_SET_AMP_GAIN	(UInt8)0x3		// Set Amp Gain / Mute
+#define HDA_VERB_GET_AMP_GAIN	(Uint8)0xB		// Get Amp Gain / Mute
 
 #define HDA_PARM_NULL		(UInt8)0x00	// Empty or NULL payload
 
@@ -106,6 +61,150 @@
 
 #define HDA_PINCAP_IS_EAPD_CAPABLE(capabilities) (((capabilities & 0xFF0000) >> 16) == 1) // Determine if this Pin widget capabilities is marked EAPD capable
 
+typedef struct __attribute__((packed))
+{
+	// 00h: GCAP – Global Capabilities
+	UInt16 GCAP_OSS			: 4;		// Number of Output Streams Supported
+	UInt16 GCAP_ISS			: 4;		// Number of Input Streams Supported
+	UInt16 GCAP_BSS			: 5;		// Number of Bidirectional Streams Supported
+	UInt16 GCAP_NSDO		: 2;		// Number of Serial Data Out Signals
+	UInt16 GCAP_64OK		: 1;		// 64 Bit Address Supported
+	// 02h: VMIN – Minor Version
+	UInt8  VMIN;						// Minor Version
+	// 03h: VMAJ – Major Version
+	UInt8  VMAJ;						// Major Version
+	// 04h: OUTPAY – Output	Payload Capability
+	UInt16 OUTPAY;						// Output Payload Capability
+	// 06h: INPAY – Input Payload Capability
+	UInt16 INPAY;						// Input Payload Capability
+	// 08h: GCTL – Global Control
+	UInt32					: 23;		// Reserved
+	UInt32 GCTL_UNSOL		: 1;		// Accept Unsolicited Response Enable
+	UInt32					: 6;		// Reserved
+	UInt32 GCTL_FCNTRL		: 1;		// Flush Control
+	UInt32 GCTL_CRST		: 1;		// Controller Reset
+	// 0Ch: WAKEEN – Wake Enable
+	UInt16					: 1;		// Reserved
+	UInt16 WAKEEN_SDIWEN	: 15;		// SDIN Wake Enable Flags
+	// 0Eh: STATESTS – State Change Status
+	UInt16					: 1;		// Reserved
+	UInt16 STATESTS_SDIWAKE	: 15;		// SDIN State Change Status Flags
+	// 10h: GSTS – Global Status
+	UInt16					: 14;		// Reserved
+	UInt16 GSTS_FSTS		: 1;		// Flush Status
+	UInt16					: 1;		// Reserved
+	
+	UInt32					: 32;		// Spacer
+	UInt16					: 16;		// Spacer
+	
+	// 18h: OUTSTRMPAY – Output Stream Payload Capability
+	UInt16 OUTSTRMPAY;					// Output Stream Payload Capability
+	// 1Ah: INSTRMPAY – Input Stream Payload Capability
+	UInt16 INSTRMPAY;					// Input Stream Payload Capability
+	
+	UInt32					: 32;		// Spacer
+	
+	// 20h: INTCTL – Interrupt Control
+	UInt32 INTCTL_GIE		: 1;		// Global Interrupt Enable
+	UInt32 INTCTL_CIE		: 1;		// Controller Interrupt Enable
+	UInt32 INTCTL_SIE		: 30;		// Stream Interrupt Enable
+	// 24h: INTSTS – Interrupt Status
+	UInt32 INTSTS_GIS		: 1;		// Global Interrupt Status
+	UInt32 INTSTS_CIS		: 1;		// Controller Interrupt Status
+	UInt32 INTSTS_SIS		: 30;		// Stream Interrupt Status
+	
+	UInt32					: 32;		// Spacer
+	UInt32					: 32;		// Spacer
+	
+	// 30h: Wall Clock Counter
+	UInt32 WALL_CLOCK_COUNTER;			// Wall Clock Counter
+	UInt32					: 32;		// Spacer
+	// 38h: SSYNC – Stream Synchronization
+	UInt32					: 2;		// Reserved
+	UInt32 SSYNC			: 30;		// Stream Synchronization Bits
+	
+	UInt32					: 32;		// Spacer
+	
+	// 40h: CORB Lower Base Address
+	UInt32 CORBLBASE;		// CORB Lower Base Address
+	// 44h: CORB Upper Base Address
+	UInt32 CORBUBASE;		// CORB Upper Base Address
+	// 48h: CORBWP – CORB Write Pointer
+	UInt16					: 8;		// Reserved
+	UInt16 CORBWP			: 8;		// CORB Write Pointer
+	// 4Ah: CORBRP – CORB Read Pointer
+	UInt16 CORBRPRST		: 1;		// CORB Read Pointer Reset
+	UInt16					: 7;		// Reserved
+	UInt16 CORBRP			: 8;		// CORB Read Pointer
+	// 4Ch: CORBCTL – CORB Control
+	UInt8					: 6;		// Reserved
+	UInt8 CORBRUN			: 1;		// Enable CORB DMA Engine
+	UInt8 CMEIE				: 1;		// CORB Memory Error Interrupt Enable
+	// 4Dh: CORBSTS – CORB Status
+	UInt8					: 7;		// Reserved
+	UInt8 CMEI				: 1;		// CORB Memory Error Indication
+	// 4Eh: CORBSIZE – CORB Size
+	UInt8					: 4;		// CORB Size Capability
+	UInt8					: 2;		// Reserved
+	UInt8					: 2;		// CORB Size
+	
+	UInt8					: 8;		// Spacer
+	
+	// 50h: RIRBLBASE – RIRB Lower Base Address
+	UInt32 RIRBLBASE;					// RIRB Lower Base Address
+	// 54h: RIRBUBASE – RIRB Upper Base Address
+	UInt32 RIRBUBASE;					// RIRB Upper Base Address
+	// 58h: RIRBWP – RIRB Write Pointer
+	UInt16 RIRBWPRST		: 1;		// RIRB Write Pointer Reset
+	UInt16					: 7;		// Reserved
+	UInt16 RIRBWP			: 8;		// RIRB Write Pointer
+	// 5Ah: RINTCNT – Response Interrupt Count
+	UInt16					: 8;
+	UInt16 RINTCNT			: 8;		// N Response Interrupt Count
+	// 5Ch: RIRBCTL – RIRB Control
+	UInt8					: 5;		// Reserved
+	UInt8 RINTCNT_RIRBOIC	: 1;		// Response Overrun Interrupt Control
+	UInt8 RINTCNT_RIRBDMAEN : 1;		// RIRB DMA Enable
+	UInt8 RINTCNT_RINTCTL	: 1;		// Response Interrupt Control
+	// 5Dh: RIRBSTS – RIRB Status
+	UInt8					: 5;		// Reserved
+	UInt8 RIRBSTS_RIRBOIS	: 1;		// Response Overrun Interrupt Status
+	UInt8					: 1;		// Reserved
+	UInt8 RIRBSTS_RINTFL	: 1;		// Response Interrupt
+	// 5Eh: RIRBSIZE – RIRB Size
+	UInt8 RIRBSIZE_RIRBSZCAP: 4;		// RIRB Size Capability
+	UInt8					: 2;		// Reserved
+	UInt8 RIRBSIZE			: 2;		// RIRB Size
+	
+	UInt8					: 8;		// Spacer
+	
+	// 60h: Immediate Command Output Interface
+	UInt32 ICW;							// Immediate Command Write
+	// 64h: Immediate Response Input Interface
+	UInt32 IRR;							// Immediate Response Read
+	// 68h: Immediate Command Status
+	union
+	{
+		UInt16 ICS;						// Immediate Command Status
+		UInt16					: 8;	// Reserved
+		UInt16 ICS_IRRADD		: 4;	// Immediate Response Result Address
+		UInt16 ICS_IRRUNSOL		: 1;	// Immediate Response Result Unsolicited
+		UInt16 ICS_ICV			: 1;	// Immediate Command Version
+		UInt16 ICS_IRV			: 1;	// Immediate Result Valid
+		UInt16 ICS_ICB			: 1;	// Immediate Command Busy
+	};
+
+	UInt32					: 32;		// Spacer
+	UInt16					: 16;		// Spacer
+	
+	// 70h: DPLBASE – DMA Position Lower Base Address
+	UInt32 DPLBASE_ADDR		: 25;		// DMA Position Lower Base Address
+	UInt32					: 6;
+	UInt32 DPLBASE_ENBL		: 1;		// DMA Position Buffer Enable
+	// 74h: DPUBASE – DMA Position Upper Base Address
+	UInt32 DPUBASE;						// DMA Position Upper Base Address
+} HDA_REG, *pHDA_REG;
+
 // Global Capabilities response
 struct HDA_GCAP
 {
@@ -131,8 +230,12 @@ enum HDACommandMode
 
 class IntelHDA
 {
-	IOPCIDevice *mDevice = NULL;
-	IOMemoryDescriptor *mDeviceMemory = NULL;
+	IOPCIDevice* mDevice = NULL;
+	IODeviceMemory* mDeviceMemory = NULL;
+	IOMemoryMap* mMemoryMap = NULL;
+	
+	pHDA_REG mRegMap = NULL;
+	
 	HDACommandMode mCommandMode = PIO;
 	UInt8 mCodecAddress;
 
@@ -151,9 +254,9 @@ class IntelHDA
 		void SetCodecAddress(UInt8 codecAddress);
 	
 		// 12-bit verb and 8-bit payload
-		UInt32 sendCommand(UInt32 nodeId, UInt32 verb, UInt8 payload);
+		UInt32 sendCommand(UInt8 nodeId, UInt16 verb, UInt8 payload);
 		// 4-bit verb and 16-bit payload
-		UInt32 sendCommand(UInt32 nodeId, UInt32 verb, UInt16 payload);
+		UInt32 sendCommand(UInt8 nodeId, UInt8 verb, UInt16 payload);
 	
 		// Send a raw command (verb and payload combined)
 		UInt32 sendCommand(UInt32 command);
