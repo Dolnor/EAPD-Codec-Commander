@@ -221,6 +221,6 @@ int main(int argc, char **argv)
     UInt32 command = HDA_VERB(nid, verb, param);
  
     // Execute command
-    printf("value = 0x%x\n", execute_command(command));
+    printf("command 0x%08x --> result = 0x%08\n", command, execute_command(command));
     return 0;
 }
