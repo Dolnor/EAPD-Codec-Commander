@@ -162,13 +162,13 @@ UInt8 IntelHDA::getStartingNode()
 
 UInt32 IntelHDA::sendCommand(UInt8 nodeId, UInt16 verb, UInt8 payload)
 {
-    DEBUG_LOG("IntelHDA::SendCommand: verb 0x%06x, payload 0x%02x.\n", verb, payload);
+    DEBUG_LOG("IntelHDA::SendCommand: node 0x%02x, verb 0x%06x, payload 0x%02x.\n", nodeId, verb, payload);
     return this->sendCommand((nodeId & 0xFF) << 20 | (verb & 0xFFF) << 8 | payload);
 }
 
 UInt32 IntelHDA::sendCommand(UInt8 nodeId, UInt8 verb, UInt16 payload)
 {
-    DEBUG_LOG("IntelHDA::SendCommand: verb 0x%02x, payload 0x%04x.\n", verb, payload);
+    DEBUG_LOG("IntelHDA::SendCommand: node 0x%02x, verb 0x%02x, payload 0x%04x.\n", nodeId, verb, payload);
     return this->sendCommand((nodeId & 0xFF) << 20 | (verb & 0xF) << 16 | payload);
 }
 
