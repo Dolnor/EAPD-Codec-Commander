@@ -64,145 +64,145 @@
 typedef struct __attribute__((packed))
 {
 	// 00h: GCAP – Global Capabilities
-	UInt16 GCAP_OSS			: 4;		// Number of Output Streams Supported
-	UInt16 GCAP_ISS			: 4;		// Number of Input Streams Supported
-	UInt16 GCAP_BSS			: 5;		// Number of Bidirectional Streams Supported
-	UInt16 GCAP_NSDO		: 2;		// Number of Serial Data Out Signals
-	UInt16 GCAP_64OK		: 1;		// 64 Bit Address Supported
+	volatile UInt16 GCAP_OSS		: 4;		// Number of Output Streams Supported
+	volatile UInt16 GCAP_ISS		: 4;		// Number of Input Streams Supported
+	volatile UInt16 GCAP_BSS		: 5;		// Number of Bidirectional Streams Supported
+	volatile UInt16 GCAP_NSDO		: 2;		// Number of Serial Data Out Signals
+	volatile UInt16 GCAP_64OK		: 1;		// 64 Bit Address Supported
 	// 02h: VMIN – Minor Version
-	UInt8  VMIN;						// Minor Version
+	volatile UInt8  VMIN;						// Minor Version
 	// 03h: VMAJ – Major Version
-	UInt8  VMAJ;						// Major Version
+	volatile UInt8  VMAJ;						// Major Version
 	// 04h: OUTPAY – Output	Payload Capability
-	UInt16 OUTPAY;						// Output Payload Capability
+	volatile UInt16 OUTPAY;						// Output Payload Capability
 	// 06h: INPAY – Input Payload Capability
-	UInt16 INPAY;						// Input Payload Capability
+	volatile UInt16 INPAY;						// Input Payload Capability
 	// 08h: GCTL – Global Control
-	UInt32					: 23;		// Reserved
-	UInt32 GCTL_UNSOL		: 1;		// Accept Unsolicited Response Enable
-	UInt32					: 6;		// Reserved
-	UInt32 GCTL_FCNTRL		: 1;		// Flush Control
-	UInt32 GCTL_CRST		: 1;		// Controller Reset
+	UInt32							: 23;		// Reserved
+	volatile UInt32 GCTL_UNSOL		: 1;		// Accept Unsolicited Response Enable
+	UInt32							: 6;		// Reserved
+	volatile UInt32 GCTL_FCNTRL		: 1;		// Flush Control
+	volatile UInt32 GCTL_CRST		: 1;		// Controller Reset
 	// 0Ch: WAKEEN – Wake Enable
-	UInt16					: 1;		// Reserved
-	UInt16 WAKEEN_SDIWEN	: 15;		// SDIN Wake Enable Flags
+	UInt16							: 1;		// Reserved
+	volatile UInt16 WAKEEN_SDIWEN	: 15;		// SDIN Wake Enable Flags
 	// 0Eh: STATESTS – State Change Status
-	UInt16					: 1;		// Reserved
-	UInt16 STATESTS_SDIWAKE	: 15;		// SDIN State Change Status Flags
+	UInt16							: 1;		// Reserved
+	volatile UInt16 STATESTS_SDIWAKE: 15;		// SDIN State Change Status Flags
 	// 10h: GSTS – Global Status
-	UInt16					: 14;		// Reserved
-	UInt16 GSTS_FSTS		: 1;		// Flush Status
-	UInt16					: 1;		// Reserved
+	UInt16							: 14;		// Reserved
+	volatile UInt16 GSTS_FSTS		: 1;		// Flush Status
+	UInt16							: 1;		// Reserved
 	
-	UInt32					: 32;		// Spacer
-	UInt16					: 16;		// Spacer
+	UInt32							: 32;		// Spacer
+	UInt16							: 16;		// Spacer
 	
 	// 18h: OUTSTRMPAY – Output Stream Payload Capability
-	UInt16 OUTSTRMPAY;					// Output Stream Payload Capability
+	volatile UInt16 OUTSTRMPAY;					// Output Stream Payload Capability
 	// 1Ah: INSTRMPAY – Input Stream Payload Capability
-	UInt16 INSTRMPAY;					// Input Stream Payload Capability
+	volatile UInt16 INSTRMPAY;					// Input Stream Payload Capability
 	
-	UInt32					: 32;		// Spacer
+	UInt32							: 32;		// Spacer
 	
 	// 20h: INTCTL – Interrupt Control
-	UInt32 INTCTL_GIE		: 1;		// Global Interrupt Enable
-	UInt32 INTCTL_CIE		: 1;		// Controller Interrupt Enable
-	UInt32 INTCTL_SIE		: 30;		// Stream Interrupt Enable
+	volatile UInt32 INTCTL_GIE		: 1;		// Global Interrupt Enable
+	volatile UInt32 INTCTL_CIE		: 1;		// Controller Interrupt Enable
+	volatile UInt32 INTCTL_SIE		: 30;		// Stream Interrupt Enable
 	// 24h: INTSTS – Interrupt Status
-	UInt32 INTSTS_GIS		: 1;		// Global Interrupt Status
-	UInt32 INTSTS_CIS		: 1;		// Controller Interrupt Status
-	UInt32 INTSTS_SIS		: 30;		// Stream Interrupt Status
+	volatile UInt32 INTSTS_GIS		: 1;		// Global Interrupt Status
+	volatile UInt32 INTSTS_CIS		: 1;		// Controller Interrupt Status
+	volatile UInt32 INTSTS_SIS		: 30;		// Stream Interrupt Status
 	
-	UInt32					: 32;		// Spacer
-	UInt32					: 32;		// Spacer
+	UInt32							: 32;		// Spacer
+	UInt32							: 32;		// Spacer
 	
 	// 30h: Wall Clock Counter
-	UInt32 WALL_CLOCK_COUNTER;			// Wall Clock Counter
-	UInt32					: 32;		// Spacer
+	volatile UInt32 WALL_CLOCK_COUNTER;			// Wall Clock Counter
+	UInt32							: 32;		// Spacer
 	// 38h: SSYNC – Stream Synchronization
-	UInt32					: 2;		// Reserved
-	UInt32 SSYNC			: 30;		// Stream Synchronization Bits
+	UInt32							: 2;		// Reserved
+	volatile UInt32 SSYNC			: 30;		// Stream Synchronization Bits
 	
-	UInt32					: 32;		// Spacer
+	UInt32							: 32;		// Spacer
 	
 	// 40h: CORB Lower Base Address
-	UInt32 CORBLBASE;		// CORB Lower Base Address
+	volatile UInt32 CORBLBASE;		// CORB Lower Base Address
 	// 44h: CORB Upper Base Address
-	UInt32 CORBUBASE;		// CORB Upper Base Address
+	volatile UInt32 CORBUBASE;		// CORB Upper Base Address
 	// 48h: CORBWP – CORB Write Pointer
-	UInt16					: 8;		// Reserved
-	UInt16 CORBWP			: 8;		// CORB Write Pointer
+	UInt16							: 8;		// Reserved
+	volatile UInt16 CORBWP			: 8;		// CORB Write Pointer
 	// 4Ah: CORBRP – CORB Read Pointer
-	UInt16 CORBRPRST		: 1;		// CORB Read Pointer Reset
-	UInt16					: 7;		// Reserved
-	UInt16 CORBRP			: 8;		// CORB Read Pointer
+	volatile UInt16 CORBRPRST		: 1;		// CORB Read Pointer Reset
+	UInt16							: 7;		// Reserved
+	volatile UInt16 CORBRP			: 8;		// CORB Read Pointer
 	// 4Ch: CORBCTL – CORB Control
-	UInt8					: 6;		// Reserved
-	UInt8 CORBRUN			: 1;		// Enable CORB DMA Engine
-	UInt8 CMEIE				: 1;		// CORB Memory Error Interrupt Enable
+	UInt8							: 6;		// Reserved
+	volatile UInt8 CORBRUN			: 1;		// Enable CORB DMA Engine
+	volatile UInt8 CMEIE			: 1;		// CORB Memory Error Interrupt Enable
 	// 4Dh: CORBSTS – CORB Status
-	UInt8					: 7;		// Reserved
-	UInt8 CMEI				: 1;		// CORB Memory Error Indication
+	UInt8							: 7;		// Reserved
+	volatile UInt8 CMEI				: 1;		// CORB Memory Error Indication
 	// 4Eh: CORBSIZE – CORB Size
-	UInt8					: 4;		// CORB Size Capability
-	UInt8					: 2;		// Reserved
-	UInt8					: 2;		// CORB Size
+	volatile UInt8 CORBSZCAP		: 4;		// CORB Size Capability
+	UInt8							: 2;		// Reserved
+	volatile UInt8 CORBSIZE			: 2;		// CORB Size
 	
-	UInt8					: 8;		// Spacer
+	UInt8							: 8;		// Spacer
 	
 	// 50h: RIRBLBASE – RIRB Lower Base Address
-	UInt32 RIRBLBASE;					// RIRB Lower Base Address
+	volatile UInt32 RIRBLBASE;					// RIRB Lower Base Address
 	// 54h: RIRBUBASE – RIRB Upper Base Address
-	UInt32 RIRBUBASE;					// RIRB Upper Base Address
+	volatile UInt32 RIRBUBASE;					// RIRB Upper Base Address
 	// 58h: RIRBWP – RIRB Write Pointer
-	UInt16 RIRBWPRST		: 1;		// RIRB Write Pointer Reset
-	UInt16					: 7;		// Reserved
-	UInt16 RIRBWP			: 8;		// RIRB Write Pointer
+	volatile UInt16 RIRBWPRST		: 1;		// RIRB Write Pointer Reset
+	UInt16							: 7;		// Reserved
+	volatile UInt16 RIRBWP			: 8;		// RIRB Write Pointer
 	// 5Ah: RINTCNT – Response Interrupt Count
-	UInt16					: 8;
-	UInt16 RINTCNT			: 8;		// N Response Interrupt Count
+	UInt16							: 8;
+	volatile UInt16 RINTCNT			: 8;		// N Response Interrupt Count
 	// 5Ch: RIRBCTL – RIRB Control
-	UInt8					: 5;		// Reserved
-	UInt8 RINTCNT_RIRBOIC	: 1;		// Response Overrun Interrupt Control
-	UInt8 RINTCNT_RIRBDMAEN : 1;		// RIRB DMA Enable
-	UInt8 RINTCNT_RINTCTL	: 1;		// Response Interrupt Control
+	UInt8							: 5;		// Reserved
+	volatile UInt8 RINTCNT_RIRBOIC	: 1;		// Response Overrun Interrupt Control
+	volatile UInt8 RINTCNT_RIRBDMAEN: 1;		// RIRB DMA Enable
+	volatile UInt8 RINTCNT_RINTCTL	: 1;		// Response Interrupt Control
 	// 5Dh: RIRBSTS – RIRB Status
-	UInt8					: 5;		// Reserved
-	UInt8 RIRBSTS_RIRBOIS	: 1;		// Response Overrun Interrupt Status
-	UInt8					: 1;		// Reserved
-	UInt8 RIRBSTS_RINTFL	: 1;		// Response Interrupt
+	UInt8							: 5;		// Reserved
+	volatile UInt8 RIRBSTS_RIRBOIS	: 1;		// Response Overrun Interrupt Status
+	UInt8							: 1;		// Reserved
+	volatile UInt8 RIRBSTS_RINTFL	: 1;		// Response Interrupt
 	// 5Eh: RIRBSIZE – RIRB Size
-	UInt8 RIRBSIZE_RIRBSZCAP: 4;		// RIRB Size Capability
-	UInt8					: 2;		// Reserved
-	UInt8 RIRBSIZE			: 2;		// RIRB Size
+	volatile UInt8 RIRBSIZE_RIRBSZCAP: 4;		// RIRB Size Capability
+	UInt8							: 2;		// Reserved
+	volatile UInt8 RIRBSIZE			: 2;		// RIRB Size
 	
-	UInt8					: 8;		// Spacer
+	UInt8							: 8;		// Spacer
 	
 	// 60h: Immediate Command Output Interface
-	UInt32 ICW;							// Immediate Command Write
+	volatile UInt32 ICW;						// Immediate Command Write
 	// 64h: Immediate Response Input Interface
-	UInt32 IRR;							// Immediate Response Read
+	volatile UInt32 IRR;						// Immediate Response Read
 	// 68h: Immediate Command Status
 	union
 	{
-		UInt16 ICS;						// Immediate Command Status
-		UInt16					: 8;	// Reserved
-		UInt16 ICS_IRRADD		: 4;	// Immediate Response Result Address
-		UInt16 ICS_IRRUNSOL		: 1;	// Immediate Response Result Unsolicited
-		UInt16 ICS_ICV			: 1;	// Immediate Command Version
-		UInt16 ICS_IRV			: 1;	// Immediate Result Valid
-		UInt16 ICS_ICB			: 1;	// Immediate Command Busy
+		volatile UInt16 ICS;					// Immediate Command Status
+		UInt16							: 8;	// Reserved
+		volatile UInt16 ICS_IRRADD		: 4;	// Immediate Response Result Address
+		volatile UInt16 ICS_IRRUNSOL	: 1;	// Immediate Response Result Unsolicited
+		volatile UInt16 ICS_ICV			: 1;	// Immediate Command Version
+		volatile UInt16 ICS_IRV			: 1;	// Immediate Result Valid
+		volatile UInt16 ICS_ICB			: 1;	// Immediate Command Busy
 	};
 
-	UInt32					: 32;		// Spacer
-	UInt16					: 16;		// Spacer
+	UInt32							: 32;		// Spacer
+	UInt16							: 16;		// Spacer
 	
 	// 70h: DPLBASE – DMA Position Lower Base Address
-	UInt32 DPLBASE_ADDR		: 25;		// DMA Position Lower Base Address
-	UInt32					: 6;
-	UInt32 DPLBASE_ENBL		: 1;		// DMA Position Buffer Enable
+	volatile UInt32 DPLBASE_ADDR	: 25;		// DMA Position Lower Base Address
+	UInt32							: 6;
+	volatile UInt32 DPLBASE_ENBL	: 1;		// DMA Position Buffer Enable
 	// 74h: DPUBASE – DMA Position Upper Base Address
-	UInt32 DPUBASE;						// DMA Position Upper Base Address
+	volatile UInt32 DPUBASE;					// DMA Position Upper Base Address
 } HDA_REG, *pHDA_REG;
 
 // Global Capabilities response
