@@ -18,6 +18,8 @@
  */
 
 #include <stdio.h>
+#include <string.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <IOKit/IOKitLib.h>
@@ -34,7 +36,7 @@ static UInt32 execute_command(UInt32 command)
         printf("Could not locate CodecCommander kext, ensure it is loaded.\n");
         return -1;
     }
-   
+    
     // Create a connection to the IOService object
     kern_return_t kr = IOServiceOpen(service, mach_task_self(), 0, &dataPort);
     
@@ -65,8 +67,8 @@ static void list_keys(struct strtbl *tbl, int one_per_line)
     
     for (; tbl->str; tbl++)
     {
-        int len = strlen(tbl->str) + 2;
-     
+        unsigned long len = strlen(tbl->str) + 2;
+        
         if (!one_per_line && c + len >= 80)
         {
             fprintf(stderr, "\n");
@@ -91,7 +93,7 @@ static void list_keys(struct strtbl *tbl, int one_per_line)
 static int lookup_str(struct strtbl *tbl, const char *str)
 {
     struct strtbl *p, *found;
-    int len = strlen(str);
+    unsigned long len = strlen(str);
     
     found = NULL;
     
@@ -104,7 +106,7 @@ static int lookup_str(struct strtbl *tbl, const char *str)
                 fprintf(stderr, "No unique key '%s'\n", str);
                 return -1;
             }
-    
+            
             found = p;
         }
     }
@@ -143,7 +145,7 @@ static void list_verbs(int one_per_line)
 
 int main(int argc, char **argv)
 {
-    int nid, verb, param;
+    long nid, verb, param;
     int c;
     char **p;
     
@@ -207,7 +209,7 @@ int main(int argc, char **argv)
     else
     {
         param = strtol(*p, NULL, 0);
-
+        
         if (param < 0 || param > 0xffff)
         {
             fprintf(stderr, "invalid param %s\n", *p);
@@ -215,12 +217,12 @@ int main(int argc, char **argv)
         }
     }
     
-    fprintf(stderr, "nid = 0x%x, verb = 0x%x, param = 0x%x\n",
+    fprintf(stderr, "nid = 0x%lx, verb = 0x%lx, param = 0x%lx\n",
             nid, verb, param);
     
-    UInt32 command = HDA_VERB(nid, verb, param);
- 
+    UInt32 command = (UInt32)HDA_VERB(nid, verb, param);
+    
     // Execute command
-    printf("command 0x%08x --> result = 0x%08\n", command, execute_command(command));
+    printf("command 0x%08x --> result = 0x%08x\n", command, execute_command(command));
     return 0;
 }
