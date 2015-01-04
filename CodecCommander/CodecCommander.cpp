@@ -242,23 +242,19 @@ void CodecCommander::handleStateChange(CodecCommanderState newState)
 {
 	switch (newState)
 	{
+		case kStateInit:
+			break;
 		case kStateSleep:
 			if (mConfiguration->getUpdateNodes())
 				setEAPD(0x0);
-			
-			customCommands(newState);
 			break;
 		case kStateWake:
 			if (mConfiguration->getUpdateNodes())
 				setEAPD(0x02);
-			
-			customCommands(newState);
-			break;
-		case kStateInit:
-			customCommands(newState);
 			break;
 	}
 	
+	customCommands(newState);
 }
 
 /******************************************************************************
@@ -266,23 +262,24 @@ void CodecCommander::handleStateChange(CodecCommanderState newState)
  ******************************************************************************/
 void CodecCommander::customCommands(CodecCommanderState newState)
 {
-	CustomCommand* customCommands = mConfiguration->getCustomCommands();
+	OSCollectionIterator* iterator = OSCollectionIterator::withCollection(mConfiguration->getCustomCommands());
 	
-	for (int i = 0; i < MAX_CUSTOM_COMMANDS; i++)
+	OSData* data;
+	
+	while ((data = OSDynamicCast(OSData, iterator->getNextObject())))
 	{
-		CustomCommand customCommand = customCommands[i];
-		
-		if (customCommand.Command == 0)
-			break;
-		
-		if ((customCommand.OnInit == (newState == kStateInit)) ||
-		   (customCommand.OnWake == (newState == kStateWake)) ||
-		   (customCommand.OnSleep == (newState == kStateSleep)))
+		CustomCommand* customCommand = (CustomCommand*)data->getBytesNoCopy();
+
+		if ((customCommand->OnInit == (newState == kStateInit)) ||
+			(customCommand->OnWake == (newState == kStateWake)) ||
+			(customCommand->OnSleep == (newState == kStateSleep)))
 		{
-			DEBUG_LOG("%s: --> custom command 0x%08x\n", this->getName(), customCommand.Command);
-			mIntelHDA->sendCommand(customCommand.Command);
+			DEBUG_LOG("%s: --> custom command 0x%08x\n", this->getName(), customCommand->Command);
+			mIntelHDA->sendCommand(customCommand->Command);
 		}
 	}
+	
+	OSSafeRelease(iterator);
 }
 
 /******************************************************************************

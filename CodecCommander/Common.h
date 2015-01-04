@@ -34,7 +34,4 @@
 #include <IOKit/IOUserClient.h>
 #include <IOKit/pci/IOPCIDevice.h>
 
-#define MAX_EAPD_NODES 5
-#define MAX_CUSTOM_COMMANDS 32
-
 #endif

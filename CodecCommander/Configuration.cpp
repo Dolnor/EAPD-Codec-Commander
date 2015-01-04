@@ -42,6 +42,8 @@
 
 Configuration::Configuration(OSObject* platformProfile)
 {
+    mCustomCommands = OSArray::withCapacity(0);
+    
     OSDictionary* list = OSDynamicCast(OSDictionary, platformProfile);
     
     if (list == NULL)
@@ -91,9 +93,6 @@ Configuration::Configuration(OSObject* platformProfile)
     {
         OSCollectionIterator* iterator = OSCollectionIterator::withCollection(list);
         
-        iterator->reset();
-        int k = 0;
-        
         while (OSDictionary* dict = OSDynamicCast(OSDictionary, iterator->getNextObject()))
         {
             if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kCustomCommand)))
@@ -101,24 +100,26 @@ Configuration::Configuration(OSObject* platformProfile)
                 // Command should be != 0
                 if (num->unsigned32BitValue() > 0)
                 {
-                    mCustomCommands[k].Command = num->unsigned32BitValue();
+                    CustomCommand customCommand;
+                    
+                    customCommand.Command = num->unsigned32BitValue();
             
                     if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCommandOnInit)))
-                        mCustomCommands[k].OnInit = bl->getValue();
+                        customCommand.OnInit = bl->getValue();
                     else
-                        mCustomCommands[k].OnInit = false;
+                        customCommand.OnInit = false;
                     
                     if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCommandOnSleep)))
-                        mCustomCommands[k].OnSleep = bl->getValue();
+                        customCommand.OnSleep = bl->getValue();
                     else
-                        mCustomCommands[k].OnSleep = false;
+                        customCommand.OnSleep = false;
             
                     if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCommandOnWake)))
-                        mCustomCommands[k].OnWake = bl->getValue();
+                        customCommand.OnWake = bl->getValue();
                     else
-                        mCustomCommands[k].OnWake = false;
-                
-                    k++;
+                        customCommand.OnWake = false;
+                    
+                    mCustomCommands->setObject(OSData::withBytes(&customCommand, sizeof(customCommand)));
                 }
             }
         }
@@ -134,6 +135,11 @@ Configuration::Configuration(OSObject* platformProfile)
     DEBUG_LOG("...Send Delay:\t\t%d\n", mSendDelay);
     DEBUG_LOG("...Check Infinite:\t%s\n", mCheckInfinite ? "true" : "false");
     DEBUG_LOG("...Update Interval:\t%d\n", mUpdateInterval);
+}
+
+Configuration::~Configuration()
+{
+    OSSafeReleaseNULL(mCustomCommands);
 }
 
 OSDictionary* Configuration::loadConfiguration(OSDictionary* list)
@@ -199,7 +205,7 @@ UInt16 Configuration::getInterval()
     return mUpdateInterval;
 }
 
-CustomCommand* Configuration::getCustomCommands()
+OSArray* Configuration::getCustomCommands()
 {
     return mCustomCommands;
 }

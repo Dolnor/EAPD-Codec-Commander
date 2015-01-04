@@ -22,17 +22,17 @@
 
 #include "Common.h"
 
-struct CustomCommand
+typedef struct __attribute__((packed))
 {
     UInt32 Command; // 32-bit verb to execute (Codec Address will be filled in)
-    bool OnInit;          // Execute command on initialization
-    bool OnSleep;         // Execute command on sleep
-    bool OnWake;          // Execute command on wake
-};
+    bool OnInit;    // Execute command on initialization
+    bool OnSleep;   // Execute command on sleep
+    bool OnWake;    // Execute command on wake
+} CustomCommand;
 
 class Configuration
 {
-    CustomCommand mCustomCommands[MAX_CUSTOM_COMMANDS];
+    OSArray* mCustomCommands;
     
     bool mCheckInfinite;
     bool mUpdateNodes;
@@ -46,10 +46,11 @@ class Configuration
         bool getCheckInfinite();
         UInt16 getInterval();
     
-        CustomCommand* getCustomCommands();
+        OSArray* getCustomCommands();
     
         // Constructor
         Configuration(OSObject* platformProfile);
+        ~Configuration();
     private:
         static OSDictionary* loadConfiguration(OSDictionary* list);
     
