@@ -109,10 +109,12 @@
 	</dict>
 	<key>OSBundleLibraries</key>
 	<dict>
-		<key>com.apple.iokit.IOPCIFamily</key>
-		<string>2.0</string>
+		<key>com.apple.iokit.IOHDAFamily</key>
+		<string>1.0</string>
 		<key>com.apple.iokit.IOAudioFamily</key>
 		<string>1.1fc9</string>
+		<key>com.apple.iokit.IOPCIFamily</key>
+		<string>2.0</string>
 		<key>com.apple.kpi.iokit</key>
 		<string>9.0.0</string>
 		<key>com.apple.kpi.libkern</key>
