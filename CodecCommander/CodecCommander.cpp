@@ -40,6 +40,21 @@ static IOPMPowerState powerStateArray[ kPowerStateCount ] =
 
 OSDefineMetaClassAndStructors(CodecCommander, IOService)
 
+static IORegistryEntry* getHDADriver(IORegistryEntry* registryEntry)
+{
+	IORegistryEntry* childEntry = registryEntry->getChildEntry(gIOServicePlane);
+	
+	if (childEntry)
+	{
+		if (strcasecmp(childEntry->getName(), "AppleHDADriver") == 0)
+			return childEntry;
+		
+		return getHDADriver(childEntry);
+	}
+	
+	return NULL;
+}
+
 /******************************************************************************
  * CodecCommander::init - parse kernel extension Info.plist
  ******************************************************************************/
@@ -67,14 +82,19 @@ bool CodecCommander::init(OSDictionary *dictionary)
 IOService* CodecCommander::probe(IOService* provider, SInt32* score)
 {
 	DEBUG_LOG("%s::probe\n", this->getName());
-	
-	mIntelHDA = new IntelHDA(provider, PIO);
-	
-	if (mIntelHDA->initialize())
-		return this;
-	
-	mIntelHDA->~IntelHDA();
-	mIntelHDA = NULL;
+
+	OSNumber* groupType = OSDynamicCast(OSNumber, provider->getProperty("IOHDACodecFunctionGroupType"));
+	mHDADriver = getHDADriver(provider);
+		
+	if (groupType->unsigned32BitValue() == 1 && mHDADriver)
+	{
+		mIntelHDA = new IntelHDA(provider, PIO);
+		
+		if (mIntelHDA->initialize())
+			return super::probe(provider, score);
+		
+		mIntelHDA->~IntelHDA();
+	}
 	
 	return NULL;
 }
@@ -155,6 +175,8 @@ bool CodecCommander::start(IOService *provider)
 void CodecCommander::stop(IOService *provider)
 {
     DEBUG_LOG("%s: Stopping...\n", this->getName());
+	
+	return;
     
     // if workloop is active - release it
     mTimer->cancelTimeout();
@@ -183,11 +205,9 @@ void CodecCommander::stop(IOService *provider)
 void CodecCommander::parseCodecPowerState()
 {
 	// monitor power state of hda audio codec
-	IORegistryEntry *hdaDriverEntry = mIntelHDA->getHDADriver();
-	
-	if (hdaDriverEntry != NULL)
+	if (mHDADriver != NULL)
 	{
-		OSNumber *powerState = OSDynamicCast(OSNumber, hdaDriverEntry->getProperty("IOAudioPowerState"));
+		OSNumber *powerState = OSDynamicCast(OSNumber, mHDADriver->getProperty("IOAudioPowerState"));
 
 		if (powerState != NULL)
 		{

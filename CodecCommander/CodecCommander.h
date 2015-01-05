@@ -79,6 +79,8 @@ private:
 	IOWorkLoop* mWorkLoop = NULL;
 	IOTimerEventSource* mTimer = NULL;
 	
+	IORegistryEntry* mHDADriver = NULL;
+	
 	// Define variables for EAPD state updating
 	OSArray* mEAPDCapableNodes = NULL;
 	

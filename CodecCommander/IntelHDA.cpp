@@ -19,37 +19,41 @@
 
 #include "IntelHDA.h"
 
-IORegistryEntry* IntelHDA::getHDADriver(IORegistryEntry* registryEntry)
+static IOPCIDevice* getPCIDevice(IORegistryEntry* registryEntry)
 {
-    
-    OSIterator* iterator = registryEntry->getChildIterator(gIOServicePlane);
-    
-    if (iterator)
+    if (registryEntry)
     {
-        IORegistryEntry* childEntry;
+        IOPCIDevice* pciDevice = OSDynamicCast(IOPCIDevice, registryEntry);
+
+        if (pciDevice)
+            return pciDevice;
         
-        while ((childEntry = OSDynamicCast(IORegistryEntry, iterator->getNextObject())))
-        {
-            // Skip CodecCommander itself
-            if (strcasecmp(childEntry->getName(), "CodecCommander") == 0)
-                continue;
-            
-            if (strcasecmp(childEntry->getName(), "AppleHDADriver") == 0)
-                return childEntry;
-            
-            return getHDADriver(childEntry);
-        }
+        return getPCIDevice(registryEntry->getParentEntry(gIOServicePlane));
+    }
+ 
+    return NULL;
+}
+
+static UInt8 getCodecAddress(IORegistryEntry* registryEntry)
+{
+    if (registryEntry)
+    {
+        OSNumber* codecAddress = OSDynamicCast(OSNumber, registryEntry->getProperty("IOHDACodecAddress"));
         
-        OSSafeRelease(iterator);
+        if (codecAddress)
+            return codecAddress->unsigned8BitValue();
+        
+        return getCodecAddress(registryEntry->getParentEntry(gIOServicePlane));
     }
     
-    return NULL;
+    return 0xFF;
 }
 
 IntelHDA::IntelHDA(IOService *service, HDACommandMode commandMode)
 {
     mCommandMode = commandMode;
-    mDevice = OSDynamicCast(IOPCIDevice, service);
+    mDevice = getPCIDevice(service);
+    mCodecAddress = getCodecAddress(service);
 }
 
 IntelHDA::~IntelHDA()
@@ -61,7 +65,7 @@ bool IntelHDA::initialize()
 {
     IOLog("CodecCommander::IntelHDA\n");
     
-    if (mDevice == NULL || mDevice->getDeviceMemoryCount() == 0)
+    if (mDevice == NULL || mDevice->getDeviceMemoryCount() == 0 || mCodecAddress == 0xFF)
         return false;
     
     mDevice->setMemoryEnable(true);
@@ -104,6 +108,7 @@ bool IntelHDA::initialize()
         mRegMap->VMIN == 0 &&
         this->getVendorId() != 0xFFFF)
     {
+        IOLog("....Codec Address:\t%d\n", mCodecAddress);
         IOLog("....Output Streams:\t%d\n", mRegMap->GCAP_OSS);
         IOLog("....Input Streams:\t%d\n", mRegMap->GCAP_ISS);
         IOLog("....Bidi Streams:\t%d\n", mRegMap->GCAP_BSS);
@@ -117,16 +122,6 @@ bool IntelHDA::initialize()
     }
     
     return false;
-}
-
-void IntelHDA::SetCodecAddress(UInt8 codecAddress)
-{
-    mCodecAddress = codecAddress;
-}
-
-IORegistryEntry* IntelHDA::getHDADriver()
-{
-    return IntelHDA::getHDADriver(mDevice);
 }
 
 UInt16 IntelHDA::getVendorId()

@@ -250,8 +250,6 @@ class IntelHDA
 		~IntelHDA();
 	
 		bool initialize();
-		IORegistryEntry* getHDADriver();
-		void SetCodecAddress(UInt8 codecAddress);
 	
 		// 12-bit verb and 8-bit payload
 		UInt32 sendCommand(UInt8 nodeId, UInt16 verb, UInt8 payload);

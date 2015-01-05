@@ -36,11 +36,9 @@ class Configuration
     
     bool mCheckInfinite;
     bool mUpdateNodes;
-    UInt8 mCodecNumber;
     UInt16 mSendDelay, mUpdateInterval;
     
     public:
-        UInt8 getCodecNumber();
         bool getUpdateNodes();
         UInt16 getSendDelay();
         bool getCheckInfinite();

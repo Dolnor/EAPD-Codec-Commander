@@ -52,14 +52,7 @@ Configuration::Configuration(OSObject* platformProfile)
     // Retrieve platform profile configuration
 
     OSDictionary* config = Configuration::loadConfiguration(list);
-   
-    // Get codec address number
-    if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kCodecAddressNumber)))
-        mCodecNumber = num->unsigned8BitValue();
-    else
-        // Default to codec number 0
-        mCodecNumber = 0;
-   
+     
     // Get delay for sending the verb
     if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kSendDelay)))
         mSendDelay = num->unsigned16BitValue();
@@ -131,7 +124,6 @@ Configuration::Configuration(OSObject* platformProfile)
     
     // Dump parsed configuration
     DEBUG_LOG("CodecCommander::Configuration\n");
-    DEBUG_LOG("...Codec Number:\t%d\n", mCodecNumber);
     DEBUG_LOG("...Send Delay:\t\t%d\n", mSendDelay);
     DEBUG_LOG("...Check Infinite:\t%s\n", mCheckInfinite ? "true" : "false");
     DEBUG_LOG("...Update Interval:\t%d\n", mUpdateInterval);
@@ -180,11 +172,6 @@ OSDictionary* Configuration::loadConfiguration(OSDictionary* list)
 /********************************************
  * Configuration Properties
  ********************************************/
-UInt8 Configuration::getCodecNumber()
-{
-    return mCodecNumber;
-}
-
 bool Configuration::getUpdateNodes()
 {
     return mUpdateNodes;
