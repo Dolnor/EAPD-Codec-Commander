@@ -73,21 +73,21 @@ public:
 	
 	UInt32 executeCommand(UInt32 command);
 private:
+	IOAudioDevice* mAudioDevice = NULL;
+	IOAudioDevicePowerState mHDACurrentPowerState, mHDAPrevPowerState;
+	
 	Configuration *mConfiguration = NULL;
 	IntelHDA *mIntelHDA = NULL;
 	
 	IOWorkLoop* mWorkLoop = NULL;
 	IOTimerEventSource* mTimer = NULL;
 	
-	IORegistryEntry* mHDADriver = NULL;
-	
 	// Define variables for EAPD state updating
 	OSArray* mEAPDCapableNodes = NULL;
 	
 	bool mEAPDPoweredDown, mColdBoot;
-	UInt8 mHDACurrentPowerState, mHDAPrevPowerState;
-	
-	void handleStateChange(CodecCommanderState newState);
+		
+	void handleStateChange(IOAudioDevicePowerState newState);
 	
 	// parse codec power state from ioreg
 	void parseCodecPowerState();
@@ -100,6 +100,8 @@ private:
 	
 	// execute configured custom commands
 	void customCommands(CodecCommanderState newState);
+	
+	static const char* getPowerState(IOAudioDevicePowerState powerState);
 };
 
 class CodecCommanderClient : public IOUserClient

@@ -237,6 +237,8 @@ class IntelHDA
 	pHDA_REG mRegMap = NULL;
 	
 	HDACommandMode mCommandMode = PIO;
+	UInt32 mCodecVendorId;
+	UInt8 mCodecGroupType;
 	UInt8 mCodecAddress;
 
 	// Read-once parameters
@@ -245,7 +247,7 @@ class IntelHDA
 	
 	public:
 		// Constructor
-		IntelHDA(IOService *service, HDACommandMode commandMode);
+		IntelHDA(IOAudioDevice *audioDevice, HDACommandMode commandMode);
 		// Destructor
 		~IntelHDA();
 	
@@ -259,6 +261,10 @@ class IntelHDA
 		// Send a raw command (verb and payload combined)
 		UInt32 sendCommand(UInt32 command);
 	
+		UInt32 getCodecVendorId() { return mCodecVendorId; }
+		UInt8 getCodecAddress() { return mCodecAddress; }
+		UInt8 getCodecGroupType() { return mCodecGroupType; }
+	
 		UInt16 getVendorId();
 		UInt16 getDeviceId();
 	
@@ -266,8 +272,6 @@ class IntelHDA
 		UInt8 getStartingNode();
 	private:
 		UInt32 executePIO(UInt32 command);
-	
-		static IORegistryEntry* getHDADriver(IORegistryEntry* registryEntry);
 };
 
 

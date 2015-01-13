@@ -19,8 +19,6 @@
 
 #include "CodecCommander.h"
 
-#define kPlatformProfile            "Platform Profile"
-
 //REVIEW: avoids problem with Xcode 5.1.0 where -dead_strip eliminates these required symbols
 #include <libkern/OSKextLib.h>
 void* _org_rehabman_dontstrip_[] =
@@ -40,21 +38,6 @@ static IOPMPowerState powerStateArray[ kPowerStateCount ] =
 
 OSDefineMetaClassAndStructors(CodecCommander, IOService)
 
-static IORegistryEntry* getHDADriver(IORegistryEntry* registryEntry)
-{
-	IORegistryEntry* childEntry = registryEntry->getChildEntry(gIOServicePlane);
-	
-	if (childEntry)
-	{
-		if (strcasecmp(childEntry->getName(), "AppleHDADriver") == 0)
-			return childEntry;
-		
-		return getHDADriver(childEntry);
-	}
-	
-	return NULL;
-}
-
 /******************************************************************************
  * CodecCommander::init - parse kernel extension Info.plist
  ******************************************************************************/
@@ -70,8 +53,8 @@ bool CodecCommander::init(OSDictionary *dictionary)
 	
 	mEAPDPoweredDown = true;
 	mColdBoot = true; // assume booting from cold since hibernate is broken on most hacks
-	mHDACurrentPowerState = 0x0; // assume hda codec has no power at cold boot
-	mHDAPrevPowerState = mHDACurrentPowerState; //and previous state was the same
+	mHDACurrentPowerState = kIOAudioDeviceSleep; // assume hda codec has no power at cold boot
+	mHDAPrevPowerState = mHDACurrentPowerState;  // and previous state was the same
 	
     return true;
 }
@@ -82,19 +65,11 @@ bool CodecCommander::init(OSDictionary *dictionary)
 IOService* CodecCommander::probe(IOService* provider, SInt32* score)
 {
 	DEBUG_LOG("%s::probe\n", this->getName());
-
-	OSNumber* groupType = OSDynamicCast(OSNumber, provider->getProperty("IOHDACodecFunctionGroupType"));
-	mHDADriver = getHDADriver(provider);
-		
-	if (groupType->unsigned32BitValue() == 1 && mHDADriver)
-	{
-		mIntelHDA = new IntelHDA(provider, PIO);
-		
-		if (mIntelHDA->initialize())
-			return super::probe(provider, score);
-		
-		mIntelHDA->~IntelHDA();
-	}
+	
+	mAudioDevice = OSDynamicCast(IOAudioDevice, provider);
+	
+	if (mAudioDevice)
+		return super::probe(provider, score);
 	
 	return NULL;
 }
@@ -111,6 +86,16 @@ bool CodecCommander::start(IOService *provider)
 		DEBUG_LOG("%s: Error loading kernel extension.\n", this->getName());
 		return false;
 	}
+
+	mIntelHDA = new IntelHDA(mAudioDevice, PIO);
+		
+	if (!mIntelHDA->initialize())
+		return false;
+	
+	// Populate HDA properties for client matching
+	setProperty(kCodecVendorID, OSNumber::withNumber(mIntelHDA->getCodecVendorId(), 32));
+	setProperty(kCodecAddress, OSNumber::withNumber(mIntelHDA->getCodecAddress(), 8));
+	setProperty(kCodecFuncGroupType, OSNumber::withNumber(mIntelHDA->getCodecGroupType(), 8));
 	
 	mConfiguration = new Configuration(this->getProperty(kPlatformProfile));
 	
@@ -119,7 +104,7 @@ bool CodecCommander::start(IOService *provider)
 		IOSleep(mConfiguration->getSendDelay()); // need to wait a bit until codec can actually respond to immediate verbs
 
 		// Fetch Pin Capabilities from the range of nodes
-		DEBUG_LOG("%s: Getting EAPD supported node list\n", this->getName());
+		DEBUG_LOG("%s: Getting EAPD supported node list.\n", this->getName());
 		
 		mEAPDCapableNodes = OSArray::withCapacity(0);
 		
@@ -129,7 +114,7 @@ bool CodecCommander::start(IOService *provider)
 			
 			if (response == -1)
 			{
-				DEBUG_LOG("CodecCommander: Failed to retrieve pin capabilities for node 0x%02x.\n", nodeId);
+				DEBUG_LOG("%s: Failed to retrieve pin capabilities for node 0x%02x.\n", this->getName(), nodeId);
 				continue;
 			}
 			
@@ -137,13 +122,13 @@ bool CodecCommander::start(IOService *provider)
 			if (HDA_PINCAP_IS_EAPD_CAPABLE(response))
 			{
 				mEAPDCapableNodes->setObject(OSNumber::withNumber(nodeId, 8));
-				IOLog("CodecCommander: Node ID 0x%02x supports EAPD, will update state after sleep\n", nodeId);
+				IOLog("%s: Node ID 0x%02x supports EAPD, will update state after sleep.\n", this->getName(), nodeId);
 			}
 		}
 	}
 	
 	// Execute any custom commands registered for initialization
-	handleStateChange(kStateInit);
+	customCommands(kStateInit);
 	
     // notify about extra feature requests
     if (mConfiguration->getCheckInfinite())
@@ -175,9 +160,7 @@ bool CodecCommander::start(IOService *provider)
 void CodecCommander::stop(IOService *provider)
 {
     DEBUG_LOG("%s: Stopping...\n", this->getName());
-	
-	return;
-    
+
     // if workloop is active - release it
     mTimer->cancelTimeout();
     mWorkLoop->removeEventSource(mTimer);
@@ -188,53 +171,15 @@ void CodecCommander::stop(IOService *provider)
 	
 	// Free IntelHDA engine
 	if (mIntelHDA)
-		mIntelHDA->~IntelHDA();
+		delete mIntelHDA;
 	
 	// Free Configuration
 	if (mConfiguration)
-		mConfiguration->~Configuration();
+		delete mConfiguration;
 	
 	OSSafeReleaseNULL(mEAPDCapableNodes);
 	
     super::stop(provider);
-}
-
-/******************************************************************************
- * CodecCommander::parseCodecPowerState - get codec power state from IOReg
- ******************************************************************************/
-void CodecCommander::parseCodecPowerState()
-{
-	// monitor power state of hda audio codec
-	if (mHDADriver != NULL)
-	{
-		OSNumber *powerState = OSDynamicCast(OSNumber, mHDADriver->getProperty("IOAudioPowerState"));
-
-		if (powerState != NULL)
-		{
-			mHDACurrentPowerState = powerState->unsigned8BitValue();
-
-			// if hda codec changed power state
-			if (mHDACurrentPowerState != mHDAPrevPowerState)
-			{
-				DEBUG_LOG("%s: power state transition from %d to %d recorded\n", this->getName(), mHDAPrevPowerState, mHDACurrentPowerState);
-				
-				// store current power state as previous state for next workloop cycle
-				mHDAPrevPowerState = mHDACurrentPowerState;
-				// notify about codec power loss state
-				if (mHDACurrentPowerState == 0x0)
-				{
-					DEBUG_LOG("%s: HDA codec lost power\n", this->getName());
-					handleStateChange(kStateSleep); // power down EAPDs properly
-					mEAPDPoweredDown = true;
-					mColdBoot = false; //codec entered fugue state or sleep - no longer a cold boot
-				}
-			}
-		}
-		else
-			DEBUG_LOG("%s: IOAudioPowerState unknown\n", this->getName());
-	}
-	else
-		DEBUG_LOG("%s: AppleHDADriver is unreachable\n", this->getName());
 }
 
 /******************************************************************************
@@ -243,13 +188,32 @@ void CodecCommander::parseCodecPowerState()
 void CodecCommander::onTimerAction()
 {
     // check if hda codec is powered - we are monitoring ocurrences of fugue state
-    parseCodecPowerState();
+	mHDACurrentPowerState = mAudioDevice->getPowerState();
+	
+	// if hda codec changed power state
+	if (mHDACurrentPowerState != mHDAPrevPowerState)
+	{
+		DEBUG_LOG("%s: Power state transition from %s to %s recorded.\n",
+				  this->getName(), getPowerState(mHDAPrevPowerState), getPowerState(mHDACurrentPowerState));
+		
+		// store current power state as previous state for next workloop cycle
+		mHDAPrevPowerState = mHDACurrentPowerState;
+		
+		// notify about codec power loss state
+		if (mHDACurrentPowerState == kIOAudioDeviceSleep)
+		{
+			DEBUG_LOG("%s: HDA codec lost power\n", this->getName());
+			handleStateChange(kIOAudioDeviceSleep); // power down EAPDs properly
+			mEAPDPoweredDown = true;
+			mColdBoot = false; //codec entered fugue state or sleep - no longer a cold boot
+		}
+	}
 	
     // if no power after semi-sleep (fugue) state and power was restored - set EAPD bit
-	if (mEAPDPoweredDown && mHDACurrentPowerState != 0x0)
+	if (mEAPDPoweredDown && mHDACurrentPowerState != kIOAudioDeviceSleep)
     {
         DEBUG_LOG("%s: --> hda codec power restored\n", this->getName());
-		handleStateChange(kStateWake);
+		handleStateChange(kIOAudioDeviceActive);
     }
     
     mTimer->setTimeoutMS(mConfiguration->getInterval());
@@ -258,23 +222,24 @@ void CodecCommander::onTimerAction()
 /******************************************************************************
  * CodecCommander::handleStateChange - handles transitioning from one state to another, i.e. sleep --> wake
  ******************************************************************************/
-void CodecCommander::handleStateChange(CodecCommanderState newState)
+void CodecCommander::handleStateChange(IOAudioDevicePowerState newState)
 {
 	switch (newState)
 	{
-		case kStateInit:
-			break;
-		case kStateSleep:
+		case kIOAudioDeviceSleep:
 			if (mConfiguration->getUpdateNodes())
 				setEAPD(0x0);
+			
+			customCommands(kStateSleep);
 			break;
-		case kStateWake:
+		case kIOAudioDeviceIdle:
+		case kIOAudioDeviceActive:
 			if (mConfiguration->getUpdateNodes())
 				setEAPD(0x02);
+			
+			customCommands(kStateWake);
 			break;
 	}
-	
-	customCommands(newState);
 }
 
 /******************************************************************************
@@ -330,7 +295,6 @@ void CodecCommander::setEAPD(UInt8 logicLevel)
 /******************************************************************************
  * CodecCommander::performCodecReset - reset function group and set power to D3
  *****************************************************************************/
-
 void CodecCommander::performCodecReset()
 {
     /*
@@ -363,39 +327,39 @@ void CodecCommander::performCodecReset()
  ******************************************************************************/
 IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker)
 {
-
-    if (kPowerStateSleep == powerStateOrdinal)
+	switch (powerStateOrdinal)
 	{
-        DEBUG_LOG("%s: --> asleep\n", this->getName());
-		handleStateChange(kStateSleep); // set EAPD logic level 0 to cause EAPD to power off properly
-        mEAPDPoweredDown = true;  // now it's powered down for sure
-        mColdBoot = false;
+		case kPowerStateSleep:
+			DEBUG_LOG("%s: --> asleep\n", this->getName());
+			handleStateChange(kIOAudioDeviceSleep); // set EAPD logic level 0 to cause EAPD to power off properly
+			mEAPDPoweredDown = true;  // now it's powered down for sure
+			mColdBoot = false;
+			break;
+		case kPowerStateNormal:
+			DEBUG_LOG("%s: --> awake\n", this->getName());
+			
+			// issue codec reset at wake and cold boot
+			performCodecReset();
+			
+			if (mEAPDPoweredDown)
+				// set EAPD bit at wake or cold boot
+				handleStateChange(kIOAudioDeviceActive);
+			
+			// if infinite checking requested
+			if (mConfiguration->getCheckInfinite())
+			{
+				// if checking infinitely then make sure to delay workloop
+				if (mColdBoot)
+					mTimer->setTimeoutMS(20000); // create a nasty 20sec delay for AudioEngineOutput to initialize
+				// if we are waking it will be already initialized
+				else
+					mTimer->setTimeoutMS(100); // so fire timer for workLoop almost immediately
+				
+				DEBUG_LOG("%s: --> workloop started\n", this->getName());
+			}
+			break;
 	}
-	else if (kPowerStateNormal == powerStateOrdinal)
-	{
-        DEBUG_LOG("%s: --> awake\n", this->getName());
-
-        // issue codec reset at wake and cold boot
-        performCodecReset();
-        
-        if (mEAPDPoweredDown)
-            // set EAPD bit at wake or cold boot
-			handleStateChange(kStateWake);
-
-        // if infinite checking requested
-        if (mConfiguration->getCheckInfinite())
-		{
-            // if checking infinitely then make sure to delay workloop
-            if (mColdBoot)
-                mTimer->setTimeoutMS(20000); // create a nasty 20sec delay for AudioEngineOutput to initialize
-            // if we are waking it will be already initialized
-            else
-                mTimer->setTimeoutMS(100); // so fire timer for workLoop almost immediately
-
-            DEBUG_LOG("%s: --> workloop started\n", this->getName());
-        }
-    }
-    
+	
     return IOPMAckImplied;
 }
 
@@ -408,4 +372,19 @@ UInt32 CodecCommander::executeCommand(UInt32 command)
 		return mIntelHDA->sendCommand(command);
 	
 	return -1;
+}
+
+/******************************************************************************
+ * CodecCommander::getPowerState - Get a textual description for a IOAudioDevicePowerState
+ ******************************************************************************/
+const char* CodecCommander::getPowerState(IOAudioDevicePowerState powerState)
+{
+	static const IONamedValue state_values[] = {
+		{kIOAudioDeviceSleep,  "Sleep"  },
+		{kIOAudioDeviceIdle,   "Idle"   },
+		{kIOAudioDeviceActive, "Active" },
+		{0,                    NULL     }
+	};
+	
+	return IOFindNameForValue(powerState, state_values);
 }

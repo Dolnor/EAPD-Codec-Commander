@@ -21,39 +21,43 @@
 
 static IOPCIDevice* getPCIDevice(IORegistryEntry* registryEntry)
 {
-    if (registryEntry)
+    while (registryEntry)
     {
         IOPCIDevice* pciDevice = OSDynamicCast(IOPCIDevice, registryEntry);
-
+        
         if (pciDevice)
             return pciDevice;
-        
-        return getPCIDevice(registryEntry->getParentEntry(gIOServicePlane));
+
+        registryEntry = registryEntry->getParentEntry(gIOServicePlane);
     }
  
     return NULL;
 }
 
-static UInt8 getCodecAddress(IORegistryEntry* registryEntry)
+static UInt32 getPropertyValue(IORegistryEntry* registryEntry, const char* propertyName)
 {
-    if (registryEntry)
+    while (registryEntry)
     {
-        OSNumber* codecAddress = OSDynamicCast(OSNumber, registryEntry->getProperty("IOHDACodecAddress"));
+        OSNumber* value = OSDynamicCast(OSNumber, registryEntry->getProperty(propertyName));
+    
+        if (value)
+            return value->unsigned32BitValue();
         
-        if (codecAddress)
-            return codecAddress->unsigned8BitValue();
-        
-        return getCodecAddress(registryEntry->getParentEntry(gIOServicePlane));
+        registryEntry = registryEntry->getParentEntry(gIOServicePlane);
     }
     
-    return 0xFF;
+    return 0xFFFFFFFF;
 }
 
-IntelHDA::IntelHDA(IOService *service, HDACommandMode commandMode)
+IntelHDA::IntelHDA(IOAudioDevice *audioDevice, HDACommandMode commandMode)
 {
+    
     mCommandMode = commandMode;
-    mDevice = getPCIDevice(service);
-    mCodecAddress = getCodecAddress(service);
+    mDevice = getPCIDevice(audioDevice);
+        
+    mCodecVendorId = getPropertyValue(audioDevice, kCodecVendorID);
+    mCodecGroupType = getPropertyValue(audioDevice, kCodecFuncGroupType);
+    mCodecAddress = getPropertyValue(audioDevice, kCodecAddress);
 }
 
 IntelHDA::~IntelHDA()

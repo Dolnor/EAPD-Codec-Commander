@@ -32,6 +32,12 @@
 #include <IOKit/IODeviceTreeSupport.h>
 #include <IOKit/IOCommandGate.h>
 #include <IOKit/IOUserClient.h>
+#include <IOKit/audio/IOAudioDevice.h>
 #include <IOKit/pci/IOPCIDevice.h>
+
+#define kPlatformProfile            "Platform Profile"
+#define kCodecVendorID              "IOHDACodecVendorID"
+#define kCodecAddress               "IOHDACodecAddress"
+#define kCodecFuncGroupType         "IOHDACodecFunctionGroupType"
 
 #endif
