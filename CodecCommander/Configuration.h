@@ -35,11 +35,13 @@ class Configuration
     OSArray* mCustomCommands;
     
     bool mCheckInfinite;
+    bool mPerformReset;
     bool mUpdateNodes;
     UInt16 mSendDelay, mUpdateInterval;
     
     public:
         bool getUpdateNodes();
+        bool getPerformReset();
         UInt16 getSendDelay();
         bool getCheckInfinite();
         UInt16 getInterval();

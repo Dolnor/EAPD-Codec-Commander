@@ -338,8 +338,9 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 		case kPowerStateNormal:
 			DEBUG_LOG("%s: --> awake\n", this->getName());
 			
-			// issue codec reset at wake and cold boot
-			performCodecReset();
+			if (mConfiguration->getPerformReset())
+				// issue codec reset at wake and cold boot
+				performCodecReset();
 			
 			if (mEAPDPoweredDown)
 				// set EAPD bit at wake or cold boot

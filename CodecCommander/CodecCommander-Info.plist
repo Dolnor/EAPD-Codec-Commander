@@ -59,6 +59,8 @@
 							<true/>
 						</dict>
 					</array>
+					<key>Perform Reset</key>
+					<false/>
 					<key>Send Delay</key>
 					<integer>300</integer>
 					<key>Update Nodes</key>
@@ -105,11 +107,11 @@
 		<string>1.0</string>
 		<key>com.apple.iokit.IOPCIFamily</key>
 		<string>1.0.0b1</string>
+		<key>com.apple.kpi.bsd</key>
+		<string>9.0.0</string>
 		<key>com.apple.kpi.iokit</key>
 		<string>9.0.0</string>
 		<key>com.apple.kpi.libkern</key>
-		<string>9.0.0</string>
-		<key>com.apple.kpi.bsd</key>
 		<string>9.0.0</string>
 	</dict>
 	<key>OSBundleRequired</key>

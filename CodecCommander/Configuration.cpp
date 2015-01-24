@@ -21,6 +21,7 @@
 
 // Constants for Configuration
 #define kDefault                    "Default"
+#define kPerformReset               "Perform Reset"
 
 // Constants for Intel HDA
 #define kCodecAddressNumber         "Codec Address Number"
@@ -59,6 +60,13 @@ Configuration::Configuration(OSObject* platformProfile)
     else
         // Default to 3000
         mSendDelay = 3000;
+
+    // Determine if perform reset is requested (Defaults to true)
+    if (OSBoolean* bl = OSDynamicCast(OSBoolean, config->getObject(kPerformReset)))
+        mPerformReset = bl->getValue();
+    else
+        // Default to true
+        mPerformReset = true;
     
     if (OSBoolean* bl = OSDynamicCast(OSBoolean, config->getObject(kUpdateNodes)))
         mUpdateNodes = bl->getValue();
@@ -175,6 +183,11 @@ OSDictionary* Configuration::loadConfiguration(OSDictionary* list)
 bool Configuration::getUpdateNodes()
 {
     return mUpdateNodes;
+}
+
+bool Configuration::getPerformReset()
+{
+    return mPerformReset;
 }
 
 UInt16 Configuration::getSendDelay()
