@@ -41,18 +41,18 @@
 #define kCommandOnSleep             "On Sleep"
 #define kCommandOnWake              "On Wake"
 
-Configuration::Configuration(OSObject* platformProfile)
+Configuration::Configuration(OSObject* codecProfile, UInt32 codecVendorId)
 {
     mCustomCommands = OSArray::withCapacity(0);
     
-    OSDictionary* list = OSDynamicCast(OSDictionary, platformProfile);
+    OSDictionary* list = OSDynamicCast(OSDictionary, codecProfile);
     
     if (list == NULL)
         return;
     
     // Retrieve platform profile configuration
 
-    OSDictionary* config = Configuration::loadConfiguration(list);
+    OSDictionary* config = Configuration::loadConfiguration(list, codecVendorId);
      
     // Get delay for sending the verb
     if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kSendDelay)))
@@ -142,37 +142,37 @@ Configuration::~Configuration()
     OSSafeReleaseNULL(mCustomCommands);
 }
 
-OSDictionary* Configuration::loadConfiguration(OSDictionary* list)
+OSDictionary* Configuration::loadConfiguration(OSDictionary* list, UInt32 codecVendorId)
 {
+    char buffer[16];
+    
     if (!list)
         return NULL;
     
     OSDictionary* result = NULL;
     OSDictionary* defaultNode = OSDynamicCast(OSDictionary, list->getObject(kDefault));
     
-    OSString* platformManufacturer = getPlatformManufacturer();
-    OSString* platformProduct = getPlatformProduct();
+    snprintf(buffer, sizeof(buffer), "0x%08x", codecVendorId);
+    OSString* codecString = OSString::withCString(buffer);
     
-    DEBUG_LOG("CodecCommander::Platform\n");
-    DEBUG_LOG("...Manufacturer:\t%s\n", platformManufacturer != NULL ? platformManufacturer->getCStringNoCopy() : "Unknown");
-    DEBUG_LOG("...Product:\t\t%s\n", platformProduct != NULL ? platformProduct->getCStringNoCopy() : "Unknown");
+    OSDictionary* codecNode = OSDynamicCast(OSDictionary, list->getObject(codecString));
     
-    OSDictionary* platformNode = Configuration::getPlatformNode(list, platformManufacturer, platformProduct);
+    if (codecNode != NULL)
+        DEBUG_LOG("CodecCommander: Located configuration for codec %s.\n", buffer);
     
-    OSSafeRelease(platformManufacturer);
-    OSSafeRelease(platformProduct);
+    OSSafeRelease(codecString);
   
     if (defaultNode)
     {
-        // have default node, result is merge with platform node
+        // have default node, result is merged with platform node
         result = OSDictionary::withDictionary(defaultNode);
         
-        if (result && platformNode)
-            result->merge(platformNode);
+        if (result && codecNode)
+            result->merge(codecNode);
     }
-    else if (platformNode)
+    else if (codecNode)
         // no default node, try to use just platform node
-        result = OSDictionary::withDictionary(platformNode);
+        result = OSDictionary::withDictionary(codecNode);
    
     return result;
 }
@@ -208,151 +208,5 @@ UInt16 Configuration::getInterval()
 OSArray* Configuration::getCustomCommands()
 {
     return mCustomCommands;
-}
-
-/******************************************************************************
- * Methods for getting configuration dictionary, courtesy of RehabMan
- ******************************************************************************/
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Simplify data from Clover's DMI readings and use it for profile make and model
- * Courtesy of kozlek (HWSensors project)
- * https://github.com/kozlek/HWSensors
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-OSString* Configuration::getManufacturerNameFromOEMName(OSString *name)
-{
-    if (!name)
-        return NULL;
-    
-    OSString *manufacturer = NULL;
-    
-    if (name->isEqualTo("ASUSTeK Computer INC.") ||
-        name->isEqualTo("ASUSTeK COMPUTER INC.")) manufacturer = OSString::withCString("ASUS");
-
-    if (name->isEqualTo("Dell Inc.")) manufacturer = OSString::withCString("DELL");
-
-    if (name->isEqualTo("Gigabyte Technology Co., Ltd.")) manufacturer = OSString::withCString("Gigabyte");
-
-    if (name->isEqualTo("FUJITSU") ||
-        name->isEqualTo("FUJITSU SIEMENS")) manufacturer = OSString::withCString("FUJITSU");
-
-    if (name->isEqualTo("Hewlett-Packard")) manufacturer = OSString::withCString("HP");
-
-    if (name->isEqualTo("IBM")) manufacturer = OSString::withCString("IBM");
-
-    if (name->isEqualTo("Intel") ||
-        name->isEqualTo("Intel Corp.") ||
-        name->isEqualTo("Intel Corporation") ||
-        name->isEqualTo("INTEL Corporation")) manufacturer = OSString::withCString("Intel");
-
-    if (name->isEqualTo("Lenovo") || name->isEqualTo("LENOVO")) manufacturer = OSString::withCString("Lenovo");
-
-    if (name->isEqualTo("Micro-Star International") ||
-        name->isEqualTo("MICRO-STAR INTERNATIONAL CO., LTD") ||
-        name->isEqualTo("MICRO-STAR INTERNATIONAL CO.,LTD") ||
-        name->isEqualTo("MSI")) manufacturer = OSString::withCString("MSI");
-    
-    if (!manufacturer && !name->isEqualTo("To be filled by O.E.M."))
-        manufacturer = OSString::withString(name);
-    
-    return manufacturer;
-}
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Obtain information for make and model to match against config in Info.plist
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-OSString* Configuration::getPlatformManufacturer()
-{
-    // Try to get data from Clover first
-    if (IORegistryEntry* platformNode = IORegistryEntry::fromPath("/efi/platform", gIODTPlane))
-    {
-        OSString *vendor = NULL;
-        OSString *manufacturer = NULL;
-        
-        if (OSData *data = OSDynamicCast(OSData, platformNode->getProperty("OEMVendor")))
-        {
-            vendor = OSString::withCString((char*)data->getBytesNoCopy());
-            manufacturer = getManufacturerNameFromOEMName(vendor);
-        }
-        
-        OSSafeRelease(vendor);
-        OSSafeRelease(platformNode);
-        
-        if (manufacturer)
-            return manufacturer;
-    }
-    
-    // If not, then try from RehabMan OEM string on PS2K (useful chameleon/chimera)
-    if (IORegistryEntry* ps2KeyboardDevice = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PS2K"))
-    {
-        OSString *vendor = NULL;
-        OSString *manufacturer = NULL;
-        
-        vendor = OSDynamicCast(OSString, ps2KeyboardDevice->getProperty("RM,oem-id"));
-        manufacturer = getManufacturerNameFromOEMName(vendor);
-        
-        OSSafeRelease(vendor);
-        OSSafeRelease(ps2KeyboardDevice);
-        
-        if (manufacturer)
-            return manufacturer;
-    }
-    
-    return NULL;
-}
-
-OSString* Configuration::getPlatformProduct()
-{
-    // try to get data from Clover first
-    if (IORegistryEntry* platformNode = IORegistryEntry::fromPath("/efi/platform", gIODTPlane))
-    {
-        OSString *product = NULL;
-        
-        if (OSData *data = OSDynamicCast(OSData, platformNode->getProperty("OEMBoard")))
-            product = OSString::withCString((char*)data->getBytesNoCopy());
-        
-        OSSafeRelease(platformNode);
-        
-        if (product)
-            return product;
-    }
-    
-    // then from PS2K
-    if (IORegistryEntry* ps2KeyboardDevice = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PS2K"))
-    {
-        OSString *product = OSDynamicCast(OSString, ps2KeyboardDevice->getProperty("RM,oem-table-id"));
-        
-        OSSafeRelease(ps2KeyboardDevice);
-        
-        if (product)
-            return product;
-    }
-    
-    return NULL;
-}
-
-OSDictionary* Configuration::getPlatformNode(OSDictionary* list, OSString *platformManufacturer, OSString *platformProduct)
-{
-    OSDictionary *configuration = NULL;
-
-    // Try and retrieve
-    // 1) Manufacturer / Product
-    // 2) Manufacturer / Default
-    // 3) Product
-    
-    if (platformManufacturer && platformProduct)
-    {
-        if (OSDictionary *manufacturerNode = OSDynamicCast(OSDictionary, list->getObject(platformManufacturer)))
-            if (!(configuration = OSDynamicCast(OSDictionary, manufacturerNode->getObject(platformProduct))))
-                configuration = OSDynamicCast(OSDictionary, manufacturerNode->getObject(kDefault));
-    }
-
-    if (platformProduct)
-    {
-        if (!configuration && !(configuration = OSDynamicCast(OSDictionary, list->getObject(platformProduct))))
-            configuration = OSDynamicCast(OSDictionary, list->getObject(kDefault));
-    }
-    
-    return configuration;
 }
 

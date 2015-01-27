@@ -49,17 +49,10 @@ class Configuration
         OSArray* getCustomCommands();
     
         // Constructor
-        Configuration(OSObject* platformProfile);
+        Configuration(OSObject* codecProfile, UInt32 codecVendorId);
         ~Configuration();
     private:
-        static OSDictionary* loadConfiguration(OSDictionary* list);
-    
-        static OSString* getManufacturerNameFromOEMName(OSString *name);
-        static OSString* getPlatformManufacturer();
-        static OSString* getPlatformProduct();
-    
-        // Get config and make config dictionary by parsing plist
-        static OSDictionary* getPlatformNode(OSDictionary* list, OSString *platformManufacturer, OSString *platformProduct);
+        static OSDictionary* loadConfiguration(OSDictionary* list, UInt32 codecVendorId);
 };
 
 

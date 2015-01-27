@@ -28,33 +28,25 @@
 		<dict>
 			<key>CFBundleIdentifier</key>
 			<string>${MODULE_NAME}</string>
-			<key>IOClass</key>
-			<string>CodecCommander</string>
-			<key>IOMatchCategory</key>
-			<string>CodecCommander</string>
-			<key>IOProviderClass</key>
-			<string>IOAudioDevice</string>
-			<key>IOUserClientClass</key>
-			<string>CodecCommanderClient</string>
-			<key>Platform Profile</key>
+			<key>Codec Profile</key>
 			<dict>
-				<key>Default</key>
+				<key>0x10ec0668</key>
 				<dict>
 					<key>Check Infinitely</key>
-					<true/>
+					<false/>
 					<key>Check Interval</key>
 					<integer>3000</integer>
 					<key>Custom Commands</key>
 					<array>
 						<dict>
 							<key>Command</key>
-							<integer>983040</integer>
+							<integer>28772128</integer>
 							<key>Comment</key>
-							<string>Test command (Vendor Info)</string>
+							<string>Node 0x0b - Pin Control (In Enable)</string>
 							<key>On Init</key>
-							<true/>
+							<false/>
 							<key>On Sleep</key>
-							<true/>
+							<false/>
 							<key>On Wake</key>
 							<true/>
 						</dict>
@@ -66,33 +58,30 @@
 					<key>Update Nodes</key>
 					<true/>
 				</dict>
-				<key>Gigabyte</key>
+				<key>Default</key>
 				<dict>
-					<key>H87-HD3</key>
-					<dict>
-						<key>Check Infinitely</key>
-						<false/>
-						<key>Codec Address Number</key>
-						<integer>2</integer>
-						<key>Update Nodes</key>
-						<false/>
-					</dict>
-				</dict>
-				<key>Lenovo</key>
-				<dict>
-					<key>Cherry 4A Touch</key>
-					<string>U430</string>
-					<key>U430</key>
-					<dict>
-						<key>Check Infinitely</key>
-						<true/>
-						<key>Check Interval</key>
-						<integer>1000</integer>
-						<key>Send Delay</key>
-						<integer>100</integer>
-					</dict>
+					<key>Check Infinitely</key>
+					<true/>
+					<key>Check Interval</key>
+					<integer>3000</integer>
+					<key>Custom Commands</key>
+					<array/>
+					<key>Perform Reset</key>
+					<false/>
+					<key>Send Delay</key>
+					<integer>300</integer>
+					<key>Update Nodes</key>
+					<true/>
 				</dict>
 			</dict>
+			<key>IOClass</key>
+			<string>CodecCommander</string>
+			<key>IOMatchCategory</key>
+			<string>CodecCommander</string>
+			<key>IOProviderClass</key>
+			<string>IOAudioDevice</string>
+			<key>IOUserClientClass</key>
+			<string>CodecCommanderClient</string>
 			<key>RM,Build</key>
 			<string>${CONFIGURATION}-${LOGNAME}</string>
 			<key>RM,Version</key>

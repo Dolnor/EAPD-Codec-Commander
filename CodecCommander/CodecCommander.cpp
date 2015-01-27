@@ -97,7 +97,7 @@ bool CodecCommander::start(IOService *provider)
 	setProperty(kCodecAddress, OSNumber::withNumber(mIntelHDA->getCodecAddress(), 8));
 	setProperty(kCodecFuncGroupType, OSNumber::withNumber(mIntelHDA->getCodecGroupType(), 8));
 	
-	mConfiguration = new Configuration(this->getProperty(kPlatformProfile));
+	mConfiguration = new Configuration(this->getProperty(kCodecProfile), mIntelHDA->getCodecVendorId());
 	
 	if (mConfiguration->getUpdateNodes())
 	{
