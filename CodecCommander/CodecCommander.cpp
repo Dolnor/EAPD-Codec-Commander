@@ -79,7 +79,9 @@ IOService* CodecCommander::probe(IOService* provider, SInt32* score)
  ******************************************************************************/
 bool CodecCommander::start(IOService *provider)
 {
-    IOLog("%s: Version 2.2.1 starting.\n", this->getName());
+	extern kmod_info_t kmod_info;
+	
+    IOLog("%s: Version %s starting.\n", this->getName(), kmod_info.version);
 
     if (!provider || !super::start(provider))
 	{
