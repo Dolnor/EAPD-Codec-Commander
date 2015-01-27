@@ -132,9 +132,11 @@ Configuration::Configuration(OSObject* codecProfile, UInt32 codecVendorId)
     
     // Dump parsed configuration
     DEBUG_LOG("CodecCommander::Configuration\n");
-    DEBUG_LOG("...Send Delay:\t\t%d\n", mSendDelay);
     DEBUG_LOG("...Check Infinite:\t%s\n", mCheckInfinite ? "true" : "false");
+    DEBUG_LOG("...Perform Reset:\t%s\n", mPerformReset ? "true" : "false");
+    DEBUG_LOG("...Send Delay:\t\t%d\n", mSendDelay);
     DEBUG_LOG("...Update Interval:\t%d\n", mUpdateInterval);
+    DEBUG_LOG("...Update Nodes:\t\t%s\n", mUpdateNodes ? "true" : "false");   
 }
 
 Configuration::~Configuration()
