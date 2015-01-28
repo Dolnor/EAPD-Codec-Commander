@@ -257,12 +257,12 @@ void CodecCommander::customCommands(CodecCommanderState newState)
 	{
 		CustomCommand* customCommand = (CustomCommand*)data->getBytesNoCopy();
 
-		if ((customCommand->OnInit == (newState == kStateInit)) ||
-			(customCommand->OnWake == (newState == kStateWake)) ||
-			(customCommand->OnSleep == (newState == kStateSleep)))
+		if ((customCommand->OnInit && (newState == kStateInit)) ||
+			(customCommand->OnWake && (newState == kStateWake)) ||
+			(customCommand->OnSleep && (newState == kStateSleep)))
 		{
 			DEBUG_LOG("%s: --> custom command 0x%08x\n", this->getName(), customCommand->Command);
-			mIntelHDA->sendCommand(customCommand->Command);
+			executeCommand(customCommand->Command);
 		}
 	}
 	
