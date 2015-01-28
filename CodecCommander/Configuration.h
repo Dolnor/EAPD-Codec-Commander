@@ -49,10 +49,8 @@ class Configuration
         OSArray* getCustomCommands();
     
         // Constructor
-        Configuration(OSObject* codecProfile, UInt32 codecVendorId);
+        Configuration(OSObject* codecProfiles, UInt32 codecVendorId);
         ~Configuration();
-    private:
-        static OSDictionary* loadConfiguration(OSDictionary* list, UInt32 codecVendorId);
 };
 
 

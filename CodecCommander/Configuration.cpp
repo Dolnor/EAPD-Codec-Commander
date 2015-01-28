@@ -22,9 +22,7 @@
 // Constants for Configuration
 #define kDefault                    "Default"
 #define kPerformReset               "Perform Reset"
-
-// Constants for Intel HDA
-#define kCodecAddressNumber         "Codec Address Number"
+#define kCodecId                    "Codec Id"
 
 // Constants for EAPD command verb sending
 #define kUpdateNodes                "Update Nodes"
@@ -41,18 +39,81 @@
 #define kCommandOnSleep             "On Sleep"
 #define kCommandOnWake              "On Wake"
 
-Configuration::Configuration(OSObject* codecProfile, UInt32 codecVendorId)
+static OSDictionary* locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
+{
+    OSCollectionIterator* iterateProfiles = OSCollectionIterator::withCollection(profiles);
+    
+    OSSymbol* profileKey;
+    
+    while ((profileKey = OSDynamicCast(OSSymbol, iterateProfiles->getNextObject())))
+    {
+        OSDictionary* profile = OSDynamicCast(OSDictionary, profiles->getObject(profileKey));
+        
+        if (profile)
+        {
+            OSArray* codecIds = OSDynamicCast(OSArray, profile->getObject(kCodecId));
+            
+            if (codecIds)
+            {
+                OSCollectionIterator* iterateCodecs = OSCollectionIterator::withCollection(codecIds);
+                
+                OSNumber* codecId;
+                
+                while ((codecId = OSDynamicCast(OSNumber, iterateCodecs->getNextObject())))
+                {
+                    if (codecId->unsigned32BitValue() == codecVendorId)
+                    {
+                        DEBUG_LOG("CodecCommander: Located configuration for codec: %s (0x%08x).\n",
+                                  profileKey->getCStringNoCopy(), codecVendorId);
+                        
+                        OSSafeRelease(iterateCodecs);
+                        OSSafeRelease(iterateProfiles);
+                        
+                        return profile;
+                    }
+                }
+                
+                OSSafeRelease(iterateCodecs);
+            }
+        }
+    }
+    
+    OSSafeRelease(iterateProfiles);
+}
+
+static OSDictionary* loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
+{
+    OSDictionary* result = NULL;
+    OSDictionary* defaultProfile = OSDynamicCast(OSDictionary, profiles->getObject(kDefault));
+    
+    OSDictionary* codecProfile = locateConfiguration(profiles, codecVendorId);
+
+    if (defaultProfile)
+    {
+        // have default node, result is merged with platform node
+        result = OSDictionary::withDictionary(defaultProfile);
+        
+        if (result && codecProfile)
+            result->merge(codecProfile);
+    }
+    else if (codecProfile)
+        // no default node, try to use just platform node
+        result = OSDictionary::withDictionary(codecProfile);
+    
+    return result;
+}
+
+Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
 {
     mCustomCommands = OSArray::withCapacity(0);
     
-    OSDictionary* list = OSDynamicCast(OSDictionary, codecProfile);
-    
-    if (list == NULL)
-        return;
-    
-    // Retrieve platform profile configuration
+    OSDictionary* list = OSDynamicCast(OSDictionary, codecProfiles);
 
-    OSDictionary* config = Configuration::loadConfiguration(list, codecVendorId);
+    if (!list)
+        return;
+
+    // Retrieve platform profile configuration
+    OSDictionary* config = loadConfiguration(list, codecVendorId);
      
     // Get delay for sending the verb
     if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kSendDelay)))
@@ -136,47 +197,12 @@ Configuration::Configuration(OSObject* codecProfile, UInt32 codecVendorId)
     DEBUG_LOG("...Perform Reset:\t%s\n", mPerformReset ? "true" : "false");
     DEBUG_LOG("...Send Delay:\t\t%d\n", mSendDelay);
     DEBUG_LOG("...Update Interval:\t%d\n", mUpdateInterval);
-    DEBUG_LOG("...Update Nodes:\t\t%s\n", mUpdateNodes ? "true" : "false");   
+    DEBUG_LOG("...Update Nodes:\t%s\n", mUpdateNodes ? "true" : "false");
 }
 
 Configuration::~Configuration()
 {
     OSSafeReleaseNULL(mCustomCommands);
-}
-
-OSDictionary* Configuration::loadConfiguration(OSDictionary* list, UInt32 codecVendorId)
-{
-    char buffer[16];
-    
-    if (!list)
-        return NULL;
-    
-    OSDictionary* result = NULL;
-    OSDictionary* defaultNode = OSDynamicCast(OSDictionary, list->getObject(kDefault));
-    
-    snprintf(buffer, sizeof(buffer), "0x%08x", codecVendorId);
-    OSString* codecString = OSString::withCString(buffer);
-    
-    OSDictionary* codecNode = OSDynamicCast(OSDictionary, list->getObject(codecString));
-    
-    if (codecNode != NULL)
-        DEBUG_LOG("CodecCommander: Located configuration for codec %s.\n", buffer);
-    
-    OSSafeRelease(codecString);
-  
-    if (defaultNode)
-    {
-        // have default node, result is merged with platform node
-        result = OSDictionary::withDictionary(defaultNode);
-        
-        if (result && codecNode)
-            result->merge(codecNode);
-    }
-    else if (codecNode)
-        // no default node, try to use just platform node
-        result = OSDictionary::withDictionary(codecNode);
-   
-    return result;
 }
 
 /********************************************
