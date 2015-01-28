@@ -11,6 +11,7 @@
 		849921901600F4FC00CCDF3B /* CodecCommander.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8499218E1600F4FC00CCDF3B /* CodecCommander.cpp */; };
 		849921911600F4FC00CCDF3B /* CodecCommander.h in Headers */ = {isa = PBXBuildFile; fileRef = 8499218F1600F4FC00CCDF3B /* CodecCommander.h */; };
 		D404F1D61A124D5E008E6BFD /* Client.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D404F1D51A124D5E008E6BFD /* Client.cpp */; };
+		D40F6EDE1A73EC0A0064E146 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D40F6EDC1A73EBFD0064E146 /* CoreFoundation.framework */; };
 		D42D3C081A59558C006C4C8C /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = D42D3C071A59558C006C4C8C /* main.c */; };
 		D42D3C0E1A595937006C4C8C /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D42D3C0D1A595937006C4C8C /* IOKit.framework */; };
 		D4FA53E11A07C8E1000DD257 /* Configuration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D4FA53E01A07C8E1000DD257 /* Configuration.cpp */; };
@@ -39,6 +40,7 @@
 		8499218E1600F4FC00CCDF3B /* CodecCommander.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = CodecCommander.cpp; sourceTree = "<group>"; usesTabs = 1; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		8499218F1600F4FC00CCDF3B /* CodecCommander.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = CodecCommander.h; sourceTree = "<group>"; usesTabs = 1; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		D404F1D51A124D5E008E6BFD /* Client.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Client.cpp; sourceTree = "<group>"; };
+		D40F6EDC1A73EBFD0064E146 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		D42D3C051A59558B006C4C8C /* CodecCommanderClient */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = CodecCommanderClient; sourceTree = BUILT_PRODUCTS_DIR; };
 		D42D3C071A59558C006C4C8C /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		D42D3C0C1A5955CA006C4C8C /* hdaverb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = hdaverb.h; sourceTree = "<group>"; };
@@ -63,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D40F6EDE1A73EC0A0064E146 /* CoreFoundation.framework in Frameworks */,
 				D42D3C0E1A595937006C4C8C /* IOKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -94,6 +97,7 @@
 		0C4B238014598AD20080D960 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D40F6EDC1A73EBFD0064E146 /* CoreFoundation.framework */,
 				D42D3C0D1A595937006C4C8C /* IOKit.framework */,
 				0AE84D9919B8306F00968A53 /* Kernel.framework */,
 			);

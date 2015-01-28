@@ -24,12 +24,25 @@
 #include <unistd.h>
 #include <IOKit/IOKitLib.h>
 
+#include <CoreFoundation/CoreFoundation.h>
 #include "hdaverb.h"
 
-static UInt32 execute_command(UInt32 command)
+static UInt32 execute_command(UInt32 command, UInt32 vendorId, UInt32 codecAddress, UInt32 functionGroup)
 {
     io_connect_t dataPort;
-    io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("CodecCommander"));
+    
+    CFMutableDictionaryRef dict = IOServiceMatching("CodecCommander");
+    
+    CFNumberRef vendorIdRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &vendorId);
+    CFDictionarySetValue(dict, CFSTR("IOHDACodecVendorID"), vendorIdRef);
+    
+    CFNumberRef codecAddressRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &codecAddress);
+    CFDictionarySetValue(dict, CFSTR("IOHDACodecAddress"), vendorIdRef);
+    
+    CFNumberRef functionGroupRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &functionGroup);
+    CFDictionarySetValue(dict, CFSTR("IOHDACodecFunctionGroupType"), functionGroupRef);
+    
+    io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, dict);
     
     if (!service)
     {
@@ -217,12 +230,12 @@ int main(int argc, char **argv)
         }
     }
     
-    fprintf(stderr, "nid = 0x%lx, verb = 0x%lx, param = 0x%lx\n",
+    printf("nid = 0x%lx, verb = 0x%lx, param = 0x%lx\n",
             nid, verb, param);
     
     UInt32 command = (UInt32)HDA_VERB(nid, verb, param);
     
     // Execute command
-    printf("command 0x%08x --> result = 0x%08x\n", command, execute_command(command));
+    printf("command 0x%08x --> result = 0x%08x\n", command, execute_command(command, 0x10ec0668, 0x0, 0x01));
     return 0;
 }
