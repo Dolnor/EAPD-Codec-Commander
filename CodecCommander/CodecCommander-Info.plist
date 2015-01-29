@@ -45,6 +45,38 @@
 					<key>Update Nodes</key>
 					<true/>
 				</dict>
+				<key>Realtek ALC292</key>
+				<dict>
+					<key>Check Infinitely</key>
+					<false/>
+					<key>Check Interval</key>
+					<integer>3000</integer>
+					<key>Codec Id</key>
+					<array>
+						<integer>283902610</integer>
+					</array>
+					<key>Custom Commands</key>
+					<array>
+						<dict>
+							<key>Command</key>
+							<integer>27723556</integer>
+							<key>Comment</key>
+							<string>Node 0x1a - Pin Control (In Enable / VRefEn)</string>
+							<key>On Init</key>
+							<false/>
+							<key>On Sleep</key>
+							<false/>
+							<key>On Wake</key>
+							<true/>
+						</dict>
+					</array>
+					<key>Perform Reset</key>
+					<false/>
+					<key>Send Delay</key>
+					<integer>300</integer>
+					<key>Update Nodes</key>
+					<true/>
+				</dict>
 				<key>Realtek ALC668</key>
 				<dict>
 					<key>Check Infinitely</key>
@@ -61,7 +93,7 @@
 							<key>Command</key>
 							<integer>28772128</integer>
 							<key>Comment</key>
-							<string>Node 0x0b - Pin Control (In Enable)</string>
+							<string>Node 0x1b - Pin Control (In Enable)</string>
 							<key>On Init</key>
 							<false/>
 							<key>On Sleep</key>
