@@ -106,8 +106,6 @@ bool CodecCommander::start(IOService *provider)
 	
 	mConfiguration = new Configuration(this->getProperty(kCodecProfile), mIntelHDA->getCodecVendorId());
 	
-	return false;
-	
 	if (mConfiguration->getUpdateNodes())
 	{
 		IOSleep(mConfiguration->getSendDelay()); // need to wait a bit until codec can actually respond to immediate verbs
