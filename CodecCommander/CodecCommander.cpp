@@ -92,7 +92,12 @@ bool CodecCommander::start(IOService *provider)
 	mIntelHDA = new IntelHDA(mAudioDevice, PIO);
 		
 	if (!mIntelHDA->initialize())
+	{
+		delete mIntelHDA;
+		mIntelHDA = NULL;
+		
 		return false;
+	}
 	
 	// Populate HDA properties for client matching
 	setProperty(kCodecVendorID, OSNumber::withNumber(mIntelHDA->getCodecVendorId(), 32));
@@ -100,6 +105,8 @@ bool CodecCommander::start(IOService *provider)
 	setProperty(kCodecFuncGroupType, OSNumber::withNumber(mIntelHDA->getCodecGroupType(), 8));
 	
 	mConfiguration = new Configuration(this->getProperty(kCodecProfile), mIntelHDA->getCodecVendorId());
+	
+	return false;
 	
 	if (mConfiguration->getUpdateNodes())
 	{

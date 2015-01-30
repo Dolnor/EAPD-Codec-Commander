@@ -83,7 +83,6 @@ static OSDictionary* locateConfiguration(OSDictionary* profiles, UInt32 codecVen
 
 static OSDictionary* loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
 {
-    OSDictionary* result = NULL;
     OSDictionary* defaultProfile = OSDynamicCast(OSDictionary, profiles->getObject(kDefault));
     
     OSDictionary* codecProfile = locateConfiguration(profiles, codecVendorId);
@@ -91,16 +90,26 @@ static OSDictionary* loadConfiguration(OSDictionary* profiles, UInt32 codecVendo
     if (defaultProfile)
     {
         // have default node, result is merged with platform node
-        result = OSDictionary::withDictionary(defaultProfile);
+        OSDictionary* result = OSDictionary::withDictionary(defaultProfile);
         
         if (result && codecProfile)
+        {
             result->merge(codecProfile);
+        }
+        
+        if (result)
+        {
+            return result;
+        }
     }
-    else if (codecProfile)
-        // no default node, try to use just platform node
-        result = OSDictionary::withDictionary(codecProfile);
     
-    return result;
+    if (codecProfile)
+    {
+        // no default node, try to use just the codec profile
+        return OSDictionary::withDictionary(codecProfile);
+    }
+    
+    return OSDictionary::withCapacity(0);
 }
 
 Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
@@ -114,7 +123,7 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
 
     // Retrieve platform profile configuration
     OSDictionary* config = loadConfiguration(list, codecVendorId);
-     
+    
     // Get delay for sending the verb
     if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kSendDelay)))
         mSendDelay = num->unsigned16BitValue();
@@ -134,7 +143,7 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
     else
         // Default to true
         mUpdateNodes = true;
-    
+
     // Determine if infinite check is needed (for 10.9 and up)
     if (OSBoolean* bl = OSDynamicCast(OSBoolean, config->getObject(kCheckInfinitely)))
     {
@@ -150,7 +159,7 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
     else
         // Default to false
         mCheckInfinite = false;
-    
+
     if (OSArray* list = OSDynamicCast(OSArray, config->getObject(kCustomCommands)))
     {
         OSCollectionIterator* iterator = OSCollectionIterator::withCollection(list);
