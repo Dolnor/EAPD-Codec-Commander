@@ -19,6 +19,9 @@
 
 #include "IntelHDA.h"
 
+#define kIntelVendorID              0x8086
+#define kIntelRegTCSEL              0x44
+
 static IOPCIDevice* getPCIDevice(IORegistryEntry* registryEntry)
 {
     while (registryEntry)
@@ -126,6 +129,23 @@ bool IntelHDA::initialize()
     }
     
     return false;
+}
+
+void IntelHDA::applyIntelTCSEL()
+{
+    if (mDevice && mDevice->configRead16(kIOPCIConfigVendorID) == kIntelVendorID)
+    {
+        /* Clear bits 0-2 of PCI register TCSEL (at offset 0x44)
+         * TCSEL == Traffic Class Select Register, which sets PCI express QOS
+         * Ensuring these bits are 0 clears playback static on some HD Audio
+         * codecs.
+         * The PCI register TCSEL is defined in the Intel manuals.
+         */
+        UInt8 value = mDevice->configRead8(kIntelRegTCSEL);
+        mDevice->configWrite8(kIntelRegTCSEL, value & ~0x07);
+        
+        DEBUG_LOG("CodecCommander: Intel TCSEL: 0x%02x -> 0x%02x\n", value, value & ~0x07);
+    }
 }
 
 UInt16 IntelHDA::getVendorId()

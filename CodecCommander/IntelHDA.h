@@ -253,6 +253,8 @@ class IntelHDA
 	
 		bool initialize();
 	
+		void applyIntelTCSEL();
+	
 		// 12-bit verb and 8-bit payload
 		UInt32 sendCommand(UInt8 nodeId, UInt16 verb, UInt8 payload);
 		// 4-bit verb and 16-bit payload

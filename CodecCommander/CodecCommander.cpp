@@ -241,6 +241,8 @@ void CodecCommander::handleStateChange(IOAudioDevicePowerState newState)
 			break;
 		case kIOAudioDeviceIdle:
 		case kIOAudioDeviceActive:
+			mIntelHDA->applyIntelTCSEL();
+			
 			if (mConfiguration->getUpdateNodes())
 				setEAPD(0x02);
 			
