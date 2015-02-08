@@ -21,10 +21,11 @@
 #define CodecCommander_Common_h
 
 #ifdef DEBUG
-#define DEBUG_LOG(args...)  IOLog(args)
+#define DebugLog(args...) do { IOLog("CodecCommander: " args); } while (0)
 #else
-#define DEBUG_LOG(args...)
+#define DebugLog(args...) do { } while (0)
 #endif
+#define AlwaysLog(args...) do { IOLog("CodecCommander: " args); } while (0)
 
 #include <IOKit/IOService.h>
 #include <IOKit/IOWorkLoop.h>

@@ -70,7 +70,7 @@ IntelHDA::~IntelHDA()
 
 bool IntelHDA::initialize()
 {
-    IOLog("CodecCommander::IntelHDA\n");
+    AlwaysLog("IntelHDA\n");
     
     if (mDevice == NULL || mDevice->getDeviceMemoryCount() == 0 || mCodecAddress == 0xFF)
         return false;
@@ -81,21 +81,21 @@ bool IntelHDA::initialize()
     
     if (mDeviceMemory == NULL)
     {
-        IOLog("CodecCommander: Failed to access device memory.\n");
+        AlwaysLog("Failed to access device memory.\n");
         return false;
     }
     
-    DEBUG_LOG("CodecCommander: Device memory @ 0x%08llx, size 0x%08llx\n", mDeviceMemory->getPhysicalAddress(), mDeviceMemory->getLength());
+    DebugLog("Device memory @ 0x%08llx, size 0x%08llx\n", mDeviceMemory->getPhysicalAddress(), mDeviceMemory->getLength());
         
     mMemoryMap = mDeviceMemory->map();
 
     if (mMemoryMap == NULL)
     {
-        IOLog("CodecCommander: Failed to map device memory.\n");
+        AlwaysLog("Failed to map device memory.\n");
         return false;
     }
     
-    DEBUG_LOG("CodecCommander: Memory mapped at @ 0x%08llx\n", mMemoryMap->getVirtualAddress());
+    DebugLog("Memory mapped at @ 0x%08llx\n", mMemoryMap->getVirtualAddress());
         
     mRegMap = (pHDA_REG)mMemoryMap->getVirtualAddress();
     
@@ -106,7 +106,7 @@ bool IntelHDA::initialize()
     uint32_t deviceInfo = mDevice->configRead32(0);
     
     if (mDevice->getPath(devicePath, &pathLen, gIOServicePlane))
-        IOLog("CodecCommander: Evaluating device \"%s\" [%04x:%04x].\n",
+        AlwaysLog("Evaluating device \"%s\" [%04x:%04x].\n",
                   devicePath,
                   deviceInfo >> 16,
                   deviceInfo & 0x0000FFFF);
@@ -115,15 +115,15 @@ bool IntelHDA::initialize()
         mRegMap->VMIN == 0 &&
         this->getVendorId() != 0xFFFF)
     {
-        IOLog("....Codec Address:\t%d\n", mCodecAddress);
-        IOLog("....Output Streams:\t%d\n", mRegMap->GCAP_OSS);
-        IOLog("....Input Streams:\t%d\n", mRegMap->GCAP_ISS);
-        IOLog("....Bidi Streams:\t%d\n", mRegMap->GCAP_BSS);
-        IOLog("....Serial Data:\t%d\n", mRegMap->GCAP_NSDO);
-        IOLog("....x64 Support:\t%d\n", mRegMap->GCAP_64OK);
-        IOLog("....Codec Version:\t%d.%d\n", mRegMap->VMAJ, mRegMap->VMIN);
-        IOLog("....Vendor Id:\t\t0x%04x\n", this->getVendorId());
-        IOLog("....Device Id:\t\t0x%04x\n", this->getDeviceId());
+        AlwaysLog("....Codec Address:\t%d\n", mCodecAddress);
+        AlwaysLog("....Output Streams:\t%d\n", mRegMap->GCAP_OSS);
+        AlwaysLog("....Input Streams:\t%d\n", mRegMap->GCAP_ISS);
+        AlwaysLog("....Bidi Streams:\t%d\n", mRegMap->GCAP_BSS);
+        AlwaysLog("....Serial Data:\t%d\n", mRegMap->GCAP_NSDO);
+        AlwaysLog("....x64 Support:\t%d\n", mRegMap->GCAP_64OK);
+        AlwaysLog("....Codec Version:\t%d.%d\n", mRegMap->VMAJ, mRegMap->VMIN);
+        AlwaysLog("....Vendor Id:\t\t0x%04x\n", this->getVendorId());
+        AlwaysLog("....Device Id:\t\t0x%04x\n", this->getDeviceId());
     
         return true;
     }
@@ -144,7 +144,7 @@ void IntelHDA::applyIntelTCSEL()
         UInt8 value = mDevice->configRead8(kIntelRegTCSEL);
         mDevice->configWrite8(kIntelRegTCSEL, value & ~0x07);
         
-        DEBUG_LOG("CodecCommander: Intel TCSEL: 0x%02x -> 0x%02x\n", value, value & ~0x07);
+        DebugLog("Intel TCSEL: 0x%02x -> 0x%02x\n", value, value & ~0x07);
     }
 }
 
@@ -182,13 +182,13 @@ UInt8 IntelHDA::getStartingNode()
 
 UInt32 IntelHDA::sendCommand(UInt8 nodeId, UInt16 verb, UInt8 payload)
 {
-    DEBUG_LOG("CodecCommander::SendCommand: node 0x%02x, verb 0x%06x, payload 0x%02x.\n", nodeId, verb, payload);
+    DebugLog("SendCommand: node 0x%02x, verb 0x%06x, payload 0x%02x.\n", nodeId, verb, payload);
     return this->sendCommand((nodeId & 0xFF) << 20 | (verb & 0xFFF) << 8 | payload);
 }
 
 UInt32 IntelHDA::sendCommand(UInt8 nodeId, UInt8 verb, UInt16 payload)
 {
-    DEBUG_LOG("CodecCommander::SendCommand: node 0x%02x, verb 0x%02x, payload 0x%04x.\n", nodeId, verb, payload);
+    DebugLog("SendCommand: node 0x%02x, verb 0x%02x, payload 0x%04x.\n", nodeId, verb, payload);
     return this->sendCommand((nodeId & 0xFF) << 20 | (verb & 0xF) << 16 | payload);
 }
 
@@ -199,7 +199,7 @@ UInt32 IntelHDA::sendCommand(UInt32 command)
     if (mDeviceMemory == NULL)
         return -1;
     
-    DEBUG_LOG("CodecCommander::SendCommand: (w) --> 0x%08x\n", fullCommand);
+    DebugLog("SendCommand: (w) --> 0x%08x\n", fullCommand);
   
     UInt32 response = -1;
     
@@ -209,7 +209,7 @@ UInt32 IntelHDA::sendCommand(UInt32 command)
             response = this->executePIO(fullCommand);
             break;
         case DMA:
-            IOLog("CodecCommander: Unsupported command mode DMA requested.\n");
+            AlwaysLog("Unsupported command mode DMA requested.\n");
             response = -1;
             break;
         default:
@@ -217,7 +217,7 @@ UInt32 IntelHDA::sendCommand(UInt32 command)
             break;
     }
     
-    DEBUG_LOG("CodecCommander::SendCommand: (r) <-- 0x%08x\n", response);
+    DebugLog("SendCommand: (r) <-- 0x%08x\n", response);
     
     return response;
 }
@@ -241,7 +241,7 @@ UInt32 IntelHDA::executePIO(UInt32 command)
     // HDA controller was not ready to receive PIO commands
     if (HDA_ICS_IS_BUSY(status))
     {
-        DEBUG_LOG("CodecCommander::ExecutePIO timed out waiting for ICS readiness.\n");
+        DebugLog("ExecutePIO timed out waiting for ICS readiness.\n");
         return -1;
     }
     
@@ -280,7 +280,7 @@ UInt32 IntelHDA::executePIO(UInt32 command)
     
     if (!validResult)
     {
-        DEBUG_LOG("CodecCommander::ExecutePIO Invalid result received.\n");
+        DebugLog("ExecutePIO Invalid result received.\n");
         return -1;
     }
     

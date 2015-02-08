@@ -63,7 +63,7 @@ static OSDictionary* locateConfiguration(OSDictionary* profiles, UInt32 codecVen
                 {
                     if (codecId->unsigned32BitValue() == codecVendorId)
                     {
-                        DEBUG_LOG("CodecCommander: Located configuration for codec: %s (0x%08x).\n",
+                        DebugLog("Located configuration for codec: %s (0x%08x).\n",
                                   profileKey->getCStringNoCopy(), codecVendorId);
                         
                         OSSafeRelease(iterateCodecs);
@@ -201,12 +201,12 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
     OSSafeRelease(config);
     
     // Dump parsed configuration
-    DEBUG_LOG("CodecCommander::Configuration\n");
-    DEBUG_LOG("...Check Infinite:\t%s\n", mCheckInfinite ? "true" : "false");
-    DEBUG_LOG("...Perform Reset:\t%s\n", mPerformReset ? "true" : "false");
-    DEBUG_LOG("...Send Delay:\t\t%d\n", mSendDelay);
-    DEBUG_LOG("...Update Interval:\t%d\n", mUpdateInterval);
-    DEBUG_LOG("...Update Nodes:\t%s\n", mUpdateNodes ? "true" : "false");
+    DebugLog("Configuration\n");
+    DebugLog("...Check Infinite:\t%s\n", mCheckInfinite ? "true" : "false");
+    DebugLog("...Perform Reset:\t%s\n", mPerformReset ? "true" : "false");
+    DebugLog("...Send Delay:\t\t%d\n", mSendDelay);
+    DebugLog("...Update Interval:\t%d\n", mUpdateInterval);
+    DebugLog("...Update Nodes:\t%s\n", mUpdateNodes ? "true" : "false");
 }
 
 Configuration::~Configuration()
