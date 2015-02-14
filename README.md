@@ -64,6 +64,27 @@ Settings below help for fugue sleep introduced in 10.9, which you could break du
 
 Codec Commander will keep monitoring the codec power state transitions. If it’s determined that power to the codec was lost and then restored a verb will be sent to codec to enable EAPD. Enabling this for 10.8.5 and lower is totally useless.
 
+## Custom Commands & Commander Client 
+
+You can send the codec your custom commands during boot, upon sleep or at wake. This functionality is part of the customizations coded in by @darkvoid to mimic automated hda-verb scripts. CommanderClient (which technically is hda-verb osx clone) is a more adequte tool for experimenting, though. The structure of the commands is as follows:
+
+                    <key>Custom Commands</key>
+                    <array>
+                        <dict>
+                            <key>Command</key>
+                            <integer>983040</integer>
+                            <key>Comment</key>
+                            <string>Test command (Vendor Info)</string>
+                            <key>On Init</key>
+                            <true/>
+                            <key>On Sleep</key>
+                            <false/>
+                            <key>On Wake</key>
+                            <false/>
+                        </dict>
+                    </array>
+
+Command itself has to be specified in decimal. In the example above command 0xf00000 is going to be sent on boot.
 
 ### Changelog
 
