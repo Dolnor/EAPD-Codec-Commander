@@ -72,9 +72,22 @@ bool IntelHDA::initialize()
 {
     AlwaysLog("IntelHDA\n");
     
-    if (mDevice == NULL || mDevice->getDeviceMemoryCount() == 0 || mCodecAddress == 0xFF)
+    if (mDevice == NULL)
+    {
+        AlwaysLog("mDevice is NULL in IntelHDA::initialize\n");
         return false;
-    
+    }
+    if (mDevice->getDeviceMemoryCount() == 0)
+    {
+        AlwaysLog("getDeviceMemoryCount returned 0 in IntelHDA::initialize\n");
+        return false;
+    }
+    if (mCodecAddress == 0xFF)
+    {
+        AlwaysLog("mCodecAddress is 0xFF in IntelHDA::initialize\n");
+        return false;
+    }
+
     mDevice->setMemoryEnable(true);
     
     mDeviceMemory = mDevice->getDeviceMemoryWithIndex(0);

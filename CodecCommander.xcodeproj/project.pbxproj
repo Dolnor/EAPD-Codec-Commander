@@ -108,14 +108,14 @@
 			isa = PBXGroup;
 			children = (
 				8499218F1600F4FC00CCDF3B /* CodecCommander.h */,
-				D404F1D51A124D5E008E6BFD /* Client.cpp */,
 				8499218E1600F4FC00CCDF3B /* CodecCommander.cpp */,
-				0C4B238414598AD20080D960 /* Supporting Files */,
 				D4FD9E031A039E550095AA5A /* IntelHDA.h */,
 				D4FB21F61A0CEBE1005D6019 /* IntelHDA.cpp */,
 				D4FA53DF1A07C83B000DD257 /* Configuration.h */,
 				D4FA53E01A07C8E1000DD257 /* Configuration.cpp */,
+				D404F1D51A124D5E008E6BFD /* Client.cpp */,
 				D4FB21F81A0CED3E005D6019 /* Common.h */,
+				0C4B238414598AD20080D960 /* Supporting Files */,
 			);
 			path = CodecCommander;
 			sourceTree = "<group>";
