@@ -32,7 +32,7 @@ update_kernelcache:
 
 .PHONY: install_debug
 install_debug:
-	sudo cp $(BUILDDIR)/Debug/CodeCommanderClient /usr/bin/hda-verb
+	sudo cp $(BUILDDIR)/Debug/CodecCommanderClient /usr/bin/hda-verb
 	if [ "`which tag`" != "" ]; then sudo tag -a Purple /usr/bin/hda-verb; fi
 	sudo rm -Rf $(INSTDIR)/$(KEXT)
 	sudo cp -R $(BUILDDIR)/Debug/$(KEXT) $(INSTDIR)
