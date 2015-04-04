@@ -54,6 +54,8 @@ distribute:
 	mkdir ./Distribute
 	cp -R $(BUILDDIR)/Debug ./Distribute
 	cp -R $(BUILDDIR)/Release ./Distribute
+	mv ./Distribute/Debug/CodecCommanderClient ./Distribute/Debug/hda-verb
+	mv ./Distribute/Release/CodecCommanderClient ./Distribute/Release/hda-verb
 	find ./Distribute -path *.DS_Store -delete
 	find ./Distribute -path *.dSYM -exec echo rm -r {} \; >/tmp/org.voodoo.rm.dsym.sh
 	chmod +x /tmp/org.voodoo.rm.dsym.sh
