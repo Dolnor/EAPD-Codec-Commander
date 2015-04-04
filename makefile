@@ -3,8 +3,9 @@
 
 KEXT=CodecCommander.kext
 DIST=RehabMan-CodecCommander
-BUILDDIR=./build
+BUILDDIR=./build/Products
 INSTDIR=/System/Library/Extensions
+OPTIONS:=$(OPTIONS) -scheme CodecCommander
 
 ifeq ($(findstring 32,$(BITS)),32)
 OPTIONS:=$(OPTIONS) -arch i386
@@ -31,6 +32,8 @@ update_kernelcache:
 
 .PHONY: install_debug
 install_debug:
+	sudo cp $(BUILDDIR)/Debug/CodeCommanderClient /usr/bin/hda-verb
+	if [ "`which tag`" != "" ]; then sudo tag -a Purple /usr/bin/hda-verb; fi
 	sudo rm -Rf $(INSTDIR)/$(KEXT)
 	sudo cp -R $(BUILDDIR)/Debug/$(KEXT) $(INSTDIR)
 	if [ "`which tag`" != "" ]; then sudo tag -a Purple $(INSTDIR)/$(KEXT); fi
@@ -38,6 +41,8 @@ install_debug:
 
 .PHONY: install
 install:
+	sudo cp $(BUILDDIR)/Release/CodecCommanderClient /usr/bin/hda-verb
+	if [ "`which tag`" != "" ]; then sudo tag -a Blue /usr/bin/hda-verb; fi
 	sudo rm -Rf $(INSTDIR)/$(KEXT)
 	sudo cp -R $(BUILDDIR)/Release/$(KEXT) $(INSTDIR)
 	if [ "`which tag`" != "" ]; then sudo tag -a Blue $(INSTDIR)/$(KEXT); fi
