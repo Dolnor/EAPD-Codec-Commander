@@ -275,7 +275,7 @@
 					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
-				MODULE_VERSION = 2.2.1;
+				MODULE_VERSION = 2.2.2;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx10.6;
 				SYMROOT = build/Products;
@@ -286,7 +286,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
-				MODULE_VERSION = 2.2.1;
+				MODULE_VERSION = 2.2.2;
 				SDKROOT = macosx10.6;
 				SYMROOT = build/Products;
 			};
@@ -299,7 +299,6 @@
 				GCC_PREFIX_HEADER = "CodecCommander/CodecCommander-Prefix.pch";
 				INFOPLIST_FILE = "CodecCommander/CodecCommander-Info.plist";
 				MODULE_NAME = org.tw.CodecCommander;
-				MODULE_VERSION = 2.2.1;
 				PRODUCT_NAME = CodecCommander;
 				STRIP_INSTALLED_PRODUCT = YES;
 			};
@@ -312,7 +311,6 @@
 				GCC_PREFIX_HEADER = "CodecCommander/CodecCommander-Prefix.pch";
 				INFOPLIST_FILE = "CodecCommander/CodecCommander-Info.plist";
 				MODULE_NAME = org.tw.CodecCommander;
-				MODULE_VERSION = 2.2.1;
 				PRODUCT_NAME = CodecCommander;
 				STRIP_INSTALLED_PRODUCT = YES;
 			};
