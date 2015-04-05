@@ -59,7 +59,7 @@
 							<key>Command</key>
 							<integer>26674981</integer>
 							<key>Comment</key>
-							<string>Node 0x19 = 0x25</string>
+							<string>Pin Widget Control, Node 0x19 = 0x25</string>
 							<key>On Init</key>
 							<true/>
 							<key>On Sleep</key>
@@ -71,7 +71,7 @@
 							<key>Command</key>
 							<integer>35063744</integer>
 							<key>Comment</key>
-							<string>Node 0x21 = 0xc0</string>
+							<string>Pin Widget Control, Node 0x21 = 0xc0</string>
 							<key>On Init</key>
 							<true/>
 							<key>On Sleep</key>
@@ -81,9 +81,9 @@
 						</dict>
 					</array>
 					<key>Perform Reset</key>
-					<false/>
+					<true/>
 					<key>Send Delay</key>
-					<integer>500</integer>
+					<integer>100</integer>
 					<key>Update Nodes</key>
 					<true/>
 				</dict>
