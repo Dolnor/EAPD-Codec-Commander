@@ -40,7 +40,7 @@ OSDefineMetaClassAndStructors(CodecCommanderClient, IOUserClient);
 
 bool CodecCommanderClient::initWithTask(task_t owningTask, void* securityID, UInt32 type, OSDictionary* properties)
 {
-    AlwaysLog("Client::initWithTask(type %u)\n", (unsigned int)type);
+    DebugLog("Client::initWithTask(type %u)\n", (unsigned int)type);
     
     mTask = owningTask;
     
@@ -49,7 +49,7 @@ bool CodecCommanderClient::initWithTask(task_t owningTask, void* securityID, UIn
 
 bool CodecCommanderClient::start(IOService * provider)
 {
-    AlwaysLog("Client::start\n");
+    DebugLog("Client::start\n");
     
     if(!super::start(provider))
         return( false );
@@ -75,7 +75,7 @@ IOReturn CodecCommanderClient::clientClose(void)
 
 void CodecCommanderClient::stop(IOService * provider)
 {
-    AlwaysLog("Client::stop\n");
+    DebugLog("Client::stop\n");
     
     super::stop(provider);
 }
@@ -84,7 +84,7 @@ IOReturn CodecCommanderClient::externalMethod(uint32_t selector, IOExternalMetho
                                               IOExternalMethodDispatch* dispatch, OSObject* target, void* reference)
 
 {
-    AlwaysLog("%s[%p]::%s(%d, %p, %p, %p, %p)\n", getName(), this, __FUNCTION__, selector, arguments, dispatch, target, reference);
+    DebugLog("%s[%p]::%s(%d, %p, %p, %p, %p)\n", getName(), this, __FUNCTION__, selector, arguments, dispatch, target, reference);
     
     if (selector < (uint32_t)kClientNumMethods)
     {
