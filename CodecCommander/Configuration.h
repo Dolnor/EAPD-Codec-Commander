@@ -49,15 +49,14 @@ class Configuration
     static UInt32 getIntegerValue(OSObject* obj, UInt32 defValue);
 
 public:
-    bool getUpdateNodes() { return mUpdateInterval; };
-    bool getSleepNodes() { return mSleepNodes; }
-    bool getPerformReset() { return mPerformReset; };
-    bool getPerformResetOnEAPDFail() { return mPerformResetOnEAPDFail; }
-    UInt16 getSendDelay() { return mSendDelay; };
-    bool getCheckInfinite() { return mCheckInfinite; };
-    UInt16 getInterval() { return mUpdateInterval; };
-
-    OSArray* getCustomCommands();
+    inline bool getUpdateNodes() { return mUpdateInterval; };
+    inline bool getSleepNodes() { return mSleepNodes; }
+    inline bool getPerformReset() { return mPerformReset; };
+    inline bool getPerformResetOnEAPDFail() { return mPerformResetOnEAPDFail; }
+    inline UInt16 getSendDelay() { return mSendDelay; };
+    inline bool getCheckInfinite() { return mCheckInfinite; };
+    inline UInt16 getInterval() { return mUpdateInterval; };
+    inline OSArray* getCustomCommands() { return mCustomCommands; };
 
     // Constructor
     Configuration(OSObject* codecProfiles, UInt32 codecVendorId);
