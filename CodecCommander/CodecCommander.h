@@ -74,7 +74,7 @@ public:
 	UInt32 executeCommand(UInt32 command);
 private:
 	IOAudioDevice* mAudioDevice = NULL;
-	IOAudioDevicePowerState mHDACurrentPowerState, mHDAPrevPowerState;
+	IOAudioDevicePowerState mHDAPrevPowerState;
 	
 	Configuration *mConfiguration = NULL;
 	IntelHDA *mIntelHDA = NULL;
@@ -93,7 +93,7 @@ private:
 	void parseCodecPowerState();
 	
 	// set the state of EAPD on outputs
-	void setEAPD(UInt8 logicLevel);
+	bool setEAPD(UInt8 logicLevel);
 	
 	// reset codec
 	void performCodecReset();

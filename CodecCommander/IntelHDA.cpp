@@ -54,13 +54,19 @@ static UInt32 getPropertyValue(IORegistryEntry* registryEntry, const char* prope
 
 IntelHDA::IntelHDA(IOAudioDevice *audioDevice, HDACommandMode commandMode)
 {
-    
     mCommandMode = commandMode;
     mDevice = getPCIDevice(audioDevice);
-        
+
+    //REVIEW_REHABMAN: specific to AppleHDA.
+    //  Should get from codec directly to work with VoodooHDA
+
     mCodecVendorId = getPropertyValue(audioDevice, kCodecVendorID);
     mCodecGroupType = getPropertyValue(audioDevice, kCodecFuncGroupType);
     mCodecAddress = getPropertyValue(audioDevice, kCodecAddress);
+
+    // defaults for VoodooHDA...
+    if (0xFF == mCodecGroupType) mCodecGroupType = 0;
+    if (0xFF == mCodecAddress) mCodecAddress = 0;
 }
 
 IntelHDA::~IntelHDA()
@@ -70,7 +76,7 @@ IntelHDA::~IntelHDA()
 
 bool IntelHDA::initialize()
 {
-    AlwaysLog("IntelHDA\n");
+    DebugLog("IntelHDA::initialize\n");
     
     if (mDevice == NULL)
     {
@@ -123,25 +129,58 @@ bool IntelHDA::initialize()
                   devicePath,
                   deviceInfo >> 16,
                   deviceInfo & 0x0000FFFF);
-        
+
+    // Note: Must reset the codec here for getVendorId to work.
+    //  If the computer is restarted when the codec is in fugue state (D3cold),
+    //  it will not respond without the Double Function Group Reset.
+    this->resetCodec();
+
     if (mRegMap->VMAJ == 1 &&
         mRegMap->VMIN == 0 &&
         this->getVendorId() != 0xFFFF)
     {
-        AlwaysLog("....Codec Address:\t%d\n", mCodecAddress);
-        AlwaysLog("....Output Streams:\t%d\n", mRegMap->GCAP_OSS);
-        AlwaysLog("....Input Streams:\t%d\n", mRegMap->GCAP_ISS);
-        AlwaysLog("....Bidi Streams:\t%d\n", mRegMap->GCAP_BSS);
-        AlwaysLog("....Serial Data:\t%d\n", mRegMap->GCAP_NSDO);
-        AlwaysLog("....x64 Support:\t%d\n", mRegMap->GCAP_64OK);
-        AlwaysLog("....Codec Version:\t%d.%d\n", mRegMap->VMAJ, mRegMap->VMIN);
-        AlwaysLog("....Vendor Id:\t\t0x%04x\n", this->getVendorId());
-        AlwaysLog("....Device Id:\t\t0x%04x\n", this->getDeviceId());
+        UInt16 vendor = this->getVendorId();
+        UInt16 device = this->getDeviceId();
+
+        AlwaysLog("....Codec Address: %d\n", mCodecAddress);
+        AlwaysLog("....Output Streams: %d\n", mRegMap->GCAP_OSS);
+        AlwaysLog("....Input Streams: %d\n", mRegMap->GCAP_ISS);
+        AlwaysLog("....Bidi Streams: %d\n", mRegMap->GCAP_BSS);
+        AlwaysLog("....Serial Data: %d\n", mRegMap->GCAP_NSDO);
+        AlwaysLog("....x64 Support: %d\n", mRegMap->GCAP_64OK);
+        AlwaysLog("....Codec Version: %d.%d\n", mRegMap->VMAJ, mRegMap->VMIN);
+        AlwaysLog("....Vendor Id: 0x%04x\n", vendor);
+        AlwaysLog("....Device Id: 0x%04x\n", device);
+
+        if (mCodecVendorId == 0xFFFFFFFF)
+            mCodecVendorId = (UInt32)vendor << 16 | device;
+
+        AlwaysLog("....CodecVendor Id: 0x%08x\n", mCodecVendorId);
     
         return true;
     }
     
     return false;
+}
+
+void IntelHDA::resetCodec()
+{
+    /*
+     Reset is created by sending two Function Group resets, potentially separated
+     by an undefined number of idle frames, but no other valid commands.
+     This Function Group “Double” reset shall do a full initialization and reset
+     most settings to their power on defaults.
+     */
+
+    DebugLog("--> resetting codec\n");
+    this->sendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
+    IOSleep(100); // define smaller delays ????
+    this->sendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
+    IOSleep(100);
+
+    // forcefully set power state to D3
+    this->sendCommand(1, HDA_VERB_SET_PSTATE, HDA_PARM_PS_D3_HOT);
+    DebugLog("--> hda codec power restored\n");
 }
 
 void IntelHDA::applyIntelTCSEL()
@@ -155,9 +194,12 @@ void IntelHDA::applyIntelTCSEL()
          * The PCI register TCSEL is defined in the Intel manuals.
          */
         UInt8 value = mDevice->configRead8(kIntelRegTCSEL);
-        mDevice->configWrite8(kIntelRegTCSEL, value & ~0x07);
-        
-        DebugLog("Intel TCSEL: 0x%02x -> 0x%02x\n", value, value & ~0x07);
+        UInt8 newValue = value & ~0x07;
+        if (newValue != value)
+        {
+            mDevice->configWrite8(kIntelRegTCSEL, newValue);
+            DebugLog("Intel TCSEL: 0x%02x -> 0x%02x\n", value, newValue);
+        }
     }
 }
 

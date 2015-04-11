@@ -22,10 +22,12 @@
 // Constants for Configuration
 #define kDefault                    "Default"
 #define kPerformReset               "Perform Reset"
+#define kPerformResetOnEAPDFail     "Perform Reset on EAPD Fail"
 #define kCodecId                    "Codec Id"
 
 // Constants for EAPD command verb sending
 #define kUpdateNodes                "Update Nodes"
+#define kSleepNodes                 "Sleep Nodes"
 #define kSendDelay                  "Send Delay"
 
 // Workloop required and Workloop timer aka update interval, ms
@@ -39,211 +41,252 @@
 #define kCommandOnSleep             "On Sleep"
 #define kCommandOnWake              "On Wake"
 
-static OSDictionary* locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
+// Parsing for configuration
+
+UInt32 Configuration::parseInteger(const char* str)
+{
+    UInt32 result = 0;
+    while (*str == ' ') ++str;
+    if (str[0] == '0' && (str[1] == 'x' || str[1] == 'X'))
+    {
+        str += 2;
+        while (*str)
+        {
+            result <<= 4;
+            if (*str >= '0' && *str <= '9')
+                result |= *str - '0';
+            else if (*str >= 'A' && *str <= 'F')
+                result |= *str - 'A' + 10;
+            else if (*str >= 'a' && *str <= 'f')
+                result |= *str - 'a' + 10;
+            else
+                return 0;
+            ++str;
+        }
+    }
+    else
+    {
+        while (*str)
+        {
+            result *= 10;
+            if (*str >= '0' && *str <= '9')
+                result += *str - '0';
+            else
+                return 0;
+            ++str;
+        }
+    }
+    return result;
+}
+
+bool Configuration::getBoolValue(OSDictionary *dict, const char *key, bool defValue)
+{
+    bool result = defValue;
+    if (dict)
+    {
+        if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(key)))
+            result = bl->getValue();
+    }
+    return result;
+}
+
+UInt32 Configuration::getIntegerValue(OSDictionary *dict, const char *key, UInt32 defValue)
+{
+    UInt32 result = defValue;
+    if (dict)
+        result = getIntegerValue(dict->getObject(key), defValue);
+    return result;
+}
+
+UInt32 Configuration::getIntegerValue(OSObject *obj, UInt32 defValue)
+{
+    UInt32 result = defValue;
+    if (OSNumber* num = OSDynamicCast(OSNumber, obj))
+        result = num->unsigned32BitValue();
+    else if (OSString* str = OSDynamicCast(OSString, obj))
+        result = parseInteger(str->getCStringNoCopy());
+    return result;
+}
+
+OSDictionary* Configuration::locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
 {
     OSCollectionIterator* iterateProfiles = OSCollectionIterator::withCollection(profiles);
+    if (!iterateProfiles)
+        return NULL;
     
-    OSSymbol* profileKey;
-    
-    while ((profileKey = OSDynamicCast(OSSymbol, iterateProfiles->getNextObject())))
+    while (OSSymbol* profileKey = OSDynamicCast(OSSymbol, iterateProfiles->getNextObject()))
     {
-        OSDictionary* profile = OSDynamicCast(OSDictionary, profiles->getObject(profileKey));
-        
-        if (profile)
+        if (OSDictionary* profile = OSDynamicCast(OSDictionary, profiles->getObject(profileKey)))
         {
-            OSArray* codecIds = OSDynamicCast(OSArray, profile->getObject(kCodecId));
-            
-            if (codecIds)
+            if (OSArray* codecIds = OSDynamicCast(OSArray, profile->getObject(kCodecId)))
             {
                 OSCollectionIterator* iterateCodecs = OSCollectionIterator::withCollection(codecIds);
-                
-                OSNumber* codecId;
-                
-                while ((codecId = OSDynamicCast(OSNumber, iterateCodecs->getNextObject())))
+                if (!iterateCodecs)
                 {
-                    if (codecId->unsigned32BitValue() == codecVendorId)
+                    iterateProfiles->release();
+                    return NULL;
+                }
+                while (OSObject* id = iterateCodecs->getNextObject())
+                {
+                    UInt32 codec = getIntegerValue(id, 0);
+                    if (codec == codecVendorId)
                     {
-                        DebugLog("Located configuration for codec: %s (0x%08x).\n",
-                                  profileKey->getCStringNoCopy(), codecVendorId);
-                        
-                        OSSafeRelease(iterateCodecs);
-                        OSSafeRelease(iterateProfiles);
+                        DebugLog("Located configuration for codec: %s (0x%08x).\n", profileKey->getCStringNoCopy(), codecVendorId);
+
+                        iterateCodecs->release();
+                        iterateProfiles->release();
                         
                         return profile;
                     }
                 }
-                
-                OSSafeRelease(iterateCodecs);
+                iterateCodecs->release();
             }
         }
     }
-    
-    OSSafeRelease(iterateProfiles);
+    iterateProfiles->release();
+
+    return NULL;
 }
 
-static OSDictionary* loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
+OSDictionary* Configuration::loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
 {
     OSDictionary* defaultProfile = OSDynamicCast(OSDictionary, profiles->getObject(kDefault));
-    
     OSDictionary* codecProfile = locateConfiguration(profiles, codecVendorId);
+    OSDictionary* result = NULL;
 
     if (defaultProfile)
     {
         // have default node, result is merged with platform node
         OSDictionary* result = OSDictionary::withDictionary(defaultProfile);
-        
         if (result && codecProfile)
-        {
             result->merge(codecProfile);
-        }
-        
-        if (result)
-        {
-            return result;
-        }
     }
-    
-    if (codecProfile)
+
+    if (!result)
     {
-        // no default node, try to use just the codec profile
-        return OSDictionary::withDictionary(codecProfile);
+        if (codecProfile)
+            // no default node, try to use just the codec profile
+            result = OSDictionary::withDictionary(codecProfile);
+        if (!result)
+            // empty dictionary in case of errors/memory problems
+            result = OSDictionary::withCapacity(0);
     }
-    
-    return OSDictionary::withCapacity(0);
+
+    return result;
 }
 
 Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
 {
-    mCustomCommands = OSArray::withCapacity(0);
-    
     OSDictionary* list = OSDynamicCast(OSDictionary, codecProfiles);
-
     if (!list)
         return;
 
     // Retrieve platform profile configuration
     OSDictionary* config = loadConfiguration(list, codecVendorId);
-    
+
     // Get delay for sending the verb
-    if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kSendDelay)))
-        mSendDelay = num->unsigned16BitValue();
-    else
-        // Default to 3000
-        mSendDelay = 3000;
+    mSendDelay = getIntegerValue(config, kSendDelay, 3000);
 
     // Determine if perform reset is requested (Defaults to true)
-    if (OSBoolean* bl = OSDynamicCast(OSBoolean, config->getObject(kPerformReset)))
-        mPerformReset = bl->getValue();
-    else
-        // Default to true
-        mPerformReset = true;
-    
-    if (OSBoolean* bl = OSDynamicCast(OSBoolean, config->getObject(kUpdateNodes)))
-        mUpdateNodes = bl->getValue();
-    else
-        // Default to true
-        mUpdateNodes = true;
+    mPerformReset = getBoolValue(config, kPerformReset, true);
+
+    // Determine if perform reset is requested (Defaults to true)
+    mPerformResetOnEAPDFail = getBoolValue(config, kPerformResetOnEAPDFail, true);
+
+    // Determine if update to EAPD nodes is requested (Defaults to true)
+    mUpdateNodes = getBoolValue(config, kUpdateNodes, true);
 
     // Determine if infinite check is needed (for 10.9 and up)
-    if (OSBoolean* bl = OSDynamicCast(OSBoolean, config->getObject(kCheckInfinitely)))
-    {
-        mCheckInfinite = (int)bl->getValue();
-        
-        if (mCheckInfinite)
-        {
-            // What is the update interval
-            if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kCheckInterval)))
-                mUpdateInterval = num->unsigned16BitValue();
-        }
-    }
-    else
-        // Default to false
-        mCheckInfinite = false;
+    mCheckInfinite = getBoolValue(config, kCheckInfinitely, false);
+    mUpdateInterval = getIntegerValue(config, kCheckInterval, 1000);
+
+    // Parse custom commands
+    mCustomCommands = OSArray::withCapacity(0);
+    if (!mCustomCommands) return;
 
     if (OSArray* list = OSDynamicCast(OSArray, config->getObject(kCustomCommands)))
     {
         OSCollectionIterator* iterator = OSCollectionIterator::withCollection(list);
-        
+        if (!iterator) return;
         while (OSDictionary* dict = OSDynamicCast(OSDictionary, iterator->getNextObject()))
         {
-            if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kCustomCommand)))
+            OSObject* obj = dict->getObject(kCustomCommand);
+            OSData* commandData = NULL;
+            CustomCommand* customCommand;
+
+            if (UInt32 commandBits = getIntegerValue(obj, 0))
             {
-                // Command should be != 0
-                if (num->unsigned32BitValue() > 0)
+                commandData = OSData::withCapacity(sizeof(CustomCommand)+sizeof(UInt32));
+                commandData->appendByte(0, commandData->getCapacity());
+                customCommand = (CustomCommand*)commandData->getBytesNoCopy();
+                customCommand->CommandCount = 1;
+                customCommand->Commands[0] = commandBits;
+            }
+            else if (OSData* data = OSDynamicCast(OSData, obj))
+            {
+                unsigned length = data->getLength();
+                commandData = OSData::withCapacity(sizeof(CustomCommand)+length);
+                commandData->appendByte(0, commandData->getCapacity());
+                customCommand = (CustomCommand*)commandData->getBytesNoCopy();
+                customCommand->CommandCount = length / sizeof(customCommand->Commands[0]);
+                // byte reverse here, so the author of Info.pist doesn't have to...
+                UInt8* bytes = (UInt8*)data->getBytesNoCopy();
+                for (int i = 0; i < customCommand->CommandCount; i++)
                 {
-                    CustomCommand customCommand;
-                    
-                    customCommand.Command = num->unsigned32BitValue();
-            
-                    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCommandOnInit)))
-                        customCommand.OnInit = bl->getValue();
-                    else
-                        customCommand.OnInit = false;
-                    
-                    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCommandOnSleep)))
-                        customCommand.OnSleep = bl->getValue();
-                    else
-                        customCommand.OnSleep = false;
-            
-                    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCommandOnWake)))
-                        customCommand.OnWake = bl->getValue();
-                    else
-                        customCommand.OnWake = false;
-                    
-                    mCustomCommands->setObject(OSData::withBytes(&customCommand, sizeof(customCommand)));
+                    customCommand->Commands[i] = bytes[0]<<24 | bytes[1]<<16 | bytes[2]<<8 | bytes[3];
+                    bytes += sizeof(UInt32);
                 }
             }
+            if (commandData)
+            {
+                customCommand->OnInit = getBoolValue(dict, kCommandOnInit, false);
+                customCommand->OnSleep = getBoolValue(dict, kCommandOnSleep, false);
+                customCommand->OnWake = getBoolValue(dict, kCommandOnWake, false);
+                mCustomCommands->setObject(commandData);
+                commandData->release();
+            }
         }
-        
-        OSSafeRelease(iterator);
+        iterator->release();
     }
-    
+
     OSSafeRelease(config);
-    
+
     // Dump parsed configuration
     DebugLog("Configuration\n");
-    DebugLog("...Check Infinite:\t%s\n", mCheckInfinite ? "true" : "false");
-    DebugLog("...Perform Reset:\t%s\n", mPerformReset ? "true" : "false");
-    DebugLog("...Send Delay:\t\t%d\n", mSendDelay);
-    DebugLog("...Update Interval:\t%d\n", mUpdateInterval);
-    DebugLog("...Update Nodes:\t%s\n", mUpdateNodes ? "true" : "false");
+    DebugLog("...Check Infinite: %s\n", mCheckInfinite ? "true" : "false");
+    DebugLog("...Perform Reset: %s\n", mPerformReset ? "true" : "false");
+    DebugLog("...Perform Reset on EAPD Fail: %s\n", mPerformResetOnEAPDFail ? "true" : "false");
+    DebugLog("...Send Delay: %d\n", mSendDelay);
+    DebugLog("...Update Interval: %d\n", mUpdateInterval);
+    DebugLog("...Update Nodes: %s\n", mUpdateNodes ? "true" : "false");
+    DebugLog("...Sleep Nodes: %s\n", mSleepNodes ? "true" : "false");
+
+#ifdef DEBUG
+    if (OSCollectionIterator* iterator = OSCollectionIterator::withCollection(mCustomCommands))
+    {
+        while (OSData* data = OSDynamicCast(OSData, iterator->getNextObject()))
+        {
+            CustomCommand* customCommand = (CustomCommand*)data->getBytesNoCopy();
+            DebugLog("Custom Command\n");
+            if (customCommand->CommandCount == 1)
+                DebugLog("...Command: 0x%08x\n", customCommand->Commands[0]);
+            if (customCommand->CommandCount == 2)
+                DebugLog("...Commands(%d): 0x%08x 0x%08x\n", customCommand->CommandCount, customCommand->Commands[0], customCommand->Commands[1]);
+            if (customCommand->CommandCount == 3)
+                DebugLog("...Commands(%d): 0x%08x 0x%08x 0x%08x\n", customCommand->CommandCount, customCommand->Commands[0], customCommand->Commands[1], customCommand->Commands[2]);
+            if (customCommand->CommandCount == 3)
+                DebugLog("...Commands(%d): 0x%08x 0x%08x 0x%08x ...\n", customCommand->CommandCount, customCommand->Commands[0], customCommand->Commands[1], customCommand->Commands[2]);
+            DebugLog("...OnInit: %s\n", customCommand->OnInit ? "true" : "false");
+            DebugLog("...OnWake: %s\n", customCommand->OnWake ? "true" : "false");
+            DebugLog("...OnSleep: %s\n", customCommand->OnSleep ? "true" : "false");
+        }
+        iterator->release();
+    }
+#endif
 }
 
 Configuration::~Configuration()
 {
     OSSafeReleaseNULL(mCustomCommands);
-}
-
-/********************************************
- * Configuration Properties
- ********************************************/
-bool Configuration::getUpdateNodes()
-{
-    return mUpdateNodes;
-}
-
-bool Configuration::getPerformReset()
-{
-    return mPerformReset;
-}
-
-UInt16 Configuration::getSendDelay()
-{
-    return mSendDelay;
-}
-
-bool Configuration::getCheckInfinite()
-{
-    return mCheckInfinite;
-}
-
-UInt16 Configuration::getInterval()
-{
-    return mUpdateInterval;
-}
-
-OSArray* Configuration::getCustomCommands()
-{
-    return mCustomCommands;
 }
 

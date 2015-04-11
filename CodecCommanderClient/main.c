@@ -32,15 +32,16 @@ static UInt32 execute_command(UInt32 command, UInt32 vendorId, UInt32 codecAddre
     io_connect_t dataPort;
     
     CFMutableDictionaryRef dict = IOServiceMatching("CodecCommander");
+
+    //REVIEW_REHABMAN: These extra filters don't work anyway...
+    //CFNumberRef vendorIdRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &vendorId);
+    //CFDictionarySetValue(dict, CFSTR("IOHDACodecVendorID"), vendorIdRef);
     
-    CFNumberRef vendorIdRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &vendorId);
-    CFDictionarySetValue(dict, CFSTR("IOHDACodecVendorID"), vendorIdRef);
+    //CFNumberRef codecAddressRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &codecAddress);
+    //CFDictionarySetValue(dict, CFSTR("IOHDACodecAddress"), vendorIdRef);
     
-    CFNumberRef codecAddressRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &codecAddress);
-    CFDictionarySetValue(dict, CFSTR("IOHDACodecAddress"), vendorIdRef);
-    
-    CFNumberRef functionGroupRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &functionGroup);
-    CFDictionarySetValue(dict, CFSTR("IOHDACodecFunctionGroupType"), functionGroupRef);
+    //CFNumberRef functionGroupRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &functionGroup);
+    //CFDictionarySetValue(dict, CFSTR("IOHDACodecFunctionGroupType"), functionGroupRef);
     
     io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, dict);
     

@@ -22,12 +22,13 @@
 
 #include "Common.h"
 
-typedef struct __attribute__((packed))
+typedef struct
 {
-    UInt32 Command; // 32-bit verb to execute (Codec Address will be filled in)
     bool OnInit;    // Execute command on initialization
     bool OnSleep;   // Execute command on sleep
     bool OnWake;    // Execute command on wake
+    UInt32 CommandCount;
+    UInt32 Commands[0]; // 32-bit verb to execute (Codec Address will be filled in)
 } CustomCommand;
 
 class Configuration
@@ -36,22 +37,31 @@ class Configuration
     
     bool mCheckInfinite;
     bool mPerformReset;
-    bool mUpdateNodes;
+    bool mPerformResetOnEAPDFail;
+    bool mUpdateNodes, mSleepNodes;
     UInt16 mSendDelay, mUpdateInterval;
-    
-    public:
-        bool getUpdateNodes();
-        bool getPerformReset();
-        UInt16 getSendDelay();
-        bool getCheckInfinite();
-        UInt16 getInterval();
-    
-        OSArray* getCustomCommands();
-    
-        // Constructor
-        Configuration(OSObject* codecProfiles, UInt32 codecVendorId);
-        ~Configuration();
-};
 
+    static UInt32 parseInteger(const char* str);
+    static OSDictionary* locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId);
+    static OSDictionary* loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId);
+    static bool getBoolValue(OSDictionary* dict, const char* key, bool defValue);
+    static UInt32 getIntegerValue(OSDictionary* dict, const char* key, UInt32 defValue);
+    static UInt32 getIntegerValue(OSObject* obj, UInt32 defValue);
+
+public:
+    bool getUpdateNodes() { return mUpdateInterval; };
+    bool getSleepNodes() { return mSleepNodes; }
+    bool getPerformReset() { return mPerformReset; };
+    bool getPerformResetOnEAPDFail() { return mPerformResetOnEAPDFail; }
+    UInt16 getSendDelay() { return mSendDelay; };
+    bool getCheckInfinite() { return mCheckInfinite; };
+    UInt16 getInterval() { return mUpdateInterval; };
+
+    OSArray* getCustomCommands();
+
+    // Constructor
+    Configuration(OSObject* codecProfiles, UInt32 codecVendorId);
+    ~Configuration();
+};
 
 #endif

@@ -235,8 +235,9 @@ class IntelHDA
 	IOMemoryMap* mMemoryMap = NULL;
 	
 	pHDA_REG mRegMap = NULL;
-	
-	HDACommandMode mCommandMode = PIO;
+
+	// Initialized in constructor
+	HDACommandMode mCommandMode;
 	UInt32 mCodecVendorId;
 	UInt8 mCodecGroupType;
 	UInt8 mCodecAddress;
@@ -245,35 +246,38 @@ class IntelHDA
 	UInt32 mVendor = -1;
 	UInt32 mNodes = -1;
 	
-	public:
-		// Constructor
-		IntelHDA(IOAudioDevice *audioDevice, HDACommandMode commandMode);
-		// Destructor
-		~IntelHDA();
-	
-		bool initialize();
-	
-		void applyIntelTCSEL();
-	
-		// 12-bit verb and 8-bit payload
-		UInt32 sendCommand(UInt8 nodeId, UInt16 verb, UInt8 payload);
-		// 4-bit verb and 16-bit payload
-		UInt32 sendCommand(UInt8 nodeId, UInt8 verb, UInt16 payload);
-	
-		// Send a raw command (verb and payload combined)
-		UInt32 sendCommand(UInt32 command);
-	
-		UInt32 getCodecVendorId() { return mCodecVendorId; }
-		UInt8 getCodecAddress() { return mCodecAddress; }
-		UInt8 getCodecGroupType() { return mCodecGroupType; }
-	
-		UInt16 getVendorId();
-		UInt16 getDeviceId();
-	
-		UInt8 getTotalNodes();
-		UInt8 getStartingNode();
-	private:
-		UInt32 executePIO(UInt32 command);
+public:
+	// Constructor
+	IntelHDA(IOAudioDevice *audioDevice, HDACommandMode commandMode);
+	// Destructor
+	~IntelHDA();
+
+	bool initialize();
+
+	void applyIntelTCSEL();
+
+	// 12-bit verb and 8-bit payload
+	UInt32 sendCommand(UInt8 nodeId, UInt16 verb, UInt8 payload);
+	// 4-bit verb and 16-bit payload
+	UInt32 sendCommand(UInt8 nodeId, UInt8 verb, UInt16 payload);
+
+	// Send a raw command (verb and payload combined)
+	UInt32 sendCommand(UInt32 command);
+
+	void resetCodec();
+
+	UInt32 getCodecVendorId() { return mCodecVendorId; }
+	UInt8 getCodecAddress() { return mCodecAddress; }
+	UInt8 getCodecGroupType() { return mCodecGroupType; }
+
+	UInt16 getVendorId();
+	UInt16 getDeviceId();
+
+	UInt8 getTotalNodes();
+	UInt8 getStartingNode();
+
+private:
+	UInt32 executePIO(UInt32 command);
 };
 
 

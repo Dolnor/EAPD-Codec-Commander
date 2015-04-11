@@ -40,26 +40,33 @@
 					<array/>
 					<key>Perform Reset</key>
 					<false/>
+					<key>Perform Reset on EAPD Fail</key>
+					<false/>
 					<key>Send Delay</key>
 					<integer>300</integer>
 					<key>Update Nodes</key>
 					<true/>
+					<key>Sleep Nodes</key>
+					<true/>
 				</dict>
-				<key>Realtek ALC283</key>
+				<key>Realtek ALC283, ALC255</key>
 				<dict>
 					<key>Check Infinitely</key>
 					<false/>
 					<key>Codec Id</key>
 					<array>
-						<integer>283902595</integer>
+						<string>0x10ec0283</string>
+						<string>0x10ec0255</string>
 					</array>
 					<key>Custom Commands</key>
 					<array>
 						<dict>
 							<key>Command</key>
-							<integer>26674981</integer>
-							<key>Comment</key>
-							<string>Pin Widget Control, Node 0x19 = 0x25</string>
+							<data>AZcHIAIXB8A=</data>
+							<key>Comment1</key>
+							<string>0x19 SET_PIN_WIDGET_CONTROL 0x20</string>
+							<key>Comment2</key>
+							<string>0x21 SET_PIN_WIDGET_CONTROL 0xC0</string>
 							<key>On Init</key>
 							<true/>
 							<key>On Sleep</key>
@@ -69,9 +76,9 @@
 						</dict>
 						<dict>
 							<key>Command</key>
-							<integer>35063744</integer>
+							<string>0x02170900</string>
 							<key>Comment</key>
-							<string>Pin Widget Control, Node 0x21 = 0xc0</string>
+							<string>0x21 SET_PIN_SENSE 0x00</string>
 							<key>On Init</key>
 							<true/>
 							<key>On Sleep</key>
@@ -82,8 +89,12 @@
 					</array>
 					<key>Perform Reset</key>
 					<true/>
+					<key>Perform Reset on EAPD Fail</key>
+					<false/>
 					<key>Send Delay</key>
-					<integer>100</integer>
+					<integer>50</integer>
+					<key>Sleep Nodes</key>
+					<false/>
 					<key>Update Nodes</key>
 					<true/>
 				</dict>
@@ -181,8 +192,6 @@
 		<key>com.apple.kpi.libkern</key>
 		<string>9.0.0</string>
 	</dict>
-	<key>OSBundleRequired</key>
-	<string>Root</string>
 	<key>Source Code</key>
 	<string>https://github.com/RehabMan/EAPD-Codec-Commander</string>
 </dict>
