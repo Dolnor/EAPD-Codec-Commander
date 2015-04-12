@@ -101,6 +101,7 @@ bool CodecCommander::start(IOService *provider)
 	mIntelHDA = new IntelHDA(mAudioDevice, PIO);
 	if (!mIntelHDA || !mIntelHDA->initialize())
 	{
+		AlwaysLog("Error initializing IntelHDA instance\n");
 		stop(provider);
 		return false;
 	}
@@ -119,7 +120,8 @@ bool CodecCommander::start(IOService *provider)
 	
 	if (mConfiguration->getUpdateNodes())
 	{
-		IOSleep(mConfiguration->getSendDelay()); // need to wait a bit until codec can actually respond to immediate verbs
+		// need to wait a bit until codec can actually respond to immediate verbs
+		IOSleep(mConfiguration->getSendDelay());
 
 		// Fetch Pin Capabilities from the range of nodes
 		DebugLog("Getting EAPD supported node list.\n");
@@ -134,7 +136,6 @@ bool CodecCommander::start(IOService *provider)
 		for (int nodeId = mIntelHDA->getStartingNode(); nodeId <= mIntelHDA->getTotalNodes(); nodeId++)
 		{
 			UInt32 response = mIntelHDA->sendCommand(nodeId, HDA_VERB_GET_PARAM, HDA_PARM_PINCAP);
-			
 			if (response == -1)
 			{
 				DebugLog("Failed to retrieve pin capabilities for node 0x%02x.\n", nodeId);
@@ -265,7 +266,14 @@ void CodecCommander::handleStateChange(IOAudioDevicePowerState newState)
 	{
 		case kIOAudioDeviceSleep:
 			if (mConfiguration->getSleepNodes())
-				setEAPD(0x0);
+			{
+				if (!setEAPD(0x00) && mConfiguration->getPerformResetOnEAPDFail())
+				{
+					AlwaysLog("BLURP! setEAPD(0x00) failed... attempt fix with codec reset\n");
+					performCodecReset();
+					setEAPD(0x00);
+				}
+			}
 
 			customCommands(kStateSleep);
 			break;
@@ -367,9 +375,9 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 	{
 		case kPowerStateSleep:
 			AlwaysLog("--> asleep(%d)\n", (int)powerStateOrdinal);
+			mColdBoot = false;
 			handleStateChange(kIOAudioDeviceSleep); // set EAPD logic level 0 to cause EAPD to power off properly
 			mEAPDPoweredDown = true;  // now it's powered down for sure
-			mColdBoot = false;
 			break;
 
 		case kPowerStateDoze:	// note kPowerStateDoze never happens

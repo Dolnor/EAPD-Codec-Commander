@@ -65,7 +65,7 @@ IntelHDA::IntelHDA(IOAudioDevice *audioDevice, HDACommandMode commandMode)
     mCodecAddress = getPropertyValue(audioDevice, kCodecAddress);
 
     // defaults for VoodooHDA...
-    if (0xFF == mCodecGroupType) mCodecGroupType = 0;
+    if (0xFF == mCodecGroupType) mCodecGroupType = 1;
     if (0xFF == mCodecAddress) mCodecAddress = 0;
 }
 
@@ -174,9 +174,9 @@ void IntelHDA::resetCodec()
 
     DebugLog("--> resetting codec\n");
     this->sendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
-    IOSleep(100); // define smaller delays ????
+    IOSleep(10);
     this->sendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
-    IOSleep(100);
+    IOSleep(250); // per-HDA spec, device must respond (D0) within 200ms
 
     // forcefully set power state to D3
     this->sendCommand(1, HDA_VERB_SET_PSTATE, HDA_PARM_PS_D3_HOT);

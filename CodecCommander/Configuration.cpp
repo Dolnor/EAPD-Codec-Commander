@@ -150,8 +150,13 @@ OSDictionary* Configuration::locateConfiguration(OSDictionary* profiles, UInt32 
 
 OSDictionary* Configuration::loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
 {
-    OSDictionary* defaultProfile = OSDynamicCast(OSDictionary, profiles->getObject(kDefault));
-    OSDictionary* codecProfile = locateConfiguration(profiles, codecVendorId);
+    OSDictionary* defaultProfile = NULL;
+    OSDictionary* codecProfile = NULL;
+    if (profiles)
+    {
+        defaultProfile = OSDynamicCast(OSDictionary, profiles->getObject(kDefault));
+        codecProfile = locateConfiguration(profiles, codecVendorId);
+    }
     OSDictionary* result = NULL;
 
     if (defaultProfile)
@@ -178,8 +183,6 @@ OSDictionary* Configuration::loadConfiguration(OSDictionary* profiles, UInt32 co
 Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
 {
     OSDictionary* list = OSDynamicCast(OSDictionary, codecProfiles);
-    if (!list)
-        return;
 
     // Retrieve platform profile configuration
     OSDictionary* config = loadConfiguration(list, codecVendorId);
@@ -195,6 +198,7 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
 
     // Determine if update to EAPD nodes is requested (Defaults to true)
     mUpdateNodes = getBoolValue(config, kUpdateNodes, true);
+    mSleepNodes = getBoolValue(config, kSleepNodes, true);
 
     // Determine if infinite check is needed (for 10.9 and up)
     mCheckInfinite = getBoolValue(config, kCheckInfinitely, false);
