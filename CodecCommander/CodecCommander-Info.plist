@@ -2,16 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>Source Code</key>
-	<string>https://github.com/RehabMan/EAPD-Codec-Commander</string>
-	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2013-2014 TimeWalker/RehabMan. All rights reserved.</string>
-	<key>CFBundleGetInfoString</key>
-	<string>${MODULE_VERSION}, Copyright © 2013-2014 TimeWalker. All rights reserved.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
 	<string>${EXECUTABLE_NAME}</string>
+	<key>CFBundleGetInfoString</key>
+	<string>${MODULE_VERSION}, Copyright © 2013-2014 TimeWalker. All rights reserved.</string>
 	<key>CFBundleIdentifier</key>
 	<string>${MODULE_NAME}</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -20,115 +16,183 @@
 	<string>${PRODUCT_NAME}</string>
 	<key>CFBundlePackageType</key>
 	<string>KEXT</string>
+	<key>CFBundleShortVersionString</key>
+	<string>${MODULE_VERSION}</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>${MODULE_VERSION}</string>
-	<key>CFBundleShortVersionString</key>
 	<string>${MODULE_VERSION}</string>
 	<key>IOKitPersonalities</key>
 	<dict>
 		<key>CodecCommander</key>
 		<dict>
-			<key>RM,Version</key>
-			<string>${PRODUCT_NAME} ${MODULE_VERSION}</string>
-			<key>RM,Build</key>
-			<string>${CONFIGURATION}-${LOGNAME}</string>
 			<key>CFBundleIdentifier</key>
 			<string>${MODULE_NAME}</string>
+			<key>Codec Profile</key>
+			<dict>
+				<key>Default</key>
+				<dict>
+					<key>Check Infinitely</key>
+					<true/>
+					<key>Check Interval</key>
+					<integer>3000</integer>
+					<key>Custom Commands</key>
+					<array/>
+					<key>Perform Reset</key>
+					<false/>
+					<key>Perform Reset on EAPD Fail</key>
+					<false/>
+					<key>Send Delay</key>
+					<integer>300</integer>
+					<key>Update Nodes</key>
+					<true/>
+					<key>Sleep Nodes</key>
+					<true/>
+				</dict>
+				<key>Realtek ALC283, ALC255</key>
+				<dict>
+					<key>Check Infinitely</key>
+					<false/>
+					<key>Codec Id</key>
+					<array>
+						<string>0x10ec0283</string>
+						<string>0x10ec0255</string>
+					</array>
+					<key>Custom Commands</key>
+					<array>
+						<dict>
+							<key>Command</key>
+							<data>AZcHIAIXB8A=</data>
+							<key>Comment1</key>
+							<string>0x19 SET_PIN_WIDGET_CONTROL 0x20</string>
+							<key>Comment2</key>
+							<string>0x21 SET_PIN_WIDGET_CONTROL 0xC0</string>
+							<key>On Init</key>
+							<true/>
+							<key>On Sleep</key>
+							<false/>
+							<key>On Wake</key>
+							<true/>
+						</dict>
+						<dict>
+							<key>Command</key>
+							<string>0x02170900</string>
+							<key>Comment</key>
+							<string>0x21 SET_PIN_SENSE 0x00</string>
+							<key>On Init</key>
+							<true/>
+							<key>On Sleep</key>
+							<false/>
+							<key>On Wake</key>
+							<true/>
+						</dict>
+					</array>
+					<key>Perform Reset</key>
+					<true/>
+					<key>Perform Reset on EAPD Fail</key>
+					<false/>
+					<key>Send Delay</key>
+					<integer>50</integer>
+					<key>Sleep Nodes</key>
+					<false/>
+					<key>Update Nodes</key>
+					<true/>
+				</dict>
+				<key>Realtek ALC292</key>
+				<dict>
+					<key>Check Infinitely</key>
+					<false/>
+					<key>Check Interval</key>
+					<integer>3000</integer>
+					<key>Codec Id</key>
+					<array>
+						<integer>283902610</integer>
+					</array>
+					<key>Custom Commands</key>
+					<array>
+						<dict>
+							<key>Command</key>
+							<integer>27723556</integer>
+							<key>Comment</key>
+							<string>Node 0x1a - Pin Control (In Enable / VRefEn)</string>
+							<key>On Init</key>
+							<false/>
+							<key>On Sleep</key>
+							<false/>
+							<key>On Wake</key>
+							<true/>
+						</dict>
+					</array>
+					<key>Perform Reset</key>
+					<false/>
+					<key>Send Delay</key>
+					<integer>300</integer>
+					<key>Update Nodes</key>
+					<true/>
+				</dict>
+				<key>Realtek ALC668</key>
+				<dict>
+					<key>Check Infinitely</key>
+					<false/>
+					<key>Check Interval</key>
+					<integer>3000</integer>
+					<key>Codec Id</key>
+					<array>
+						<integer>283903592</integer>
+					</array>
+					<key>Custom Commands</key>
+					<array>
+						<dict>
+							<key>Command</key>
+							<integer>28772128</integer>
+							<key>Comment</key>
+							<string>Node 0x1b - Pin Control (In Enable)</string>
+							<key>On Init</key>
+							<false/>
+							<key>On Sleep</key>
+							<false/>
+							<key>On Wake</key>
+							<true/>
+						</dict>
+					</array>
+					<key>Perform Reset</key>
+					<false/>
+					<key>Send Delay</key>
+					<integer>300</integer>
+					<key>Update Nodes</key>
+					<true/>
+				</dict>
+			</dict>
 			<key>IOClass</key>
 			<string>CodecCommander</string>
 			<key>IOMatchCategory</key>
 			<string>CodecCommander</string>
 			<key>IOProviderClass</key>
-			<string>IOResources</string>
-			<key>IOResourceMatch</key>
-			<string>IOKit</string>
+			<string>IOAudioDevice</string>
 			<key>IOUserClientClass</key>
 			<string>CodecCommanderClient</string>
-			<key>Platform Profile</key>
-			<dict>
-				<key>Default</key>
-				<dict>
-					<key>Update Nodes</key>
-					<true/>
-					<key>Custom Commands</key>
-					<array>
-						<dict>
-							<key>Command</key>
-							<integer>983040</integer>
-							<key>Comment</key>
-							<string>Test command (Vendor Info)</string>
-							<key>On Init</key>
-							<true/>
-							<key>On Sleep</key>
-							<true/>
-							<key>On Wake</key>
-							<true/>
-						</dict>
-					</array>
-					<key>HDEF Device Location</key>
-					<string>1B</string>
-					<key>Codec Address Number</key>
-					<integer>0</integer>
-					<key>Send Delay</key>
-					<integer>300</integer>
-					<key>Check Interval</key>
-					<integer>3000</integer>
-					<key>Check Infinitely</key>
-					<true/>
-				</dict>
-				<key>ASUS</key>
-				<dict>
-					<key>1201N</key>
-					<dict>
-						<key>HDEF Device Location</key>
-						<string>8</string>
-					</dict>
-				</dict>
-				<key>Gigabyte</key>
-				<dict>
-					<key>H87-HD3</key>
-					<dict>
-						<key>Codec Address Number</key>
-						<integer>2</integer>
-						<key>Update Nodes</key>
-						<false/>
-						<key>Check Infinitely</key>
-						<false/>
-					</dict>
-				</dict>
-				<key>Lenovo</key>
-				<dict>
-					<key>U430</key>
-					<dict>
-						<key>Check Infinitely</key>
-						<true/>
-						<key>Check Interval</key>
-						<integer>1000</integer>
-						<key>Send Delay</key>
-						<integer>100</integer>
-					</dict>
-					<key>Cherry 4A Touch</key>
-					<string>U430</string>
-				</dict>
-			</dict>
+			<key>RM,Build</key>
+			<string>${CONFIGURATION}-${LOGNAME}</string>
+			<key>RM,Version</key>
+			<string>${PRODUCT_NAME} ${MODULE_VERSION}</string>
 		</dict>
 	</dict>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2013-2014 TimeWalker/RehabMan. All rights reserved.</string>
 	<key>OSBundleLibraries</key>
 	<dict>
-		<key>com.apple.iokit.IOHIDSystem</key>
-		<string>1.1</string>
 		<key>com.apple.iokit.IOAudioFamily</key>
-		<string>1.1fc9</string>
+		<string>1.0</string>
+		<key>com.apple.iokit.IOPCIFamily</key>
+		<string>1.0.0b1</string>
+		<key>com.apple.kpi.bsd</key>
+		<string>9.0.0</string>
 		<key>com.apple.kpi.iokit</key>
 		<string>9.0.0</string>
 		<key>com.apple.kpi.libkern</key>
 		<string>9.0.0</string>
-		<key>com.apple.kpi.mach</key>
-		<string>9.0.0</string>
-		<key>com.apple.kpi.unsupported</key>
-		<string>9.0.0</string>
 	</dict>
+	<key>Source Code</key>
+	<string>https://github.com/RehabMan/EAPD-Codec-Commander</string>
 </dict>
 </plist>

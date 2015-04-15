@@ -21,10 +21,11 @@
 #define CodecCommander_Common_h
 
 #ifdef DEBUG
-#define DEBUG_LOG(args...)  IOLog(args)
+#define DebugLog(args...) do { IOLog("CodecCommander: " args); } while (0)
 #else
-#define DEBUG_LOG(args...)
+#define DebugLog(args...) do { } while (0)
 #endif
+#define AlwaysLog(args...) do { IOLog("CodecCommander: " args); } while (0)
 
 #include <IOKit/IOService.h>
 #include <IOKit/IOWorkLoop.h>
@@ -32,8 +33,12 @@
 #include <IOKit/IODeviceTreeSupport.h>
 #include <IOKit/IOCommandGate.h>
 #include <IOKit/IOUserClient.h>
+#include <IOKit/audio/IOAudioDevice.h>
+#include <IOKit/pci/IOPCIDevice.h>
 
-#define MAX_EAPD_NODES 5
-#define MAX_CUSTOM_COMMANDS 32
+#define kCodecProfile               "Codec Profile"
+#define kCodecVendorID              "IOHDACodecVendorID"
+#define kCodecAddress               "IOHDACodecAddress"
+#define kCodecFuncGroupType         "IOHDACodecFunctionGroupType"
 
 #endif

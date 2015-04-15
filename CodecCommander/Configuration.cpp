@@ -20,15 +20,14 @@
 #include "Configuration.h"
 
 // Constants for Configuration
-#define kPlatformProfile            "Platform Profile"
 #define kDefault                    "Default"
-
-// Constants for Intel HDA
-#define kHDEFLocation               "HDEF Device Location"
-#define kCodecAddressNumber         "Codec Address Number"
+#define kPerformReset               "Perform Reset"
+#define kPerformResetOnEAPDFail     "Perform Reset on EAPD Fail"
+#define kCodecId                    "Codec Id"
 
 // Constants for EAPD command verb sending
 #define kUpdateNodes                "Update Nodes"
+#define kSleepNodes                 "Sleep Nodes"
 #define kSendDelay                  "Send Delay"
 
 // Workloop required and Workloop timer aka update interval, ms
@@ -42,348 +41,256 @@
 #define kCommandOnSleep             "On Sleep"
 #define kCommandOnWake              "On Wake"
 
-Configuration::Configuration(OSDictionary* dictionary)
-{
-    if (NULL == dictionary)
-        return;
-    
-    // Retrieve platform profile configuration
-    OSDictionary* list = OSDynamicCast(OSDictionary, dictionary->getObject(kPlatformProfile));
-    OSDictionary* config = Configuration::loadConfiguration(list);
-   
-    // Get HDA device location address
-    if (OSString* str = OSDynamicCast(OSString, config->getObject(kHDEFLocation)))
-    {
-        if (str->getLength() > 1)
-        {
-            for (int i = 0; i <= 1; i++)
-                mHDALocation[i] = str->getChar(i);
-        }
-        else
-            mHDALocation[0] = str->getChar(0);
-    }
-  
-    // Get codec address number
-    if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kCodecAddressNumber)))
-        mCodecNumber = num->unsigned8BitValue();
-    else
-        // Default to codec number 0
-        mCodecNumber = 0;
-    
-    // set path for ioreg entries
-    snprintf(mHDADevicePath, sizeof(mHDADevicePath),
-             "IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/HDEF@%s", mHDALocation);
+// Parsing for configuration
 
-    snprintf(mHDADriverPath, sizeof(mHDADriverPath),
-             "%s/AppleHDAController@%s/IOHDACodecDevice@%s,%d/IOHDACodecDriver/IOHDACodecFunction@%s,%d,1/AppleHDACodecGeneric/AppleHDADriver",
-             mHDADevicePath,
-             mHDALocation,
-             mHDALocation,
-             mCodecNumber,
-             mHDALocation,
-             mCodecNumber);
-    
-    // Get delay for sending the verb
-    if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kSendDelay)))
-        mSendDelay = num->unsigned16BitValue();
-    else
-        // Default to 3000
-        mSendDelay = 3000;
-    
-    if (OSBoolean* bl = OSDynamicCast(OSBoolean, config->getObject(kUpdateNodes)))
-        mUpdateNodes = bl->getValue();
-    else
-        // Default to true
-        mUpdateNodes = true;
-    
-    // Determine if infinite check is needed (for 10.9 and up)
-    if (OSBoolean* bl = OSDynamicCast(OSBoolean, config->getObject(kCheckInfinitely)))
-    {
-        mCheckInfinite = (int)bl->getValue();
-        
-        if (mCheckInfinite)
-        {
-            // What is the update interval
-            if (OSNumber* num = OSDynamicCast(OSNumber, config->getObject(kCheckInterval)))
-                mUpdateInterval = num->unsigned16BitValue();
-        }
-    }
-    else
-        // Default to false
-        mCheckInfinite = false;
-    
-    if (OSArray* list = OSDynamicCast(OSArray, config->getObject(kCustomCommands)))
-    {
-        OSCollectionIterator* iterator = OSCollectionIterator::withCollection(list);
-        
-        iterator->reset();
-        int k = 0;
-        
-        while (OSDictionary* dict = OSDynamicCast(OSDictionary, iterator->getNextObject()))
-        {
-            if (OSNumber* num = OSDynamicCast(OSNumber, dict->getObject(kCustomCommand)))
-            {
-                // Command should be != 0
-                if (num->unsigned32BitValue() > 0)
-                {
-                    mCustomCommands[k].Command = num->unsigned32BitValue();
-            
-                    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCommandOnInit)))
-                        mCustomCommands[k].OnInit = bl->getValue();
-                    else
-                        mCustomCommands[k].OnInit = false;
-                    
-                    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCommandOnSleep)))
-                        mCustomCommands[k].OnSleep = bl->getValue();
-                    else
-                        mCustomCommands[k].OnSleep = false;
-            
-                    if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(kCommandOnWake)))
-                        mCustomCommands[k].OnWake = bl->getValue();
-                    else
-                        mCustomCommands[k].OnWake = false;
-                
-                    k++;
-                }
-            }
-        }
-        
-        OSSafeRelease(iterator);
-    }
-    
-    OSSafeRelease(config);
-    
-    // Dump parsed configuration
-    DEBUG_LOG("CodecCommander::Configuration\n");
-    DEBUG_LOG("...HDA Location:\t%s\n", mHDALocation);
-    DEBUG_LOG("...HDA Device:\t\t%s\n", mHDADevicePath);
-    DEBUG_LOG("...Codec Number:\t%d\n", mCodecNumber);
-    DEBUG_LOG("...Send Delay:\t\t%d\n", mSendDelay);
-    DEBUG_LOG("...Check Infinite:\t%s\n", mCheckInfinite ? "true" : "false");
-    DEBUG_LOG("...Update Interval:\t%d\n", mUpdateInterval);
-}
-
-OSDictionary* Configuration::loadConfiguration(OSDictionary* list)
+UInt32 Configuration::parseInteger(const char* str)
 {
-    if (!list)
-        return NULL;
-    
-    OSDictionary* result = NULL;
-    OSDictionary* defaultNode = OSDynamicCast(OSDictionary, list->getObject(kDefault));
-    
-    OSString* platformManufacturer = getPlatformManufacturer();
-    OSString* platformProduct = getPlatformProduct();
-    
-    DEBUG_LOG("CodecCommander::Platform\n");
-    DEBUG_LOG("...Manufacturer:\t%s\n", platformManufacturer != NULL ? platformManufacturer->getCStringNoCopy() : "Unknown");
-    DEBUG_LOG("...Product:\t\t%s\n", platformProduct != NULL ? platformProduct->getCStringNoCopy() : "Unknown");
-    
-    OSDictionary* platformNode = Configuration::getPlatformNode(list, platformManufacturer, platformProduct);
-    
-    OSSafeRelease(platformManufacturer);
-    OSSafeRelease(platformProduct);
-  
-    if (defaultNode)
+    UInt32 result = 0;
+    while (*str == ' ') ++str;
+    if (str[0] == '0' && (str[1] == 'x' || str[1] == 'X'))
     {
-        // have default node, result is merge with platform node
-        result = OSDictionary::withDictionary(defaultNode);
-        
-        if (result && platformNode)
-            result->merge(platformNode);
+        str += 2;
+        while (*str)
+        {
+            result <<= 4;
+            if (*str >= '0' && *str <= '9')
+                result |= *str - '0';
+            else if (*str >= 'A' && *str <= 'F')
+                result |= *str - 'A' + 10;
+            else if (*str >= 'a' && *str <= 'f')
+                result |= *str - 'a' + 10;
+            else
+                return 0;
+            ++str;
+        }
     }
-    else if (platformNode)
-        // no default node, try to use just platform node
-        result = OSDictionary::withDictionary(platformNode);
-   
+    else
+    {
+        while (*str)
+        {
+            result *= 10;
+            if (*str >= '0' && *str <= '9')
+                result += *str - '0';
+            else
+                return 0;
+            ++str;
+        }
+    }
     return result;
 }
 
-/********************************************
- * Configuration Properties
- ********************************************/
-const char * Configuration::getHDADevicePath()
+bool Configuration::getBoolValue(OSDictionary *dict, const char *key, bool defValue)
 {
-    return mHDADevicePath;
+    bool result = defValue;
+    if (dict)
+    {
+        if (OSBoolean* bl = OSDynamicCast(OSBoolean, dict->getObject(key)))
+            result = bl->getValue();
+    }
+    return result;
 }
 
-const char * Configuration::getHDADriverPath()
+UInt32 Configuration::getIntegerValue(OSDictionary *dict, const char *key, UInt32 defValue)
 {
-    return mHDADriverPath;
+    UInt32 result = defValue;
+    if (dict)
+        result = getIntegerValue(dict->getObject(key), defValue);
+    return result;
 }
 
-UInt8 Configuration::getCodecNumber()
+UInt32 Configuration::getIntegerValue(OSObject *obj, UInt32 defValue)
 {
-    return mCodecNumber;
+    UInt32 result = defValue;
+    if (OSNumber* num = OSDynamicCast(OSNumber, obj))
+        result = num->unsigned32BitValue();
+    else if (OSString* str = OSDynamicCast(OSString, obj))
+        result = parseInteger(str->getCStringNoCopy());
+    return result;
 }
 
-bool Configuration::getUpdateNodes()
+OSDictionary* Configuration::locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
 {
-    return mUpdateNodes;
-}
-
-UInt16 Configuration::getSendDelay()
-{
-    return mSendDelay;
-}
-
-bool Configuration::getCheckInfinite()
-{
-    return mCheckInfinite;
-}
-
-UInt16 Configuration::getInterval()
-{
-    return mUpdateInterval;
-}
-
-CustomCommand* Configuration::getCustomCommands()
-{
-    return mCustomCommands;
-}
-
-/******************************************************************************
- * Methods for getting configuration dictionary, courtesy of RehabMan
- ******************************************************************************/
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Simplify data from Clover's DMI readings and use it for profile make and model
- * Courtesy of kozlek (HWSensors project)
- * https://github.com/kozlek/HWSensors
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-OSString* Configuration::getManufacturerNameFromOEMName(OSString *name)
-{
-    if (!name)
+    OSCollectionIterator* iterateProfiles = OSCollectionIterator::withCollection(profiles);
+    if (!iterateProfiles)
         return NULL;
     
-    OSString *manufacturer = NULL;
-    
-    if (name->isEqualTo("ASUSTeK Computer INC.") ||
-        name->isEqualTo("ASUSTeK COMPUTER INC.")) manufacturer = OSString::withCString("ASUS");
-
-    if (name->isEqualTo("Dell Inc.")) manufacturer = OSString::withCString("DELL");
-
-    if (name->isEqualTo("Gigabyte Technology Co., Ltd.")) manufacturer = OSString::withCString("Gigabyte");
-
-    if (name->isEqualTo("FUJITSU") ||
-        name->isEqualTo("FUJITSU SIEMENS")) manufacturer = OSString::withCString("FUJITSU");
-
-    if (name->isEqualTo("Hewlett-Packard")) manufacturer = OSString::withCString("HP");
-
-    if (name->isEqualTo("IBM")) manufacturer = OSString::withCString("IBM");
-
-    if (name->isEqualTo("Intel") ||
-        name->isEqualTo("Intel Corp.") ||
-        name->isEqualTo("Intel Corporation") ||
-        name->isEqualTo("INTEL Corporation")) manufacturer = OSString::withCString("Intel");
-
-    if (name->isEqualTo("Lenovo") || name->isEqualTo("LENOVO")) manufacturer = OSString::withCString("Lenovo");
-
-    if (name->isEqualTo("Micro-Star International") ||
-        name->isEqualTo("MICRO-STAR INTERNATIONAL CO., LTD") ||
-        name->isEqualTo("MICRO-STAR INTERNATIONAL CO.,LTD") ||
-        name->isEqualTo("MSI")) manufacturer = OSString::withCString("MSI");
-    
-    if (!manufacturer && !name->isEqualTo("To be filled by O.E.M."))
-        manufacturer = OSString::withString(name);
-    
-    return manufacturer;
-}
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Obtain information for make and model to match against config in Info.plist
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-OSString* Configuration::getPlatformManufacturer()
-{
-    // Try to get data from Clover first
-    if (IORegistryEntry* platformNode = IORegistryEntry::fromPath("/efi/platform", gIODTPlane))
+    while (OSSymbol* profileKey = OSDynamicCast(OSSymbol, iterateProfiles->getNextObject()))
     {
-        OSString *vendor = NULL;
-        OSString *manufacturer = NULL;
-        
-        if (OSData *data = OSDynamicCast(OSData, platformNode->getProperty("OEMVendor")))
+        if (OSDictionary* profile = OSDynamicCast(OSDictionary, profiles->getObject(profileKey)))
         {
-            vendor = OSString::withCString((char*)data->getBytesNoCopy());
-            manufacturer = getManufacturerNameFromOEMName(vendor);
+            if (OSArray* codecIds = OSDynamicCast(OSArray, profile->getObject(kCodecId)))
+            {
+                OSCollectionIterator* iterateCodecs = OSCollectionIterator::withCollection(codecIds);
+                if (!iterateCodecs)
+                {
+                    iterateProfiles->release();
+                    return NULL;
+                }
+                while (OSObject* id = iterateCodecs->getNextObject())
+                {
+                    UInt32 codec = getIntegerValue(id, 0);
+                    if (codec == codecVendorId)
+                    {
+                        DebugLog("Located configuration for codec: %s (0x%08x).\n", profileKey->getCStringNoCopy(), codecVendorId);
+
+                        iterateCodecs->release();
+                        iterateProfiles->release();
+                        
+                        return profile;
+                    }
+                }
+                iterateCodecs->release();
+            }
         }
-        
-        OSSafeRelease(vendor);
-        OSSafeRelease(platformNode);
-        
-        if (manufacturer)
-            return manufacturer;
     }
-    
-    // If not, then try from RehabMan OEM string on PS2K (useful chameleon/chimera)
-    if (IORegistryEntry* ps2KeyboardDevice = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PS2K"))
-    {
-        OSString *vendor = NULL;
-        OSString *manufacturer = NULL;
-        
-        vendor = OSDynamicCast(OSString, ps2KeyboardDevice->getProperty("RM,oem-id"));
-        manufacturer = getManufacturerNameFromOEMName(vendor);
-        
-        OSSafeRelease(vendor);
-        OSSafeRelease(ps2KeyboardDevice);
-        
-        if (manufacturer)
-            return manufacturer;
-    }
-    
+    iterateProfiles->release();
+
     return NULL;
 }
 
-OSString* Configuration::getPlatformProduct()
+OSDictionary* Configuration::loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
 {
-    // try to get data from Clover first
-    if (IORegistryEntry* platformNode = IORegistryEntry::fromPath("/efi/platform", gIODTPlane))
+    OSDictionary* defaultProfile = NULL;
+    OSDictionary* codecProfile = NULL;
+    if (profiles)
     {
-        OSString *product = NULL;
-        
-        if (OSData *data = OSDynamicCast(OSData, platformNode->getProperty("OEMBoard")))
-            product = OSString::withCString((char*)data->getBytesNoCopy());
-        
-        OSSafeRelease(platformNode);
-        
-        if (product)
-            return product;
+        defaultProfile = OSDynamicCast(OSDictionary, profiles->getObject(kDefault));
+        codecProfile = locateConfiguration(profiles, codecVendorId);
     }
-    
-    // then from PS2K
-    if (IORegistryEntry* ps2KeyboardDevice = IORegistryEntry::fromPath("IOService:/AppleACPIPlatformExpert/PS2K"))
+    OSDictionary* result = NULL;
+
+    if (defaultProfile)
     {
-        OSString *product = OSDynamicCast(OSString, ps2KeyboardDevice->getProperty("RM,oem-table-id"));
-        
-        OSSafeRelease(ps2KeyboardDevice);
-        
-        if (product)
-            return product;
+        // have default node, result is merged with platform node
+        OSDictionary* result = OSDictionary::withDictionary(defaultProfile);
+        if (result && codecProfile)
+            result->merge(codecProfile);
     }
-    
-    return NULL;
+
+    if (!result)
+    {
+        if (codecProfile)
+            // no default node, try to use just the codec profile
+            result = OSDictionary::withDictionary(codecProfile);
+        if (!result)
+            // empty dictionary in case of errors/memory problems
+            result = OSDictionary::withCapacity(0);
+    }
+
+    return result;
 }
 
-OSDictionary* Configuration::getPlatformNode(OSDictionary* list, OSString *platformManufacturer, OSString *platformProduct)
+Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
 {
-    OSDictionary *configuration = NULL;
+    OSDictionary* list = OSDynamicCast(OSDictionary, codecProfiles);
 
-    // Try and retrieve
-    // 1) Manufacturer / Product
-    // 2) Manufacturer / Default
-    // 3) Product
-    
-    if (platformManufacturer && platformProduct)
+    // Retrieve platform profile configuration
+    OSDictionary* config = loadConfiguration(list, codecVendorId);
+
+    // Get delay for sending the verb
+    mSendDelay = getIntegerValue(config, kSendDelay, 3000);
+
+    // Determine if perform reset is requested (Defaults to true)
+    mPerformReset = getBoolValue(config, kPerformReset, true);
+
+    // Determine if perform reset is requested (Defaults to true)
+    mPerformResetOnEAPDFail = getBoolValue(config, kPerformResetOnEAPDFail, true);
+
+    // Determine if update to EAPD nodes is requested (Defaults to true)
+    mUpdateNodes = getBoolValue(config, kUpdateNodes, true);
+    mSleepNodes = getBoolValue(config, kSleepNodes, true);
+
+    // Determine if infinite check is needed (for 10.9 and up)
+    mCheckInfinite = getBoolValue(config, kCheckInfinitely, false);
+    mUpdateInterval = getIntegerValue(config, kCheckInterval, 1000);
+
+    // Parse custom commands
+    mCustomCommands = OSArray::withCapacity(0);
+    if (!mCustomCommands) return;
+
+    if (OSArray* list = OSDynamicCast(OSArray, config->getObject(kCustomCommands)))
     {
-        if (OSDictionary *manufacturerNode = OSDynamicCast(OSDictionary, list->getObject(platformManufacturer)))
-            if (!(configuration = OSDynamicCast(OSDictionary, manufacturerNode->getObject(platformProduct))))
-                configuration = OSDynamicCast(OSDictionary, manufacturerNode->getObject(kDefault));
+        OSCollectionIterator* iterator = OSCollectionIterator::withCollection(list);
+        if (!iterator) return;
+        while (OSDictionary* dict = OSDynamicCast(OSDictionary, iterator->getNextObject()))
+        {
+            OSObject* obj = dict->getObject(kCustomCommand);
+            OSData* commandData = NULL;
+            CustomCommand* customCommand;
+
+            if (UInt32 commandBits = getIntegerValue(obj, 0))
+            {
+                commandData = OSData::withCapacity(sizeof(CustomCommand)+sizeof(UInt32));
+                commandData->appendByte(0, commandData->getCapacity());
+                customCommand = (CustomCommand*)commandData->getBytesNoCopy();
+                customCommand->CommandCount = 1;
+                customCommand->Commands[0] = commandBits;
+            }
+            else if (OSData* data = OSDynamicCast(OSData, obj))
+            {
+                unsigned length = data->getLength();
+                commandData = OSData::withCapacity(sizeof(CustomCommand)+length);
+                commandData->appendByte(0, commandData->getCapacity());
+                customCommand = (CustomCommand*)commandData->getBytesNoCopy();
+                customCommand->CommandCount = length / sizeof(customCommand->Commands[0]);
+                // byte reverse here, so the author of Info.pist doesn't have to...
+                UInt8* bytes = (UInt8*)data->getBytesNoCopy();
+                for (int i = 0; i < customCommand->CommandCount; i++)
+                {
+                    customCommand->Commands[i] = bytes[0]<<24 | bytes[1]<<16 | bytes[2]<<8 | bytes[3];
+                    bytes += sizeof(UInt32);
+                }
+            }
+            if (commandData)
+            {
+                customCommand->OnInit = getBoolValue(dict, kCommandOnInit, false);
+                customCommand->OnSleep = getBoolValue(dict, kCommandOnSleep, false);
+                customCommand->OnWake = getBoolValue(dict, kCommandOnWake, false);
+                mCustomCommands->setObject(commandData);
+                commandData->release();
+            }
+        }
+        iterator->release();
     }
 
-    if (platformProduct)
+    OSSafeRelease(config);
+
+    // Dump parsed configuration
+    DebugLog("Configuration\n");
+    DebugLog("...Check Infinite: %s\n", mCheckInfinite ? "true" : "false");
+    DebugLog("...Perform Reset: %s\n", mPerformReset ? "true" : "false");
+    DebugLog("...Perform Reset on EAPD Fail: %s\n", mPerformResetOnEAPDFail ? "true" : "false");
+    DebugLog("...Send Delay: %d\n", mSendDelay);
+    DebugLog("...Update Interval: %d\n", mUpdateInterval);
+    DebugLog("...Update Nodes: %s\n", mUpdateNodes ? "true" : "false");
+    DebugLog("...Sleep Nodes: %s\n", mSleepNodes ? "true" : "false");
+
+#ifdef DEBUG
+    if (OSCollectionIterator* iterator = OSCollectionIterator::withCollection(mCustomCommands))
     {
-        if (!configuration && !(configuration = OSDynamicCast(OSDictionary, list->getObject(platformProduct))))
-            configuration = OSDynamicCast(OSDictionary, list->getObject(kDefault));
+        while (OSData* data = OSDynamicCast(OSData, iterator->getNextObject()))
+        {
+            CustomCommand* customCommand = (CustomCommand*)data->getBytesNoCopy();
+            DebugLog("Custom Command\n");
+            if (customCommand->CommandCount == 1)
+                DebugLog("...Command: 0x%08x\n", customCommand->Commands[0]);
+            if (customCommand->CommandCount == 2)
+                DebugLog("...Commands(%d): 0x%08x 0x%08x\n", customCommand->CommandCount, customCommand->Commands[0], customCommand->Commands[1]);
+            if (customCommand->CommandCount == 3)
+                DebugLog("...Commands(%d): 0x%08x 0x%08x 0x%08x\n", customCommand->CommandCount, customCommand->Commands[0], customCommand->Commands[1], customCommand->Commands[2]);
+            if (customCommand->CommandCount == 3)
+                DebugLog("...Commands(%d): 0x%08x 0x%08x 0x%08x ...\n", customCommand->CommandCount, customCommand->Commands[0], customCommand->Commands[1], customCommand->Commands[2]);
+            DebugLog("...OnInit: %s\n", customCommand->OnInit ? "true" : "false");
+            DebugLog("...OnWake: %s\n", customCommand->OnWake ? "true" : "false");
+            DebugLog("...OnSleep: %s\n", customCommand->OnSleep ? "true" : "false");
+        }
+        iterator->release();
     }
-    
-    return configuration;
+#endif
+}
+
+Configuration::~Configuration()
+{
+    OSSafeReleaseNULL(mCustomCommands);
 }
 

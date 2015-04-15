@@ -54,46 +54,54 @@ enum
 
 class CodecCommander : public IOService
 {
-	Configuration *mConfiguration = NULL;
-	IntelHDA *mIntelHDA = NULL;
-	
-	IOWorkLoop*			mWorkLoop = NULL;
-	IOTimerEventSource* mTimer = NULL;
-	
     typedef IOService super;
 	OSDeclareDefaultStructors(CodecCommander)
 
 public:
     // standard IOKit methods
 	virtual bool init(OSDictionary *dictionary = 0);
+	virtual IOService* probe (IOService* provider, SInt32* score);
     virtual bool start(IOService *provider);
 	virtual void stop(IOService *provider);
-#ifdef DEBUG
-    virtual void free(void);
-#endif
-    
+	
     // workloop parameters
     bool startWorkLoop(IOService *provider);
     void onTimerAction();
     
-    //power management event
+    // power management event
     virtual IOReturn setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker);
 	
 	UInt32 executeCommand(UInt32 command);
 private:
-	void handleStateChange(CodecCommanderState newState);
+	IOAudioDevice* mAudioDevice = NULL;
+	IOAudioDevicePowerState mHDAPrevPowerState;
+	
+	Configuration *mConfiguration = NULL;
+	IntelHDA *mIntelHDA = NULL;
+	
+	IOWorkLoop* mWorkLoop = NULL;
+	IOTimerEventSource* mTimer = NULL;
+	
+	// Define variables for EAPD state updating
+	OSArray* mEAPDCapableNodes = NULL;
+	
+	bool mEAPDPoweredDown, mColdBoot;
+		
+	void handleStateChange(IOAudioDevicePowerState newState);
 	
 	// parse codec power state from ioreg
 	void parseCodecPowerState();
 	
 	// set the state of EAPD on outputs
-	void setEAPD(UInt8 logicLevel);
+	bool setEAPD(UInt8 logicLevel);
 	
 	// reset codec
 	void performCodecReset();
 	
 	// execute configured custom commands
 	void customCommands(CodecCommanderState newState);
+	
+	static const char* getPowerState(IOAudioDevicePowerState powerState);
 };
 
 class CodecCommanderClient : public IOUserClient
