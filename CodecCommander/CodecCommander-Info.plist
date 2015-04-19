@@ -63,11 +63,9 @@
 					<array>
 						<dict>
 							<key>Command</key>
-							<data>AZcHIAIXB8A=</data>
-							<key>Comment1</key>
-							<string>0x19 SET_PIN_WIDGET_CONTROL 0x20</string>
-							<key>Comment2</key>
-							<string>0x21 SET_PIN_WIDGET_CONTROL 0xC0</string>
+							<data>AZcHJQ==</data>
+							<key>Comment</key>
+							<string>0x19 SET_PIN_WIDGET_CONTROL 0x25</string>
 							<key>On Init</key>
 							<true/>
 							<key>On Sleep</key>
@@ -77,9 +75,33 @@
 						</dict>
 						<dict>
 							<key>Command</key>
-							<string>0x02170900</string>
+							<data>AhcHwA==</data>
+							<key>Comment</key>
+							<string>0x21 SET_PIN_WIDGET_CONTROL 0xC0</string>
+							<key>On Init</key>
+							<false/>
+							<key>On Sleep</key>
+							<false/>
+							<key>On Wake</key>
+							<false/>
+						</dict>
+						<dict>
+							<key>Command</key>
+							<string>0x02170901</string>
 							<key>Comment</key>
 							<string>0x21 SET_PIN_SENSE 0x00</string>
+							<key>On Init</key>
+							<false/>
+							<key>On Sleep</key>
+							<false/>
+							<key>On Wake</key>
+							<false/>
+						</dict>
+						<dict>
+							<key>Command</key>
+							<string>0x02170883</string>
+							<key>Comment</key>
+							<string>0x21 SET_UNSOLICITED_ENABLE 0x83</string>
 							<key>On Init</key>
 							<true/>
 							<key>On Sleep</key>
@@ -93,7 +115,7 @@
 					<key>Perform Reset on EAPD Fail</key>
 					<false/>
 					<key>Send Delay</key>
-					<integer>50</integer>
+					<integer>10</integer>
 					<key>Sleep Nodes</key>
 					<false/>
 					<key>Update Nodes</key>

@@ -174,9 +174,9 @@ void IntelHDA::resetCodec()
 
     DebugLog("--> resetting codec\n");
     this->sendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
-    IOSleep(10);
+    IOSleep(1);
     this->sendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
-    IOSleep(250); // per-HDA spec, device must respond (D0) within 200ms
+    IOSleep(220); // per-HDA spec, device must respond (D0) within 200ms
 
     // forcefully set power state to D3
     this->sendCommand(1, HDA_VERB_SET_PSTATE, HDA_PARM_PS_D3_HOT);
