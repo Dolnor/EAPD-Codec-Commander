@@ -75,31 +75,7 @@
 						</dict>
 						<dict>
 							<key>Command</key>
-							<data>AhcHwA==</data>
-							<key>Comment</key>
-							<string>0x21 SET_PIN_WIDGET_CONTROL 0xC0</string>
-							<key>On Init</key>
-							<false/>
-							<key>On Sleep</key>
-							<false/>
-							<key>On Wake</key>
-							<false/>
-						</dict>
-						<dict>
-							<key>Command</key>
-							<string>0x02170901</string>
-							<key>Comment</key>
-							<string>0x21 SET_PIN_SENSE 0x00</string>
-							<key>On Init</key>
-							<false/>
-							<key>On Sleep</key>
-							<false/>
-							<key>On Wake</key>
-							<false/>
-						</dict>
-						<dict>
-							<key>Command</key>
-							<string>0x02170883</string>
+							<data>AhcIgw==</data>
 							<key>Comment</key>
 							<string>0x21 SET_UNSOLICITED_ENABLE 0x83</string>
 							<key>On Init</key>
