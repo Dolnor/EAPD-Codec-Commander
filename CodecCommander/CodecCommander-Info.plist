@@ -105,13 +105,13 @@
 					<integer>3000</integer>
 					<key>Codec Id</key>
 					<array>
-						<integer>283902610</integer>
+						<string>0x10ec0292</string>
 					</array>
 					<key>Custom Commands</key>
 					<array>
 						<dict>
 							<key>Command</key>
-							<integer>27723556</integer>
+							<string>0x01a70724</string>
 							<key>Comment</key>
 							<string>Node 0x1a - Pin Control (In Enable / VRefEn)</string>
 							<key>On Init</key>
@@ -137,13 +137,13 @@
 					<integer>3000</integer>
 					<key>Codec Id</key>
 					<array>
-						<integer>283903592</integer>
+						<string>0x10ec0668</string>
 					</array>
 					<key>Custom Commands</key>
 					<array>
 						<dict>
 							<key>Command</key>
-							<integer>28772128</integer>
+							<string>0x01b70720</string>
 							<key>Comment</key>
 							<string>Node 0x1b - Pin Control (In Enable)</string>
 							<key>On Init</key>
