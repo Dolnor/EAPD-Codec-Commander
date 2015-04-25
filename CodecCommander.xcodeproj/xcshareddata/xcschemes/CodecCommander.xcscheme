@@ -14,10 +14,24 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "D402227E1A14F0F600800AA7"
-               BuildableName = "hda-verb"
+               BlueprintIdentifier = "0C4B237D14598AD20080D960"
+               BuildableName = "CodecCommander.kext"
+               BlueprintName = "CodecCommander"
+               ReferencedContainer = "container:CodecCommander.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "D42D3C041A59558B006C4C8C"
+               BuildableName = "CodecCommanderClient"
                BlueprintName = "CodecCommanderClient"
-               ReferencedContainer = "container:CodecCommanderClient.xcodeproj">
+               ReferencedContainer = "container:CodecCommander.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -32,10 +46,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D402227E1A14F0F600800AA7"
-            BuildableName = "hda-verb"
-            BlueprintName = "CodecCommanderClient"
-            ReferencedContainer = "container:CodecCommanderClient.xcodeproj">
+            BlueprintIdentifier = "0C4B237D14598AD20080D960"
+            BuildableName = "CodecCommander.kext"
+            BlueprintName = "CodecCommander"
+            ReferencedContainer = "container:CodecCommander.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </TestAction>
@@ -44,19 +58,19 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
-      buildConfiguration = "Release"
+      buildConfiguration = "Debug"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       allowLocationSimulation = "YES">
-      <BuildableProductRunnable>
+      <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D402227E1A14F0F600800AA7"
-            BuildableName = "hda-verb"
-            BlueprintName = "CodecCommanderClient"
-            ReferencedContainer = "container:CodecCommanderClient.xcodeproj">
+            BlueprintIdentifier = "0C4B237D14598AD20080D960"
+            BuildableName = "CodecCommander.kext"
+            BlueprintName = "CodecCommander"
+            ReferencedContainer = "container:CodecCommander.xcodeproj">
          </BuildableReference>
-      </BuildableProductRunnable>
+      </MacroExpansion>
       <AdditionalOptions>
       </AdditionalOptions>
    </LaunchAction>
@@ -66,15 +80,15 @@
       useCustomWorkingDirectory = "NO"
       buildConfiguration = "Release"
       debugDocumentVersioning = "YES">
-      <BuildableProductRunnable>
+      <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D402227E1A14F0F600800AA7"
-            BuildableName = "hda-verb"
-            BlueprintName = "CodecCommanderClient"
-            ReferencedContainer = "container:CodecCommanderClient.xcodeproj">
+            BlueprintIdentifier = "0C4B237D14598AD20080D960"
+            BuildableName = "CodecCommander.kext"
+            BlueprintName = "CodecCommander"
+            ReferencedContainer = "container:CodecCommander.xcodeproj">
          </BuildableReference>
-      </BuildableProductRunnable>
+      </MacroExpansion>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

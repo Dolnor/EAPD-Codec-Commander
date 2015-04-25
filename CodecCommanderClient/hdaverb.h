@@ -96,7 +96,7 @@
 #define HDA_REG_NID_SHIFT   24
 #define HDA_REG_VERB_SHIFT  8
 #define HDA_REG_VAL_SHIFT   0
-#define HDA_VERB(nid,verb,param) (nid << 24 | verb << 8 | param)
+#define HDA_VERB(nid,verb,param) (nid << 20 | verb << 8 | param)
 
 struct strtbl
 {
