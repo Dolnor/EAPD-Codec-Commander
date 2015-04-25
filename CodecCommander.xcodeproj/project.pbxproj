@@ -300,6 +300,7 @@
 				INFOPLIST_FILE = "CodecCommander/CodecCommander-Info.plist";
 				MODULE_NAME = org.tw.CodecCommander;
 				PRODUCT_NAME = CodecCommander;
+				SDKROOT = macosx10.9;
 				STRIP_INSTALLED_PRODUCT = YES;
 			};
 			name = Debug;
@@ -312,6 +313,7 @@
 				INFOPLIST_FILE = "CodecCommander/CodecCommander-Info.plist";
 				MODULE_NAME = org.tw.CodecCommander;
 				PRODUCT_NAME = CodecCommander;
+				SDKROOT = macosx10.9;
 				STRIP_INSTALLED_PRODUCT = YES;
 			};
 			name = Release;
@@ -322,7 +324,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx10.6;
+				SDKROOT = macosx10.9;
 			};
 			name = Debug;
 		};
@@ -331,7 +333,7 @@
 			buildSettings = {
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx10.6;
+				SDKROOT = macosx10.9;
 			};
 			name = Release;
 		};
