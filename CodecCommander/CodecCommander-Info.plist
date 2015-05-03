@@ -49,6 +49,30 @@
 					<key>Sleep Nodes</key>
 					<true/>
 				</dict>
+				<key>Realtek ALC269</key>
+				<dict>
+					<key>Check Infinitely</key>
+					<false/>
+					<key>Codec Id</key>
+					<array>
+						<string>0x10ec0269</string>
+					</array>
+					<key>Custom Commands</key>
+					<array>
+						<dict>
+							<key>Command</key>
+							<data>AVcIgw==</data>
+							<key>Comment</key>
+							<string>0x15 SET_UNSOLICITED_ENABLE 0x83</string>
+							<key>On Init</key>
+							<true/>
+							<key>On Sleep</key>
+							<false/>
+							<key>On Wake</key>
+							<true/>
+						</dict>
+					</array>
+				</dict>
 				<key>Realtek ALC283, ALC255, ALC233</key>
 				<dict>
 					<key>Check Infinitely</key>
@@ -88,21 +112,15 @@
 					</array>
 					<key>Perform Reset</key>
 					<true/>
-					<key>Perform Reset on EAPD Fail</key>
-					<false/>
 					<key>Send Delay</key>
 					<integer>10</integer>
 					<key>Sleep Nodes</key>
 					<false/>
-					<key>Update Nodes</key>
-					<true/>
 				</dict>
 				<key>Realtek ALC292</key>
 				<dict>
 					<key>Check Infinitely</key>
 					<false/>
-					<key>Check Interval</key>
-					<integer>3000</integer>
 					<key>Codec Id</key>
 					<array>
 						<string>0x10ec0292</string>
@@ -122,19 +140,11 @@
 							<true/>
 						</dict>
 					</array>
-					<key>Perform Reset</key>
-					<false/>
-					<key>Send Delay</key>
-					<integer>300</integer>
-					<key>Update Nodes</key>
-					<true/>
 				</dict>
 				<key>Realtek ALC668</key>
 				<dict>
 					<key>Check Infinitely</key>
 					<false/>
-					<key>Check Interval</key>
-					<integer>3000</integer>
 					<key>Codec Id</key>
 					<array>
 						<string>0x10ec0668</string>
@@ -154,12 +164,6 @@
 							<true/>
 						</dict>
 					</array>
-					<key>Perform Reset</key>
-					<false/>
-					<key>Send Delay</key>
-					<integer>300</integer>
-					<key>Update Nodes</key>
-					<true/>
 				</dict>
 			</dict>
 			<key>IOClass</key>
@@ -181,7 +185,7 @@
 	<key>OSBundleLibraries</key>
 	<dict>
 		<key>com.apple.iokit.IOAudioFamily</key>
-		<string>1.0</string>
+		<string>1.1</string>
 		<key>com.apple.iokit.IOPCIFamily</key>
 		<string>1.0.0b1</string>
 		<key>com.apple.kpi.bsd</key>
