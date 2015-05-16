@@ -61,6 +61,10 @@ public:
     // Constructor
     Configuration(OSObject* codecProfiles, UInt32 codecVendorId);
     ~Configuration();
+
+#ifdef DEBUG
+    OSDictionary* mConfig;
+#endif
 };
 
 #endif

@@ -136,7 +136,7 @@ OSDictionary* Configuration::loadConfiguration(OSDictionary* profiles, UInt32 co
     if (defaultProfile)
     {
         // have default node, result is merged with platform node
-        OSDictionary* result = OSDictionary::withDictionary(defaultProfile);
+        result = OSDictionary::withDictionary(defaultProfile);
         if (result && codecProfile)
             result->merge(codecProfile);
     }
@@ -160,6 +160,11 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
 
     // Retrieve platform profile configuration
     OSDictionary* config = loadConfiguration(list, codecVendorId);
+#ifdef DEBUG
+    mConfig = config;
+    if (mConfig)
+        mConfig->retain();
+#endif
 
     // Get delay for sending the verb
     mSendDelay = getIntegerValue(config, kSendDelay, 3000);
@@ -265,6 +270,9 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
 
 Configuration::~Configuration()
 {
-    OSSafeReleaseNULL(mCustomCommands);
+#ifdef DEBUG
+    OSSafeRelease(mConfig);
+#endif
+    OSSafeRelease(mCustomCommands);
 }
 

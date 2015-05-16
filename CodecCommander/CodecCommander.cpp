@@ -117,6 +117,9 @@ bool CodecCommander::start(IOService *provider)
 		stop(provider);
 		return false;
 	}
+#ifdef DEBUG
+	setProperty("Merged Profile", mConfiguration->mConfig);
+#endif
 	
 	if (mConfiguration->getUpdateNodes())
 	{
