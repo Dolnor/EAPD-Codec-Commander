@@ -49,14 +49,22 @@
 					<key>Sleep Nodes</key>
 					<true/>
 				</dict>
+				<key>10ec_0269</key>
+				<string>Realtek ALC269</string>
+				<key>10ec_0283</key>
+				<string>Realtek ALC283, ALC255, ALC233</string>
+				<key>10ec_0255</key>
+				<string>Realtek ALC283, ALC255, ALC233</string>
+				<key>10ec_0233</key>
+				<string>Realtek ALC283, ALC255, ALC233</string>
+				<key>10ec_0292</key>
+				<string>Realtek ALC292</string>
+				<key>10ec_0668</key>
+				<string>Realtek ALC668</string>
 				<key>Realtek ALC269</key>
 				<dict>
 					<key>Check Infinitely</key>
 					<false/>
-					<key>Codec Id</key>
-					<array>
-						<string>0x10ec0269</string>
-					</array>
 					<key>Custom Commands</key>
 					<array>
 						<dict>
@@ -77,12 +85,6 @@
 				<dict>
 					<key>Check Infinitely</key>
 					<false/>
-					<key>Codec Id</key>
-					<array>
-						<string>0x10ec0283</string>
-						<string>0x10ec0255</string>
-						<string>0x10ec0233</string>
-					</array>
 					<key>Custom Commands</key>
 					<array>
 						<dict>
@@ -121,10 +123,6 @@
 				<dict>
 					<key>Check Infinitely</key>
 					<false/>
-					<key>Codec Id</key>
-					<array>
-						<string>0x10ec0292</string>
-					</array>
 					<key>Custom Commands</key>
 					<array>
 						<dict>
@@ -145,10 +143,6 @@
 				<dict>
 					<key>Check Infinitely</key>
 					<false/>
-					<key>Codec Id</key>
-					<array>
-						<string>0x10ec0668</string>
-					</array>
 					<key>Custom Commands</key>
 					<array>
 						<dict>

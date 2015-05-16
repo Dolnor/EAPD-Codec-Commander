@@ -110,42 +110,16 @@ UInt32 Configuration::getIntegerValue(OSObject *obj, UInt32 defValue)
 
 OSDictionary* Configuration::locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
 {
-    OSCollectionIterator* iterateProfiles = OSCollectionIterator::withCollection(profiles);
-    if (!iterateProfiles)
-        return NULL;
+    char codecLookup[sizeof("vvvv_cccc")];
+    snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x", codecVendorId >> 16, codecVendorId & 0xFFFF);
+    OSObject* obj = profiles->getObject(codecLookup);
+    OSDictionary* dict;
+    if (OSString* str = OSDynamicCast(OSString, obj))
+        dict = OSDynamicCast(OSDictionary, profiles->getObject(str));
+    else
+        dict = OSDynamicCast(OSDictionary, obj);
     
-    while (OSSymbol* profileKey = OSDynamicCast(OSSymbol, iterateProfiles->getNextObject()))
-    {
-        if (OSDictionary* profile = OSDynamicCast(OSDictionary, profiles->getObject(profileKey)))
-        {
-            if (OSArray* codecIds = OSDynamicCast(OSArray, profile->getObject(kCodecId)))
-            {
-                OSCollectionIterator* iterateCodecs = OSCollectionIterator::withCollection(codecIds);
-                if (!iterateCodecs)
-                {
-                    iterateProfiles->release();
-                    return NULL;
-                }
-                while (OSObject* id = iterateCodecs->getNextObject())
-                {
-                    UInt32 codec = getIntegerValue(id, 0);
-                    if (codec == codecVendorId)
-                    {
-                        DebugLog("Located configuration for codec: %s (0x%08x).\n", profileKey->getCStringNoCopy(), codecVendorId);
-
-                        iterateCodecs->release();
-                        iterateProfiles->release();
-                        
-                        return profile;
-                    }
-                }
-                iterateCodecs->release();
-            }
-        }
-    }
-    iterateProfiles->release();
-
-    return NULL;
+    return dict;
 }
 
 OSDictionary* Configuration::loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
