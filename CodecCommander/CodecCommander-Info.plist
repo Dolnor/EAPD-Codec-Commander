@@ -49,6 +49,17 @@
 					<key>Sleep Nodes</key>
 					<true/>
 				</dict>
+				<key>8086</key>
+				<string>Intel HDMI</string>
+				<key>Intel HDMI</key>
+				<dict>
+					<key>Check Infinitely</key>
+					<false/>
+					<key>Update Nodes</key>
+					<false/>
+					<key>Sleep Nodes</key>
+					<false/>
+				</dict>
 				<key>10ec_0269</key>
 				<string>Realtek ALC269</string>
 				<key>10ec_0283</key>

@@ -110,9 +110,17 @@ UInt32 Configuration::getIntegerValue(OSObject *obj, UInt32 defValue)
 
 OSDictionary* Configuration::locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
 {
+    // check vendor_codec first
     char codecLookup[sizeof("vvvv_cccc")];
     snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x", codecVendorId >> 16, codecVendorId & 0xFFFF);
     OSObject* obj = profiles->getObject(codecLookup);
+    if (!obj)
+    {
+        // not found, check for vendor override (used for Intel HDMI)
+        snprintf(codecLookup, sizeof(codecLookup), "%04x", codecVendorId >> 16);
+        obj = profiles->getObject(codecLookup);
+    }
+    // look up actual dictionary (can be string redirect)
     OSDictionary* dict;
     if (OSString* str = OSDynamicCast(OSString, obj))
         dict = OSDynamicCast(OSDictionary, profiles->getObject(str));
