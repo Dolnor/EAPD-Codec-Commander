@@ -49,7 +49,7 @@ class Configuration
     static UInt32 getIntegerValue(OSObject* obj, UInt32 defValue);
 
 public:
-    inline bool getUpdateNodes() { return mUpdateInterval; };
+    inline bool getUpdateNodes() { return mUpdateNodes; };
     inline bool getSleepNodes() { return mSleepNodes; }
     inline bool getPerformReset() { return mPerformReset; };
     inline bool getPerformResetOnEAPDFail() { return mPerformResetOnEAPDFail; }
