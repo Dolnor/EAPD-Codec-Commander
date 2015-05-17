@@ -38,6 +38,19 @@ static IOPMPowerState powerStateArray[ kPowerStateCount ] =
 
 OSDefineMetaClassAndStructors(CodecCommander, IOService)
 
+static IOAudioDevice* getHDADriver(IORegistryEntry* registryEntry)
+{
+	IOAudioDevice* audioDevice = NULL;
+	while (registryEntry)
+	{
+		audioDevice = OSDynamicCast(IOAudioDevice, registryEntry);
+		if (audioDevice)
+			break;
+		registryEntry = registryEntry->getChildEntry(gIOServicePlane);
+	}
+	return audioDevice;
+}
+
 /******************************************************************************
  * CodecCommander::init - parse kernel extension Info.plist
  ******************************************************************************/
@@ -65,12 +78,7 @@ IOService* CodecCommander::probe(IOService* provider, SInt32* score)
 {
 	DebugLog("Probe\n");
 	
-	mAudioDevice = OSDynamicCast(IOAudioDevice, provider);
-	
-	if (mAudioDevice)
-		return super::probe(provider, score);
-	
-	return NULL;
+	return super::probe(provider, score);
 }
 
 static void setNumberProperty(IOService* service, const char* key, UInt32 value)
@@ -97,6 +105,14 @@ bool CodecCommander::start(IOService *provider)
 		DebugLog("Error loading kernel extension.\n");
 		return false;
 	}
+
+	mAudioDevice = getHDADriver(provider);
+	if (!mAudioDevice)
+	{
+		AlwaysLog("Not able to get IOAudioDevice in getHDADriver\n");
+		return false;
+	}
+	mAudioDevice->retain();
 
 	mIntelHDA = new IntelHDA(mAudioDevice, PIO);
 	if (!mIntelHDA || !mIntelHDA->initialize())
@@ -218,6 +234,7 @@ void CodecCommander::stop(IOService *provider)
 	mConfiguration = NULL;
 	
 	OSSafeReleaseNULL(mEAPDCapableNodes);
+	OSSafeReleaseNULL(mAudioDevice);
 	
     super::stop(provider);
 }

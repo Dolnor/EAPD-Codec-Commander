@@ -178,7 +178,7 @@
 			<key>IOMatchCategory</key>
 			<string>CodecCommander</string>
 			<key>IOProviderClass</key>
-			<string>IOAudioDevice</string>
+			<string>IOHDACodecFunction</string>
 			<key>IOUserClientClass</key>
 			<string>CodecCommanderClient</string>
 			<key>RM,Build</key>
