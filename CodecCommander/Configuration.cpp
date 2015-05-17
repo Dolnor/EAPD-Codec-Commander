@@ -24,6 +24,7 @@
 #define kPerformReset               "Perform Reset"
 #define kPerformResetOnEAPDFail     "Perform Reset on EAPD Fail"
 #define kCodecId                    "Codec Id"
+#define kDisable                    "Disable"
 
 // Constants for EAPD command verb sending
 #define kUpdateNodes                "Update Nodes"
@@ -174,6 +175,21 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
         mConfig->retain();
 #endif
 
+    mCustomCommands = OSArray::withCapacity(0);
+    if (!mCustomCommands)
+    {
+        OSSafeRelease(config);
+        return;
+    }
+
+    // if Disable is set in the profile, no more config is gathered, start will fail
+    mDisable = getBoolValue(config, kDisable, false);
+    if (mDisable)
+    {
+        OSSafeRelease(config);
+        return;
+    }
+
     // Get delay for sending the verb
     mSendDelay = getIntegerValue(config, kSendDelay, 3000);
 
@@ -192,9 +208,6 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
     mUpdateInterval = getIntegerValue(config, kCheckInterval, 1000);
 
     // Parse custom commands
-    mCustomCommands = OSArray::withCapacity(0);
-    if (!mCustomCommands) return;
-
     if (OSArray* list = OSDynamicCast(OSArray, config->getObject(kCustomCommands)))
     {
         OSCollectionIterator* iterator = OSCollectionIterator::withCollection(list);

@@ -112,7 +112,7 @@ bool CodecCommander::start(IOService *provider)
 	setNumberProperty(this, kCodecFuncGroupType, mIntelHDA->getCodecGroupType());
 	
 	mConfiguration = new Configuration(this->getProperty(kCodecProfile), mIntelHDA->getCodecVendorId());
-	if (!mConfiguration)
+	if (!mConfiguration || mConfiguration->getDisable())
 	{
 		stop(provider);
 		return false;
@@ -120,7 +120,7 @@ bool CodecCommander::start(IOService *provider)
 #ifdef DEBUG
 	setProperty("Merged Profile", mConfiguration->mConfig);
 #endif
-	
+
 	if (mConfiguration->getUpdateNodes())
 	{
 		// need to wait a bit until codec can actually respond to immediate verbs

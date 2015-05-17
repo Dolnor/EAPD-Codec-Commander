@@ -40,6 +40,7 @@ class Configuration
     bool mPerformResetOnEAPDFail;
     bool mUpdateNodes, mSleepNodes;
     UInt16 mSendDelay, mUpdateInterval;
+    bool mDisable;
 
     static UInt32 parseInteger(const char* str);
     static OSDictionary* locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId);
@@ -57,6 +58,7 @@ public:
     inline bool getCheckInfinite() { return mCheckInfinite; };
     inline UInt16 getInterval() { return mUpdateInterval; };
     inline OSArray* getCustomCommands() { return mCustomCommands; };
+    inline bool getDisable() { return mDisable; }
 
     // Constructor
     Configuration(OSObject* codecProfiles, UInt32 codecVendorId);

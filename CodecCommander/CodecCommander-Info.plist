@@ -33,7 +33,7 @@
 				<key>Default</key>
 				<dict>
 					<key>Check Infinitely</key>
-					<true/>
+					<false/>
 					<key>Check Interval</key>
 					<integer>3000</integer>
 					<key>Custom Commands</key>
@@ -53,6 +53,8 @@
 				<string>Intel HDMI</string>
 				<key>Intel HDMI</key>
 				<dict>
+					<key>Disable</key>
+					<true/>
 					<key>Check Infinitely</key>
 					<false/>
 					<key>Update Nodes</key>
