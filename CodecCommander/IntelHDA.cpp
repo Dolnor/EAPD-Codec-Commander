@@ -24,49 +24,36 @@
 
 static IOPCIDevice* getPCIDevice(IORegistryEntry* registryEntry)
 {
+    IOPCIDevice* result = NULL;
     while (registryEntry)
     {
-        IOPCIDevice* pciDevice = OSDynamicCast(IOPCIDevice, registryEntry);
-        
-        if (pciDevice)
-            return pciDevice;
-
+        result = OSDynamicCast(IOPCIDevice, registryEntry);
+        if (result)
+            break;
         registryEntry = registryEntry->getParentEntry(gIOServicePlane);
     }
- 
-    return NULL;
+    return result;
 }
 
 static UInt32 getPropertyValue(IORegistryEntry* registryEntry, const char* propertyName)
 {
+    UInt32 result = -1;
     while (registryEntry)
     {
-        OSNumber* value = OSDynamicCast(OSNumber, registryEntry->getProperty(propertyName));
-    
-        if (value)
-            return value->unsigned32BitValue();
-        
+        if (OSNumber* value = OSDynamicCast(OSNumber, registryEntry->getProperty(propertyName)))
+        {
+            result = value->unsigned32BitValue();
+            break;
+        }
         registryEntry = registryEntry->getParentEntry(gIOServicePlane);
     }
-    
-    return 0xFFFFFFFF;
+    return result;
 }
 
-IntelHDA::IntelHDA(IOAudioDevice *audioDevice, HDACommandMode commandMode)
+IntelHDA::IntelHDA(IOService* provider, HDACommandMode commandMode)
 {
     mCommandMode = commandMode;
-    mDevice = getPCIDevice(audioDevice);
-
-    //REVIEW_REHABMAN: specific to AppleHDA.
-    //  Should get from codec directly to work with VoodooHDA
-
-    mCodecVendorId = getPropertyValue(audioDevice, kCodecVendorID);
-    mCodecGroupType = getPropertyValue(audioDevice, kCodecFuncGroupType);
-    mCodecAddress = getPropertyValue(audioDevice, kCodecAddress);
-
-    // defaults for VoodooHDA...
-    if (0xFF == mCodecGroupType) mCodecGroupType = 1;
-    if (0xFF == mCodecAddress) mCodecAddress = 0;
+    mDevice = getPCIDevice(provider);
 }
 
 IntelHDA::~IntelHDA()
@@ -135,12 +122,11 @@ bool IntelHDA::initialize()
     //  it will not respond without the Double Function Group Reset.
     this->resetCodec();
 
-    if (mRegMap->VMAJ == 1 &&
-        mRegMap->VMIN == 0 &&
-        this->getVendorId() != 0xFFFF)
+    if (mRegMap->VMAJ == 1 && mRegMap->VMIN == 0 && this->getVendorId() != -1)
     {
         UInt16 vendor = this->getVendorId();
         UInt16 device = this->getDeviceId();
+        UInt32 subsystem = this->getSubsystemId();
 
         AlwaysLog("....Codec Address: %d\n", mCodecAddress);
         AlwaysLog("....Output Streams: %d\n", mRegMap->GCAP_OSS);
@@ -151,8 +137,10 @@ bool IntelHDA::initialize()
         AlwaysLog("....Codec Version: %d.%d\n", mRegMap->VMAJ, mRegMap->VMIN);
         AlwaysLog("....Vendor Id: 0x%04x\n", vendor);
         AlwaysLog("....Device Id: 0x%04x\n", device);
+        AlwaysLog("....Subsystem Id: 0x%08x\n", subsystem);
+        AlwaysLog("....PCI Sub Id: 0x%08x\n", getPCISubId());
 
-        if (mCodecVendorId == 0xFFFFFFFF)
+        if (mCodecVendorId == -1)
             mCodecVendorId = (UInt32)vendor << 16 | device;
 
         AlwaysLog("....CodecVendor Id: 0x%08x\n", mCodecVendorId);
@@ -233,6 +221,20 @@ UInt8 IntelHDA::getStartingNode()
         mNodes = this->sendCommand(1, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
     
     return (mNodes & 0xFF0000) >> 16;
+}
+
+UInt32 IntelHDA::getSubsystemId()
+{
+    if (mSubsystemId == -1)
+        mSubsystemId = this->sendCommand(1, HDA_VERB_GET_SUBSYSTEM_ID, HDA_PARM_NULL);
+    return mSubsystemId;
+}
+
+UInt32 IntelHDA::getPCISubId()
+{
+    UInt32 result = mDevice->configRead32(kIOPCIConfigSubSystemVendorID);
+    // flip words to be consistent with other 32-bit identifiers
+    return ((result & 0xFFFF) << 16) | result >> 16;
 }
 
 UInt32 IntelHDA::sendCommand(UInt8 nodeId, UInt16 verb, UInt8 payload)

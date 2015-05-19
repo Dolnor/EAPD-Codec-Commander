@@ -38,6 +38,9 @@ static IOPMPowerState powerStateArray[ kPowerStateCount ] =
 
 OSDefineMetaClassAndStructors(CodecCommander, IOService)
 
+//REVIEW: getHDADriver and getAudioDevice are only used by "Check Infinitely"
+// Note: "Check Infinitely" should be called "Check Periodically"
+
 static IOAudioDevice* getHDADriver(IORegistryEntry* registryEntry)
 {
 	IOAudioDevice* audioDevice = NULL;
@@ -48,7 +51,22 @@ static IOAudioDevice* getHDADriver(IORegistryEntry* registryEntry)
 			break;
 		registryEntry = registryEntry->getChildEntry(gIOServicePlane);
 	}
+#ifdef DEBUG
+	if (!audioDevice)
+		AlwaysLog("getHDADriver unable to find IOAudioDevice\n");
+#endif
 	return audioDevice;
+}
+
+IOAudioDevice* CodecCommander::getAudioDevice()
+{
+	if (!mAudioDevice)
+	{
+		mAudioDevice = getHDADriver(mProvider);
+		if (mAudioDevice)
+			mAudioDevice->retain();
+	}
+	return mAudioDevice;
 }
 
 /******************************************************************************
@@ -106,15 +124,11 @@ bool CodecCommander::start(IOService *provider)
 		return false;
 	}
 
-	mAudioDevice = getHDADriver(provider);
-	if (!mAudioDevice)
-	{
-		AlwaysLog("Not able to get IOAudioDevice in getHDADriver\n");
-		return false;
-	}
-	mAudioDevice->retain();
+	// cache the provider
+	mProvider = provider;
+	mProvider->retain();
 
-	mIntelHDA = new IntelHDA(mAudioDevice, PIO);
+	mIntelHDA = new IntelHDA(provider, PIO);
 	if (!mIntelHDA || !mIntelHDA->initialize())
 	{
 		AlwaysLog("Error initializing IntelHDA instance\n");
@@ -127,7 +141,7 @@ bool CodecCommander::start(IOService *provider)
 	setNumberProperty(this, kCodecAddress, mIntelHDA->getCodecAddress());
 	setNumberProperty(this, kCodecFuncGroupType, mIntelHDA->getCodecGroupType());
 	
-	mConfiguration = new Configuration(this->getProperty(kCodecProfile), mIntelHDA->getCodecVendorId());
+	mConfiguration = new Configuration(this->getProperty(kCodecProfile), mIntelHDA->getCodecVendorId(), mIntelHDA->getSubsystemId(), mIntelHDA->getPCISubId());
 	if (!mConfiguration || mConfiguration->getDisable())
 	{
 		stop(provider);
@@ -235,6 +249,7 @@ void CodecCommander::stop(IOService *provider)
 	
 	OSSafeReleaseNULL(mEAPDCapableNodes);
 	OSSafeReleaseNULL(mAudioDevice);
+	OSSafeReleaseNULL(mProvider);
 	
     super::stop(provider);
 }
@@ -244,8 +259,14 @@ void CodecCommander::stop(IOService *provider)
  ******************************************************************************/
 void CodecCommander::onTimerAction()
 {
+	mTimer->setTimeoutMS(mConfiguration->getInterval());
+
+	IOAudioDevice* audioDevice = getAudioDevice();
+	if (!audioDevice)
+		return;
+
     // check if hda codec is powered - we are monitoring ocurrences of fugue state
-	IOAudioDevicePowerState powerState = mAudioDevice->getPowerState();
+	IOAudioDevicePowerState powerState = audioDevice->getPowerState();
 	
 	// if hda codec changed power state
 	if (powerState != mHDAPrevPowerState)
@@ -273,8 +294,6 @@ void CodecCommander::onTimerAction()
 			mEAPDPoweredDown = false;
 		}
 	}
-
-    mTimer->setTimeoutMS(mConfiguration->getInterval());
 }
 
 /******************************************************************************

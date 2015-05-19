@@ -29,6 +29,7 @@
 #define HDA_VERB_EAPDBTL_GET	(UInt16)0xF0C	// EAPD/BTL Enable Get
 #define HDA_VERB_EAPDBTL_SET	(UInt16)0x70C	// EAPD/BTL Enable Set
 #define HDA_VERB_RESET			(UInt16)0x7FF	// Function Reset Execute
+#define HDA_VERB_GET_SUBSYSTEM_ID	(UInt16)0xF20	// Get codec subsystem ID
 
 #define HDA_VERB_SET_AMP_GAIN	(UInt8)0x3		// Set Amp Gain / Mute
 #define HDA_VERB_GET_AMP_GAIN	(Uint8)0xB		// Get Amp Gain / Mute
@@ -238,9 +239,10 @@ class IntelHDA
 
 	// Initialized in constructor
 	HDACommandMode mCommandMode;
-	UInt32 mCodecVendorId;
-	UInt8 mCodecGroupType;
-	UInt8 mCodecAddress;
+	UInt32 mCodecVendorId = -1;
+	UInt32 mSubsystemId = -1;
+	UInt8 mCodecGroupType = 1;
+	UInt8 mCodecAddress = 0;
 
 	// Read-once parameters
 	UInt32 mVendor = -1;
@@ -248,7 +250,7 @@ class IntelHDA
 	
 public:
 	// Constructor
-	IntelHDA(IOAudioDevice *audioDevice, HDACommandMode commandMode);
+	IntelHDA(IOService *provider, HDACommandMode commandMode);
 	// Destructor
 	~IntelHDA();
 
@@ -272,6 +274,8 @@ public:
 
 	UInt16 getVendorId();
 	UInt16 getDeviceId();
+	UInt32 getPCISubId();
+	UInt32 getSubsystemId();
 
 	UInt8 getTotalNodes();
 	UInt8 getStartingNode();
