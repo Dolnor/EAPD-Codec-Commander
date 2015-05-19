@@ -52,8 +52,12 @@
 					<true/>
 				</dict>
 				<key>8086</key>
-				<string>Intel HDMI</string>
-				<key>Intel HDMI</key>
+				<string>Disabled HDMI</string>
+				<key>10de</key>
+				<string>Disabled HDMI</string>
+				<key>1002</key>
+				<string>Disabled HDMI</string>
+				<key>Disabled HDMI</key>
 				<dict>
 					<key>Disable</key>
 					<true/>
@@ -199,7 +203,42 @@
 			<key>IOMatchCategory</key>
 			<string>CodecCommanderPowerHook</string>
 			<key>IOProviderClass</key>
-			<string>IOAudioDevice</string>
+			<string>AppleHDADriver</string>
+		</dict>
+		<key>CodecCommander VoodooHDA</key>
+		<dict>
+			<key>CFBundleIdentifier</key>
+			<string>${MODULE_NAME}</string>
+			<key>Codec Profile</key>
+			<dict>
+				<key>Default</key>
+				<dict>
+					<key>Check Infinitely</key>
+					<false/>
+					<key>Perform Reset</key>
+					<false/>
+					<key>Perform Reset on External Wake</key>
+					<false/>
+					<key>Perform Reset on EAPD Fail</key>
+					<false/>
+					<key>Update Nodes</key>
+					<false/>
+					<key>Sleep Nodes</key>
+					<false/>
+				</dict>
+			</dict>
+			<key>IOClass</key>
+			<string>CodecCommander</string>
+			<key>IOMatchCategory</key>
+			<string>CodecCommander</string>
+			<key>IOProviderClass</key>
+			<string>VoodooHDADriver</string>
+			<key>IOUserClientClass</key>
+			<string>CodecCommanderClient</string>
+			<key>RM,Build</key>
+			<string>${CONFIGURATION}-${LOGNAME}</string>
+			<key>RM,Version</key>
+			<string>${PRODUCT_NAME} ${MODULE_VERSION}</string>
 		</dict>
 	</dict>
 	<key>NSHumanReadableCopyright</key>
