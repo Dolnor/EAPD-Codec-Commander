@@ -126,7 +126,6 @@ bool CodecCommander::start(IOService *provider)
 
 	// cache the provider
 	mProvider = provider;
-	mProvider->retain();
 
 	mIntelHDA = new IntelHDA(provider, PIO);
 	if (!mIntelHDA || !mIntelHDA->initialize())
@@ -148,7 +147,7 @@ bool CodecCommander::start(IOService *provider)
 		return false;
 	}
 #ifdef DEBUG
-	setProperty("Merged Profile", mConfiguration->mConfig);
+	setProperty("Merged Profile", mConfiguration->mMergedConfig);
 #endif
 
 	if (mConfiguration->getUpdateNodes())
@@ -251,8 +250,8 @@ void CodecCommander::stop(IOService *provider)
 	
 	OSSafeReleaseNULL(mEAPDCapableNodes);
 	OSSafeReleaseNULL(mAudioDevice);
-	OSSafeReleaseNULL(mProvider);
-	
+	mProvider = NULL;
+
     super::stop(provider);
 }
 
@@ -284,8 +283,6 @@ void CodecCommander::onTimerAction()
 		{
 			DebugLog("HDA codec lost power\n");
 			handleStateChange(kIOAudioDeviceSleep); // power down EAPDs properly
-			mEAPDPoweredDown = true;
-			mColdBoot = false; //codec entered fugue state or sleep - no longer a cold boot
 		}
 
 		// if no power after semi-sleep (fugue) state and power was restored - set EAPD bit
@@ -293,7 +290,6 @@ void CodecCommander::onTimerAction()
 		{
 			DebugLog("--> hda codec power restored\n");
 			handleStateChange(kIOAudioDeviceActive);
-			mEAPDPoweredDown = false;
 		}
 	}
 }
@@ -306,6 +302,7 @@ void CodecCommander::handleStateChange(IOAudioDevicePowerState newState)
 	switch (newState)
 	{
 		case kIOAudioDeviceSleep:
+			mColdBoot = false;
 			if (mConfiguration->getSleepNodes())
 			{
 				if (!setEAPD(0x00) && mConfiguration->getPerformResetOnEAPDFail())
@@ -317,6 +314,7 @@ void CodecCommander::handleStateChange(IOAudioDevicePowerState newState)
 			}
 
 			customCommands(kStateSleep);
+			mEAPDPoweredDown = true;
 			break;
 
 		case kIOAudioDeviceIdle:	// note kIOAudioDeviceIdle is not used
@@ -334,6 +332,7 @@ void CodecCommander::handleStateChange(IOAudioDevicePowerState newState)
 			}
 
 			customCommands(kStateWake);
+			mEAPDPoweredDown = false;
 			break;
 	}
 }
@@ -423,9 +422,7 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 	{
 		case kPowerStateSleep:
 			AlwaysLog("--> asleep(%d)\n", (int)powerStateOrdinal);
-			mColdBoot = false;
 			handleStateChange(kIOAudioDeviceSleep); // set EAPD logic level 0 to cause EAPD to power off properly
-			mEAPDPoweredDown = true;  // now it's powered down for sure
 			break;
 
 		case kPowerStateDoze:	// note kPowerStateDoze never happens
@@ -455,6 +452,36 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 	}
 	
     return IOPMAckImplied;
+}
+
+IOReturn CodecCommander::setPowerStateExternal(unsigned long powerStateOrdinal, IOService *policyMaker)
+{
+	DebugLog("setPowerStateExternal %ld\n", powerStateOrdinal);
+
+	if (mPrevPowerStateOrdinal == powerStateOrdinal)
+	{
+		DebugLog("setPowerStateExternal same power state\n");
+		return IOPMAckImplied;
+	}
+	mPrevPowerStateOrdinal = powerStateOrdinal;
+
+	switch (powerStateOrdinal)
+	{
+		case kPowerStateSleep:
+			AlwaysLog("--> asleep(%d)\n", (int)powerStateOrdinal);
+			handleStateChange(kIOAudioDeviceSleep); // set EAPD logic level 0 to cause EAPD to power off properly
+			break;
+
+		case kPowerStateDoze:	// note kPowerStateDoze never happens
+		case kPowerStateNormal:
+			AlwaysLog("--> awake(%d)\n", (int)powerStateOrdinal);
+			if (mEAPDPoweredDown)
+				// set EAPD bit at wake or cold boot
+				handleStateChange(kIOAudioDeviceActive);
+			break;
+	}
+
+	return IOPMAckImplied;
 }
 
 /******************************************************************************
@@ -517,6 +544,11 @@ bool CodecCommanderPowerHook::start(IOService *provider)
 		return false;
 	}
 
+	//REVIEW_REHABMAN: hack alert!
+	// We don't want to start capturing a CodecCommander node if it is going to
+	//	disable itself shortly...  So wait a bit at start to let things stabilize.
+	IOSleep(50);
+
 	// walk up tree to find associated IOHDACodecFunction
 	IORegistryEntry* entry = provider;
 	while (entry)
@@ -543,7 +575,6 @@ bool CodecCommanderPowerHook::start(IOService *provider)
 		if (commander)
 		{
 			mCodecCommander = commander;
-			mCodecCommander->retain();
 			break;
 		}
 	}
@@ -567,7 +598,7 @@ bool CodecCommanderPowerHook::start(IOService *provider)
 
 void CodecCommanderPowerHook::stop(IOService *provider)
 {
-	OSSafeReleaseNULL(mCodecCommander);
+	mCodecCommander = NULL;
 
 	PMstop();
 
@@ -579,7 +610,7 @@ IOReturn CodecCommanderPowerHook::setPowerState(unsigned long powerStateOrdinal,
 	DebugLog("PowerHook: setPowerState %ld\n", powerStateOrdinal);
 
 	if (mCodecCommander)
-		return mCodecCommander->setPowerState(powerStateOrdinal, policyMaker);
+		return mCodecCommander->setPowerStateExternal(powerStateOrdinal, policyMaker);
 
 	return IOPMAckImplied;
 }

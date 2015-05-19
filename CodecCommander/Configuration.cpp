@@ -186,9 +186,9 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId, UInt
     // Retrieve platform profile configuration
     OSDictionary* config = loadConfiguration(list, codecVendorId, hdaSubsystemId, pciSubId);
 #ifdef DEBUG
-    mConfig = config;
-    if (mConfig)
-        mConfig->retain();
+    mMergedConfig = config;
+    if (mMergedConfig)
+        mMergedConfig->retain();
 #endif
 
     mCustomCommands = OSArray::withCapacity(0);
@@ -308,7 +308,7 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId, UInt
 Configuration::~Configuration()
 {
 #ifdef DEBUG
-    OSSafeRelease(mConfig);
+    OSSafeRelease(mMergedConfig);
 #endif
     OSSafeRelease(mCustomCommands);
 }

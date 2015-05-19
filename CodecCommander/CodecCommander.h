@@ -69,6 +69,7 @@ public:
     
     // power management event
     virtual IOReturn setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker);
+	IOReturn setPowerStateExternal(unsigned long powerStateOrdinal, IOService *policyMaker);
 	
 	UInt32 executeCommand(UInt32 command);
 

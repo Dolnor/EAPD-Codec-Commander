@@ -65,7 +65,7 @@ public:
     ~Configuration();
 
 #ifdef DEBUG
-    OSDictionary* mConfig;
+    OSDictionary* mMergedConfig;
 #endif
 };
 
