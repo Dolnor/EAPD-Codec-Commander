@@ -192,30 +192,32 @@ bool CodecCommander::start(IOService *provider)
 	// Execute any custom commands registered for initialization
 	customCommands(kStateInit);
 	
-    // notify about extra feature requests
-    if (mConfiguration->getCheckInfinite())
-        DebugLog("Infinite workloop requested, will start now!\n");
-    
     // init power state management & set state as PowerOn
     PMinit();
     registerPowerDriver(this, powerStateArray, kPowerStateCount);
 	provider->joinPMtree(this);
-    
-    // setup workloop and timer
-    mWorkLoop = IOWorkLoop::workLoop();
-    mTimer = IOTimerEventSource::timerEventSource(this,
-                                                  OSMemberFunctionCast(IOTimerEventSource::Action, this,
-                                                  &CodecCommander::onTimerAction));
-    if (!mWorkLoop || !mTimer)
-	{
-        stop(provider);
-		return false;
-	}
 
-    if (mWorkLoop->addEventSource(mTimer) != kIOReturnSuccess)
+	// no need to start timer unless "Check Infinitely" is enabled
+	if (mConfiguration->getCheckInfinite())
 	{
-        stop(provider);
-		return false;
+		DebugLog("Infinite workloop requested, will start now!\n");
+
+		// setup workloop and timer
+		mWorkLoop = IOWorkLoop::workLoop();
+		mTimer = IOTimerEventSource::timerEventSource(this,
+													  OSMemberFunctionCast(IOTimerEventSource::Action, this,
+													  &CodecCommander::onTimerAction));
+		if (!mWorkLoop || !mTimer)
+		{
+			stop(provider);
+			return false;
+		}
+
+		if (mWorkLoop->addEventSource(mTimer) != kIOReturnSuccess)
+		{
+			stop(provider);
+			return false;
+		}
 	}
 
 	this->registerService(0);
