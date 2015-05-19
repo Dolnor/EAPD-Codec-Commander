@@ -186,6 +186,17 @@
 			<key>RM,Version</key>
 			<string>${PRODUCT_NAME} ${MODULE_VERSION}</string>
 		</dict>
+		<key>CodecCommander PowerHook</key>
+		<dict>
+			<key>CFBundleIdentifier</key>
+			<string>${MODULE_NAME}</string>
+			<key>IOClass</key>
+			<string>CodecCommanderPowerHook</string>
+			<key>IOMatchCategory</key>
+			<string>CodecCommanderPowerHook</string>
+			<key>IOProviderClass</key>
+			<string>IOAudioDevice</string>
+		</dict>
 	</dict>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2013-2014 TimeWalker/RehabMan. All rights reserved.</string>

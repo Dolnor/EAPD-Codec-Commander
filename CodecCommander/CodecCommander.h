@@ -76,6 +76,7 @@ private:
 	IOService* mProvider = NULL;
 	IOAudioDevice* mAudioDevice = NULL;
 	IOAudioDevicePowerState mHDAPrevPowerState;
+	unsigned long mPrevPowerStateOrdinal = -1;
 	
 	Configuration *mConfiguration = NULL;
 	IntelHDA *mIntelHDA = NULL;
@@ -106,6 +107,26 @@ private:
 	
 	static const char* getPowerState(IOAudioDevicePowerState powerState);
 };
+
+class CodecCommanderPowerHook : public IOService
+{
+	typedef IOService super;
+	OSDeclareDefaultStructors(CodecCommanderPowerHook)
+
+public:
+	// standard IOKit methods
+	virtual bool init(OSDictionary *dictionary = 0);
+	virtual IOService* probe (IOService* provider, SInt32* score);
+	virtual bool start(IOService *provider);
+	virtual void stop(IOService* provider);
+
+	// power management event
+	virtual IOReturn setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker);
+
+private:
+	CodecCommander* mCodecCommander = NULL;
+};
+
 
 class CodecCommanderClient : public IOUserClient
 {

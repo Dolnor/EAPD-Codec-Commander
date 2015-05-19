@@ -412,6 +412,13 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 {
 	DebugLog("setPowerState %ld\n", powerStateOrdinal);
 
+	if (mPrevPowerStateOrdinal == powerStateOrdinal)
+	{
+		DebugLog("setPowerState same power state\n");
+		return IOPMAckImplied;
+	}
+	mPrevPowerStateOrdinal = powerStateOrdinal;
+
 	switch (powerStateOrdinal)
 	{
 		case kPowerStateSleep:
@@ -474,4 +481,105 @@ const char* CodecCommander::getPowerState(IOAudioDevicePowerState powerState)
 	};
 	
 	return IOFindNameForValue(powerState, state_values);
+}
+
+
+/******************************************************************************
+ * CodecCommander_PowerHook - for tracking power states of IOAudioDevice nodes
+ ******************************************************************************/
+
+OSDefineMetaClassAndStructors(CodecCommanderPowerHook, IOService)
+
+bool CodecCommanderPowerHook::init(OSDictionary *dictionary)
+{
+	DebugLog("CodecCommanderPowerHook::init\n");
+
+	if (!super::init(dictionary))
+		return false;
+
+	return true;
+}
+
+IOService* CodecCommanderPowerHook::probe(IOService* provider, SInt32* score)
+{
+	DebugLog("CodecCommanderPowerHook::probe\n");
+
+	return super::probe(provider, score);
+}
+
+bool CodecCommanderPowerHook::start(IOService *provider)
+{
+	DebugLog("CodecCommanderPowerHook::start\n");
+
+	if (!provider || !super::start(provider))
+	{
+		DebugLog("Error loading kernel extension.\n");
+		return false;
+	}
+
+	// walk up tree to find associated IOHDACodecFunction
+	IORegistryEntry* entry = provider;
+	while (entry)
+	{
+		if (OSDynamicCast(OSNumber, entry->getProperty(kCodecSubsystemID)))
+			break;
+		entry = entry->getParentEntry(gIOServicePlane);
+	}
+	if (!entry)
+	{
+		DebugLog("parent entry IOHDACodecFunction not found\n");
+		return false;
+	}
+	// look at children for CodecCommander instance
+	OSIterator* iter = entry->getChildIterator(gIOServicePlane);
+	if (!iter)
+	{
+		DebugLog("can't get child iterator\n");
+		return false;
+	}
+	while (OSObject* entry = iter->getNextObject())
+	{
+		CodecCommander* commander = OSDynamicCast(CodecCommander, entry);
+		if (commander)
+		{
+			mCodecCommander = commander;
+			mCodecCommander->retain();
+			break;
+		}
+	}
+	iter->release();
+
+	// if no CodecCommander instance found, don't attach
+	if (!mCodecCommander)
+	{
+		DebugLog("no CodecCommander found with child iterator\n");
+		return false;
+	}
+
+	// init power state management & set state as PowerOn
+	PMinit();
+	registerPowerDriver(this, powerStateArray, kPowerStateCount);
+	provider->joinPMtree(this);
+
+	this->registerService(0);
+	return true;
+}
+
+void CodecCommanderPowerHook::stop(IOService *provider)
+{
+	OSSafeReleaseNULL(mCodecCommander);
+
+	PMstop();
+
+	super::stop(provider);
+}
+
+IOReturn CodecCommanderPowerHook::setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker)
+{
+	DebugLog("PowerHook: setPowerState %ld\n", powerStateOrdinal);
+
+	if (mCodecCommander)
+		return mCodecCommander->setPowerState(powerStateOrdinal, policyMaker);
+
+	return IOPMAckImplied;
 }
