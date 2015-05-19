@@ -475,6 +475,10 @@ IOReturn CodecCommander::setPowerStateExternal(unsigned long powerStateOrdinal, 
 		case kPowerStateDoze:	// note kPowerStateDoze never happens
 		case kPowerStateNormal:
 			AlwaysLog("--> awake(%d)\n", (int)powerStateOrdinal);
+			if (mConfiguration->getPerformResetOnExternalWake())
+				// issue codec reset at wake and cold boot
+				performCodecReset();
+
 			if (mEAPDPoweredDown)
 				// set EAPD bit at wake or cold boot
 				handleStateChange(kIOAudioDeviceActive);

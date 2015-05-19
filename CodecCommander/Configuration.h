@@ -37,6 +37,7 @@ class Configuration
     
     bool mCheckInfinite;
     bool mPerformReset;
+    bool mPerformResetOnExternalWake;
     bool mPerformResetOnEAPDFail;
     bool mUpdateNodes, mSleepNodes;
     UInt16 mSendDelay, mUpdateInterval;
@@ -53,6 +54,7 @@ public:
     inline bool getUpdateNodes() { return mUpdateNodes; };
     inline bool getSleepNodes() { return mSleepNodes; }
     inline bool getPerformReset() { return mPerformReset; };
+    inline bool getPerformResetOnExternalWake() { return mPerformResetOnExternalWake; }
     inline bool getPerformResetOnEAPDFail() { return mPerformResetOnEAPDFail; }
     inline UInt16 getSendDelay() { return mSendDelay; };
     inline bool getCheckInfinite() { return mCheckInfinite; };

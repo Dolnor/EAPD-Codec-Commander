@@ -22,6 +22,7 @@
 // Constants for Configuration
 #define kDefault                    "Default"
 #define kPerformReset               "Perform Reset"
+#define kPerformResetOnExternalWake "Perform Reset on External Wake"
 #define kPerformResetOnEAPDFail     "Perform Reset on EAPD Fail"
 #define kCodecId                    "Codec Id"
 #define kDisable                    "Disable"
@@ -211,6 +212,7 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId, UInt
 
     // Determine if perform reset is requested (Defaults to true)
     mPerformReset = getBoolValue(config, kPerformReset, true);
+    mPerformResetOnExternalWake = getBoolValue(config, kPerformResetOnExternalWake, true);
 
     // Determine if perform reset is requested (Defaults to true)
     mPerformResetOnEAPDFail = getBoolValue(config, kPerformResetOnEAPDFail, true);

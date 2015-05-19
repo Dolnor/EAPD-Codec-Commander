@@ -40,6 +40,8 @@
 					<array/>
 					<key>Perform Reset</key>
 					<false/>
+					<key>Perform Reset on External Wake</key>
+					<false/>
 					<key>Perform Reset on EAPD Fail</key>
 					<false/>
 					<key>Send Delay</key>
@@ -126,6 +128,8 @@
 						</dict>
 					</array>
 					<key>Perform Reset</key>
+					<true/>
+					<key>Perform Reset on External Wake</key>
 					<true/>
 					<key>Send Delay</key>
 					<integer>10</integer>
