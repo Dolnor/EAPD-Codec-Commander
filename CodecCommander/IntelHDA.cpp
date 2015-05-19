@@ -54,6 +54,18 @@ IntelHDA::IntelHDA(IOService* provider, HDACommandMode commandMode)
 {
     mCommandMode = commandMode;
     mDevice = getPCIDevice(provider);
+
+    //REVIEW_REHABMAN: specific to AppleHDA.
+    //  Should get from codec directly to work with VoodooHDA
+
+    mCodecVendorId = getPropertyValue(provider, kCodecVendorID);
+    mCodecGroupType = getPropertyValue(provider, kCodecFuncGroupType);
+    mCodecAddress = getPropertyValue(provider, kCodecAddress);
+    mCodecSubsystemId = getPropertyValue(provider, kCodecSubsystemID);
+
+    // defaults for VoodooHDA...
+    if (0xFF == mCodecGroupType) mCodecGroupType = 1;
+    if (0xFF == mCodecAddress) mCodecAddress = 0;
 }
 
 IntelHDA::~IntelHDA()
@@ -122,7 +134,7 @@ bool IntelHDA::initialize()
     //  it will not respond without the Double Function Group Reset.
     this->resetCodec();
 
-    if (mRegMap->VMAJ == 1 && mRegMap->VMIN == 0 && this->getVendorId() != -1)
+    if (mRegMap->VMAJ == 1 && mRegMap->VMIN == 0 && this->getVendorId() != 0xFFFF)
     {
         UInt16 vendor = this->getVendorId();
         UInt16 device = this->getDeviceId();
@@ -140,7 +152,7 @@ bool IntelHDA::initialize()
         AlwaysLog("....Subsystem Id: 0x%08x\n", subsystem);
         AlwaysLog("....PCI Sub Id: 0x%08x\n", getPCISubId());
 
-        if (mCodecVendorId == -1)
+        if (mCodecVendorId == (UInt32)-1)
             mCodecVendorId = (UInt32)vendor << 16 | device;
 
         AlwaysLog("....CodecVendor Id: 0x%08x\n", mCodecVendorId);
@@ -225,9 +237,9 @@ UInt8 IntelHDA::getStartingNode()
 
 UInt32 IntelHDA::getSubsystemId()
 {
-    if (mSubsystemId == -1)
-        mSubsystemId = this->sendCommand(1, HDA_VERB_GET_SUBSYSTEM_ID, HDA_PARM_NULL);
-    return mSubsystemId;
+    if (mCodecSubsystemId == -1)
+        mCodecSubsystemId = this->sendCommand(1, HDA_VERB_GET_SUBSYSTEM_ID, HDA_PARM_NULL);
+    return mCodecSubsystemId;
 }
 
 UInt32 IntelHDA::getPCISubId()

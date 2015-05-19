@@ -239,10 +239,10 @@ class IntelHDA
 
 	// Initialized in constructor
 	HDACommandMode mCommandMode;
-	UInt32 mCodecVendorId = -1;
-	UInt32 mSubsystemId = -1;
-	UInt8 mCodecGroupType = 1;
-	UInt8 mCodecAddress = 0;
+	UInt32 mCodecVendorId;
+	UInt32 mCodecSubsystemId;
+	UInt8 mCodecGroupType;
+	UInt8 mCodecAddress;
 
 	// Read-once parameters
 	UInt32 mVendor = -1;
