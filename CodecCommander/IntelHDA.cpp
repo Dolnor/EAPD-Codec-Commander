@@ -57,6 +57,12 @@ IntelHDA::IntelHDA(IOService* provider, HDACommandMode commandMode)
 
     //REVIEW_REHABMAN: specific to AppleHDA.
     //  Should get from codec directly to work with VoodooHDA
+    //
+    //REVIEW_REHABMAN: the group type is almost always going to be
+    //  one (1) as that designates audio (AFG). Really we should be
+    //  checking it against 1 and refusing to attach if it is something
+    //  else (because CodecCommander probably doesn't make sense for
+    //  modem or OEM custom FG).
 
     mCodecVendorId = getPropertyValue(provider, kCodecVendorID);
     mCodecGroupType = getPropertyValue(provider, kCodecFuncGroupType);
@@ -223,6 +229,12 @@ UInt16 IntelHDA::getDeviceId()
     
     return mVendor & 0xFFFF;
 }
+
+//REVIEW_REHABMAN: getTotalNodes/getStartingNode/getSubsystemId should actually determine
+// the funcgroup node by parsing the node count on node 0 and looking for
+// a funcgroup that is audio.  Although modem funcgroups and oem funcgroups are
+// rare, they are possible, and they could be at node 1,2/etc pushing the AFG to a
+// different node than 1.
 
 UInt8 IntelHDA::getTotalNodes()
 {
