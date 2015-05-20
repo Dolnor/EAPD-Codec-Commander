@@ -39,7 +39,7 @@
 					<key>Custom Commands</key>
 					<array/>
 					<key>Perform Reset</key>
-					<false/>
+					<true/>
 					<key>Perform Reset on External Wake</key>
 					<true/>
 					<key>Perform Reset on EAPD Fail</key>
@@ -70,18 +70,6 @@
 				</dict>
 				<key>10ec_0269</key>
 				<string>Realtek ALC269</string>
-				<key>10ec_0282</key>
-				<string>Realtek ALC283,etc</string>
-				<key>10ec_0283</key>
-				<string>Realtek ALC283,etc</string>
-				<key>10ec_0255</key>
-				<string>Realtek ALC283,etc</string>
-				<key>10ec_0233</key>
-				<string>Realtek ALC283,etc</string>
-				<key>10ec_0292</key>
-				<string>Realtek ALC292</string>
-				<key>10ec_0668</key>
-				<string>Realtek ALC668</string>
 				<key>Realtek ALC269</key>
 				<dict>
 					<key>Custom Commands</key>
@@ -99,9 +87,39 @@
 							<true/>
 						</dict>
 					</array>
-					<key>Perform Reset</key>
-					<true/>
 				</dict>
+				<key>10ec_0269_pci_102804d9</key>
+				<string>Realtek ALC269VB</string>
+				<key>Realtek ALC269VB</key>
+				<dict>
+					<key>Custom Commands</key>
+					<array>
+						<dict>
+							<key>Command</key>
+							<data>AhcIgw==</data>
+							<key>Comment</key>
+							<string>0x21 SET_UNSOLICITED_ENABLE 0x83</string>
+							<key>On Init</key>
+							<true/>
+							<key>On Sleep</key>
+							<false/>
+							<key>On Wake</key>
+							<true/>
+						</dict>
+					</array>
+					<key>Send Delay</key>
+					<integer>20</integer>
+					<key>Sleep Nodes</key>
+					<false/>
+				</dict>
+				<key>10ec_0233</key>
+				<string>Realtek ALC283,etc</string>
+				<key>10ec_0282</key>
+				<string>Realtek ALC283,etc</string>
+				<key>10ec_0283</key>
+				<string>Realtek ALC283,etc</string>
+				<key>10ec_0255</key>
+				<string>Realtek ALC283,etc</string>
 				<key>Realtek ALC283,etc</key>
 				<dict>
 					<key>Custom Commands</key>
@@ -131,11 +149,15 @@
 							<true/>
 						</dict>
 					</array>
+					<key>Perform Reset</key>
+					<false/>
 					<key>Send Delay</key>
 					<integer>10</integer>
 					<key>Sleep Nodes</key>
 					<false/>
 				</dict>
+				<key>10ec_0292</key>
+				<string>Realtek ALC292</string>
 				<key>Realtek ALC292</key>
 				<dict>
 					<key>Custom Commands</key>
@@ -153,7 +175,11 @@
 							<true/>
 						</dict>
 					</array>
+					<key>Perform Reset</key>
+					<false/>
 				</dict>
+				<key>10ec_0668</key>
+				<string>Realtek ALC668</string>
 				<key>Realtek ALC668</key>
 				<dict>
 					<key>Custom Commands</key>
@@ -171,6 +197,8 @@
 							<true/>
 						</dict>
 					</array>
+					<key>Perform Reset</key>
+					<false/>
 				</dict>
 			</dict>
 			<key>IOClass</key>
