@@ -201,8 +201,10 @@
 					<false/>
 				</dict>
 				<key>10ec_0892_pci_1458</key>
-				<string>Realtek ALC892 Gigabyte</string>
-				<key>Realtek ALC892 Gigabyte</key>
+				<string>Realtek ALC892 desktop</string>
+				<key>10ec_0892_pci_8086</key>
+				<string>Realtek ALC892 desktop</string>
+				<key>Realtek ALC892 desktop</key>
 				<dict>
 					<key>Update Nodes</key>
 					<false/>
