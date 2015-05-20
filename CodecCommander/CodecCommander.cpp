@@ -434,7 +434,10 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 				// issue codec reset at wake and cold boot
 				performCodecReset();
 
-			if (mEAPDPoweredDown)
+			// when "Perform Reset"=false and "Perform Reset on External Wake"=true...
+			// we want power transitions, including setting EAPD to be handled
+			// exclusively by setPowerStateExternal.
+			if ((mConfiguration->getPerformReset() || !mConfiguration->getPerformResetOnExternalWake()) && mEAPDPoweredDown)
 				// set EAPD bit at wake or cold boot
 				handleStateChange(kIOAudioDeviceActive);
 
