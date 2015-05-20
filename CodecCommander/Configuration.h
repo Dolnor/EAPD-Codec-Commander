@@ -36,11 +36,12 @@ class Configuration
     OSArray* mCustomCommands;
     
     bool mCheckInfinite;
+    UInt16 mCheckInterval;
     bool mPerformReset;
     bool mPerformResetOnExternalWake;
     bool mPerformResetOnEAPDFail;
     bool mUpdateNodes, mSleepNodes;
-    UInt16 mSendDelay, mUpdateInterval;
+    UInt16 mSendDelay;
     bool mDisable;
 
     static UInt32 parseInteger(const char* str);
@@ -58,7 +59,7 @@ public:
     inline bool getPerformResetOnEAPDFail() { return mPerformResetOnEAPDFail; }
     inline UInt16 getSendDelay() { return mSendDelay; };
     inline bool getCheckInfinite() { return mCheckInfinite; };
-    inline UInt16 getInterval() { return mUpdateInterval; };
+    inline UInt16 getCheckInterval() { return mCheckInterval; };
     inline OSArray* getCustomCommands() { return mCustomCommands; };
     inline bool getDisable() { return mDisable; }
 
