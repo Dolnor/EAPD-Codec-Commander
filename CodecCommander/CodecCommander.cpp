@@ -410,14 +410,14 @@ void CodecCommander::performCodecReset()
 IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker)
 {
 	DebugLog("setPowerState %ld\n", powerStateOrdinal);
-
+#if 0
 	if (mPrevPowerStateOrdinal == powerStateOrdinal)
 	{
 		DebugLog("setPowerState same power state\n");
 		return IOPMAckImplied;
 	}
 	mPrevPowerStateOrdinal = powerStateOrdinal;
-
+#endif
 	switch (powerStateOrdinal)
 	{
 		case kPowerStateSleep:
@@ -457,14 +457,14 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 IOReturn CodecCommander::setPowerStateExternal(unsigned long powerStateOrdinal, IOService *policyMaker)
 {
 	DebugLog("setPowerStateExternal %ld\n", powerStateOrdinal);
-
+#if 0
 	if (mPrevPowerStateOrdinal == powerStateOrdinal)
 	{
 		DebugLog("setPowerStateExternal same power state\n");
 		return IOPMAckImplied;
 	}
 	mPrevPowerStateOrdinal = powerStateOrdinal;
-
+#endif
 	switch (powerStateOrdinal)
 	{
 		case kPowerStateSleep:

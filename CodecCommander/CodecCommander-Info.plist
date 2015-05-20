@@ -132,7 +132,7 @@
 						</dict>
 					</array>
 					<key>Perform Reset</key>
-					<true/>
+					<false/>
 					<key>Perform Reset on External Wake</key>
 					<true/>
 					<key>Send Delay</key>
