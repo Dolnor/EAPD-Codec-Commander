@@ -70,12 +70,14 @@
 				</dict>
 				<key>10ec_0269</key>
 				<string>Realtek ALC269</string>
+				<key>10ec_0282</key>
+				<string>Realtek ALC283,etc</string>
 				<key>10ec_0283</key>
-				<string>Realtek ALC283, ALC255, ALC233</string>
+				<string>Realtek ALC283,etc</string>
 				<key>10ec_0255</key>
-				<string>Realtek ALC283, ALC255, ALC233</string>
+				<string>Realtek ALC283,etc</string>
 				<key>10ec_0233</key>
-				<string>Realtek ALC283, ALC255, ALC233</string>
+				<string>Realtek ALC283,etc</string>
 				<key>10ec_0292</key>
 				<string>Realtek ALC292</string>
 				<key>10ec_0668</key>
@@ -100,7 +102,7 @@
 					<key>Perform Reset</key>
 					<true/>
 				</dict>
-				<key>Realtek ALC283, ALC255, ALC233</key>
+				<key>Realtek ALC283,etc</key>
 				<dict>
 					<key>Custom Commands</key>
 					<array>
