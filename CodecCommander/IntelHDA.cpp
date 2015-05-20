@@ -72,7 +72,9 @@ IntelHDA::IntelHDA(IOService* provider, HDACommandMode commandMode)
     DebugLog("mCodecAddress = 0x%04x\n", mCodecAddress);
     mCodecSubsystemId = getPropertyValue(provider, kCodecSubsystemID);
     DebugLog("mCodecSubsystemId = 0x%04x\n", mCodecSubsystemId);
-    mCodecSubsystemId = -1;
+    //mCodecSubsystemId = -1;
+    //REVIEW: why have two copies of the same thing...
+    mVendor = mCodecVendorId;
 
     // defaults for VoodooHDA...
     if (0xFF == mCodecGroupType) mCodecGroupType = 1;
@@ -143,7 +145,8 @@ bool IntelHDA::initialize()
     // Note: Must reset the codec here for getVendorId to work.
     //  If the computer is restarted when the codec is in fugue state (D3cold),
     //  it will not respond without the Double Function Group Reset.
-    this->resetCodec();
+    if (mVendor == -1 && this->getVendorId() == 0xFFFF)
+        this->resetCodec();
 
     if (mRegMap->VMAJ == 1 && mRegMap->VMIN == 0 && this->getVendorId() != 0xFFFF)
     {
