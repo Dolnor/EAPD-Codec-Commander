@@ -114,28 +114,41 @@ OSDictionary* Configuration::locateConfiguration(OSDictionary* profiles, UInt32 
 {
     UInt16 vendor = codecVendorId >> 16;
     UInt16 codec = codecVendorId & 0xFFFF;
+    OSObject* obj;
 
-    // check vendor_codec_hda_subsystem first
-    char codecLookup[sizeof("vvvv_cccc_pci_xxxxdddd")]; // can also be vvvv_cccc_hda_xxxxdddd
-    snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x_hda_%08x", vendor, codec, subsystemId);
-    OSObject* obj = profiles->getObject(codecLookup);
+    // check vendor_codec_hda_full-subsystem first
+    char codecLookup[sizeof("vvvv_cccc_pci_xxxx_dddd")]; // can also be vvvv_cccc_hda_xxxx_dddd
+    snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x_hda_%04x_%04x", vendor, codec, subsystemId >> 16, subsystemId & 0xFFFF);
+    obj = profiles->getObject(codecLookup);
     if (!obj)
     {
-        // check vendor_codec_pci_subid next
-        snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x_pci_%08x", vendor, codec, pciSubId);
+        // check vendor_codec_hda_vendorsubid next
+        snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x_hda_%04x", vendor, codec, subsystemId >> 16);
         obj = profiles->getObject(codecLookup);
-        if (!obj)
-        {
-            // check vendor_codec next
-            snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x", vendor, codec);
-            obj = profiles->getObject(codecLookup);
-            if (!obj)
-            {
-                // not found, check for vendor override (used for Intel HDMI)
-                snprintf(codecLookup, sizeof(codecLookup), "%04x", vendor);
-                obj = profiles->getObject(codecLookup);
-            }
-        }
+    }
+    if (!obj)
+    {
+        // check vendor_codec_pci_full-subid next
+        snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x_pci_%04x_%04x", vendor, codec, pciSubId >> 16, pciSubId & 0xFFFF);
+        obj = profiles->getObject(codecLookup);
+    }
+    if (!obj)
+    {
+        // check vendor_codec_pci_subvendorid next
+        snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x_pci_%04x", vendor, codec, pciSubId >> 16);
+        obj = profiles->getObject(codecLookup);
+    }
+    if (!obj)
+    {
+        // check vendor_codec next
+        snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x", vendor, codec);
+        obj = profiles->getObject(codecLookup);
+    }
+    if (!obj)
+    {
+        // not found, check for vendor override (used for Intel HDMI)
+        snprintf(codecLookup, sizeof(codecLookup), "%04x", vendor);
+        obj = profiles->getObject(codecLookup);
     }
 
     // look up actual dictionary (can be string redirect)

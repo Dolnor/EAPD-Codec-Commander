@@ -88,7 +88,7 @@
 						</dict>
 					</array>
 				</dict>
-				<key>10ec_0269_pci_102804d9</key>
+				<key>10ec_0269_pci_1028_04d9</key>
 				<string>Realtek ALC269VB</string>
 				<key>Realtek ALC269VB</key>
 				<dict>
@@ -198,6 +198,15 @@
 						</dict>
 					</array>
 					<key>Perform Reset</key>
+					<false/>
+				</dict>
+				<key>10ec_0892_pci_1458</key>
+				<string>Realtek ALC892 Gigabyte</string>
+				<key>Realtek ALC892 Gigabyte</key>
+				<dict>
+					<key>Update Nodes</key>
+					<false/>
+					<key>Sleep Nodes</key>
 					<false/>
 				</dict>
 			</dict>
