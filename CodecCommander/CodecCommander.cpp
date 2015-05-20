@@ -260,7 +260,7 @@ void CodecCommander::stop(IOService *provider)
  ******************************************************************************/
 void CodecCommander::onTimerAction()
 {
-	mTimer->setTimeoutMS(mConfiguration->getInterval());
+	mTimer->setTimeoutMS(mConfiguration->getCheckInterval());
 
 	IOAudioDevice* audioDevice = getAudioDevice();
 	if (!audioDevice)
@@ -422,7 +422,9 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 	{
 		case kPowerStateSleep:
 			AlwaysLog("--> asleep(%d)\n", (int)powerStateOrdinal);
-			handleStateChange(kIOAudioDeviceSleep); // set EAPD logic level 0 to cause EAPD to power off properly
+			if (!mEAPDPoweredDown)
+				// set EAPD logic level 0 to cause EAPD to power off properly
+				handleStateChange(kIOAudioDeviceSleep);
 			break;
 
 		case kPowerStateDoze:	// note kPowerStateDoze never happens
@@ -469,13 +471,15 @@ IOReturn CodecCommander::setPowerStateExternal(unsigned long powerStateOrdinal, 
 	{
 		case kPowerStateSleep:
 			AlwaysLog("--> asleep(%d)\n", (int)powerStateOrdinal);
-			handleStateChange(kIOAudioDeviceSleep); // set EAPD logic level 0 to cause EAPD to power off properly
+			if (!mEAPDPoweredDown)
+				// set EAPD logic level 0 to cause EAPD to power off properly
+				handleStateChange(kIOAudioDeviceSleep);
 			break;
 
 		case kPowerStateDoze:	// note kPowerStateDoze never happens
 		case kPowerStateNormal:
 			AlwaysLog("--> awake(%d)\n", (int)powerStateOrdinal);
-			if (mConfiguration->getPerformResetOnExternalWake())
+			if (mEAPDPoweredDown && mConfiguration->getPerformResetOnExternalWake())
 				// issue codec reset at wake and cold boot
 				performCodecReset();
 

@@ -223,7 +223,7 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId, UInt
 
     // Determine if infinite check is needed (for 10.9 and up)
     mCheckInfinite = getBoolValue(config, kCheckInfinitely, false);
-    mUpdateInterval = getIntegerValue(config, kCheckInterval, 1000);
+    mCheckInterval = getIntegerValue(config, kCheckInterval, 1000);
 
     // Parse custom commands
     if (OSArray* list = OSDynamicCast(OSArray, config->getObject(kCustomCommands)))
@@ -276,10 +276,11 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId, UInt
     // Dump parsed configuration
     DebugLog("Configuration\n");
     DebugLog("...Check Infinite: %s\n", mCheckInfinite ? "true" : "false");
+    DebugLog("...Check Interval: %d\n", mCheckInterval);
     DebugLog("...Perform Reset: %s\n", mPerformReset ? "true" : "false");
+    DebugLog("...Perform Reset on External Wake: %s\n", mPerformResetOnExternalWake ? "true" : "false");
     DebugLog("...Perform Reset on EAPD Fail: %s\n", mPerformResetOnEAPDFail ? "true" : "false");
     DebugLog("...Send Delay: %d\n", mSendDelay);
-    DebugLog("...Update Interval: %d\n", mUpdateInterval);
     DebugLog("...Update Nodes: %s\n", mUpdateNodes ? "true" : "false");
     DebugLog("...Sleep Nodes: %s\n", mSleepNodes ? "true" : "false");
 
