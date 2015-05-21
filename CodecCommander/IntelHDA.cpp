@@ -89,7 +89,7 @@ bool IntelHDA::initialize()
         AlwaysLog("mCodecAddress is 0xFF in IntelHDA::initialize\n");
         return false;
     }
-    if (mCodecGroupType != 1)
+    if (mCodecGroupType != HDA_TYPE_AFG)
     {
         DebugLog("mCodecGroupType is %d (must be 1) in IntelHDA::initialize\n", mCodecGroupType);
         return false;
@@ -181,13 +181,15 @@ void IntelHDA::resetCodec()
      */
 
     DebugLog("--> resetting codec\n");
-    this->sendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
+
+    UInt16 audioRoot = getAudioRoot();
+    this->sendCommand(audioRoot, HDA_VERB_RESET, HDA_PARM_NULL);
     IOSleep(1);
-    this->sendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
+    this->sendCommand(audioRoot, HDA_VERB_RESET, HDA_PARM_NULL);
     IOSleep(220); // per-HDA spec, device must respond (D0) within 200ms
 
     // forcefully set power state to D3
-    this->sendCommand(1, HDA_VERB_SET_PSTATE, HDA_PARM_PS_D3_HOT);
+    this->sendCommand(audioRoot, HDA_VERB_SET_PSTATE, HDA_PARM_PS_D3_HOT);
     DebugLog("--> hda codec power restored\n");
 }
 
@@ -227,32 +229,68 @@ UInt16 IntelHDA::getDeviceId()
     return mCodecVendorId & 0xFFFF;
 }
 
-//REVIEW_REHABMAN: getTotalNodes/getStartingNode/getSubsystemId should actually determine
-// the funcgroup node by parsing the node count on node 0 and looking for
-// a funcgroup that is audio.  Although modem funcgroups and oem funcgroups are
-// rare, they are possible, and they could be at node 1,2/etc pushing the AFG to a
-// different node than 1.
+UInt16 IntelHDA::getAudioRoot()
+{
+    if (mAudioRoot == (UInt16)-1)
+    {
+        UInt32 nodes = this->sendCommand(0, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
+        if (nodes != -1)
+        {
+            UInt16 start = nodes & 0xFF;
+            UInt16 end = start + ((nodes & 0xFF0000) >> 16);
+            for (UInt16 node = start; node < end; node++)
+            {
+                UInt32 type = this->sendCommand(node, HDA_VERB_GET_PARAM, HDA_PARM_FUNCGRP);
+                if ((type & 0xFF) == HDA_TYPE_AFG)
+                {
+                    DebugLog("getAudioRoot found audio root = 0x%02x\n", node);
+                    mAudioRoot = node;
+                    break;
+                }
+            }
+        }
+        if (mAudioRoot == (UInt16)-1)
+        {
+            DebugLog("getAudioRoot failed to find audio root... using default root of 1\n");
+            mAudioRoot = 1;
+        }
+    }
+    return mAudioRoot;
+}
 
 UInt8 IntelHDA::getTotalNodes()
 {
     if (mNodes == -1)
-        mNodes = this->sendCommand(1, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
-    
-    return ((mNodes & 0x0000FF) >>  0) + 1;
+    {
+        UInt16 audioRoot = getAudioRoot();
+        mNodes = this->sendCommand(audioRoot, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
+        // in the case of an invalid response, use zero
+        if (mNodes == -1) mNodes = 0;
+    }
+    return mNodes & 0x0000FF;
 }
 
 UInt8 IntelHDA::getStartingNode()
 {
     if (mNodes == -1)
-        mNodes = this->sendCommand(1, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
-    
+    {
+        UInt16 audioRoot = getAudioRoot();
+        mNodes = this->sendCommand(audioRoot, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
+        // in the case of an invalid response, use zero
+        if (mNodes == -1) mNodes = 0;
+    }
     return (mNodes & 0xFF0000) >> 16;
 }
 
 UInt32 IntelHDA::getSubsystemId()
 {
     if (mCodecSubsystemId == -1)
-        mCodecSubsystemId = this->sendCommand(1, HDA_VERB_GET_SUBSYSTEM_ID, HDA_PARM_NULL);
+    {
+        UInt16 audioRoot = getAudioRoot();
+        mCodecSubsystemId = this->sendCommand(audioRoot, HDA_VERB_GET_SUBSYSTEM_ID, HDA_PARM_NULL);
+        // in the case of an invalid response, use zero
+        if (mCodecSubsystemId == -1) mCodecSubsystemId = 0;
+    }
     return mCodecSubsystemId;
 }
 

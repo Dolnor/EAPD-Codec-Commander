@@ -166,25 +166,27 @@ bool CodecCommander::start(IOService *provider)
 			return false;
 		}
 		
-		for (int nodeId = mIntelHDA->getStartingNode(); nodeId <= mIntelHDA->getTotalNodes(); nodeId++)
+		UInt16 start = mIntelHDA->getStartingNode();
+		UInt16 end = start + mIntelHDA->getTotalNodes();
+		for (UInt16 node = start; node < end; node++)
 		{
-			UInt32 response = mIntelHDA->sendCommand(nodeId, HDA_VERB_GET_PARAM, HDA_PARM_PINCAP);
+			UInt32 response = mIntelHDA->sendCommand(node, HDA_VERB_GET_PARAM, HDA_PARM_PINCAP);
 			if (response == -1)
 			{
-				DebugLog("Failed to retrieve pin capabilities for node 0x%02x.\n", nodeId);
+				DebugLog("Failed to retrieve pin capabilities for node 0x%02x.\n", node);
 				continue;
 			}
 			
 			// if bit 16 is set in pincap - node supports EAPD
 			if (HDA_PINCAP_IS_EAPD_CAPABLE(response))
 			{
-				OSNumber* num = OSNumber::withNumber(nodeId, 8);
+				OSNumber* num = OSNumber::withNumber(node, 16);
 				if (num)
 				{
 					mEAPDCapableNodes->setObject(num);
 					num->release();
 				}
-				AlwaysLog("Node ID 0x%02x supports EAPD, will update state after sleep.\n", nodeId);
+				AlwaysLog("Node ID 0x%02x supports EAPD, will update state after sleep.\n", node);
 			}
 		}
 	}

@@ -49,6 +49,8 @@
 #define HDA_PARM_PS_D3_HOT	(UInt8)0x03 // Powerstate D3Hot
 #define HDA_PARM_PS_D3_COLD (UInt8)0x04	// Powerstate D3Cold
 
+#define HDA_TYPE_AFG	1	// return from PARM_FUNCGRP is 1 for Audio
+
 // Dynamic payload parameters
 #define HDA_PARM_AMP_GAIN_GET(Index, Left, Output) \
 	(UInt16)((Output & 0x1) << 15 | (Left & 0x01) << 13 | Index & 0xF) // Get Amp gain / mute
@@ -57,10 +59,14 @@
 	(UInt16)((SetOutput & 0x01) << 15 | (SetInput & 0x01) << 14 | (SetLeft & 0x01) << 13 | (SetRight & 0x01) << 12 | \
     (Index & 0xF) << 8 | (Mute & 0x1) << 7 | Gain & 0x7F) // Set Amp gain / mute
 
-#define HDA_ICS_IS_BUSY(status) ((status & 0x01) == 1) // Determine Immediate Command Busy (ICB) of Immediate Command Status (ICS)
-#define HDA_ICS_IS_VALID(status) (((status & 0x02) >> 1) == 1) // Determine Immediate Result Valid (IRV) of Immediate Command Status (ICS)
+// Determine Immediate Command Busy (ICB) of Immediate Command Status (ICS)
+#define HDA_ICS_IS_BUSY(status) ((status) & (1<<0))
 
-#define HDA_PINCAP_IS_EAPD_CAPABLE(capabilities) (((capabilities & 0xFF0000) >> 16) == 1) // Determine if this Pin widget capabilities is marked EAPD capable
+// Determine Immediate Result Valid (IRV) of Immediate Command Status (ICS)
+#define HDA_ICS_IS_VALID(status) ((status) & (1<<1))
+
+// Determine if this Pin widget capabilities is marked EAPD capable
+#define HDA_PINCAP_IS_EAPD_CAPABLE(capabilities) ((capabilities) & (1<<16))
 
 typedef struct __attribute__((packed))
 {
@@ -246,6 +252,7 @@ class IntelHDA
 
 	// Read-once parameters
 	UInt32 mNodes = -1;
+	UInt16 mAudioRoot = -1;
 	
 public:
 	// Constructor
@@ -281,6 +288,7 @@ public:
 
 private:
 	UInt32 executePIO(UInt32 command);
+	UInt16 getAudioRoot();
 };
 
 
