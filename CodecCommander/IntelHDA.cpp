@@ -55,15 +55,6 @@ IntelHDA::IntelHDA(IOService* provider, HDACommandMode commandMode)
     mCommandMode = commandMode;
     mDevice = getPCIDevice(provider);
 
-    //REVIEW_REHABMAN: specific to AppleHDA.
-    //  Should get from codec directly to work with VoodooHDA
-    //
-    //REVIEW_REHABMAN: the group type is almost always going to be
-    //  one (1) as that designates audio (AFG). Really we should be
-    //  checking it against 1 and refusing to attach if it is something
-    //  else (because CodecCommander probably doesn't make sense for
-    //  modem or OEM custom FG).
-
     mCodecVendorId = getPropertyValue(provider, kCodecVendorID);
     mCodecGroupType = getPropertyValue(provider, kCodecFuncGroupType);
     mCodecAddress = getPropertyValue(provider, kCodecAddress);
@@ -73,8 +64,6 @@ IntelHDA::IntelHDA(IOService* provider, HDACommandMode commandMode)
     mCodecSubsystemId = getPropertyValue(provider, kCodecSubsystemID);
     DebugLog("mCodecSubsystemId = 0x%04x\n", mCodecSubsystemId);
     //mCodecSubsystemId = -1;
-    //REVIEW: why have two copies of the same thing...
-    mVendor = mCodecVendorId;
 
     // defaults for VoodooHDA...
     if (0xFF == mCodecGroupType) mCodecGroupType = 1;
@@ -103,6 +92,11 @@ bool IntelHDA::initialize()
     if (mCodecAddress == 0xFF)
     {
         AlwaysLog("mCodecAddress is 0xFF in IntelHDA::initialize\n");
+        return false;
+    }
+    if (mCodecGroupType != 1)
+    {
+        DebugLog("mCodecGroupType is %d (must be 1) in IntelHDA::initialize\n", mCodecGroupType);
         return false;
     }
 
@@ -139,13 +133,13 @@ bool IntelHDA::initialize()
     if (mDevice->getPath(devicePath, &pathLen, gIOServicePlane))
         AlwaysLog("Evaluating device \"%s\" [%04x:%04x].\n",
                   devicePath,
-                  deviceInfo >> 16,
-                  deviceInfo & 0x0000FFFF);
+                  deviceInfo & 0xFFFF,
+                  deviceInfo >> 16);
 
     // Note: Must reset the codec here for getVendorId to work.
     //  If the computer is restarted when the codec is in fugue state (D3cold),
     //  it will not respond without the Double Function Group Reset.
-    if (mVendor == -1 && this->getVendorId() == 0xFFFF)
+    if (mCodecVendorId == -1 && this->getVendorId() == 0xFFFF)
         this->resetCodec();
 
     if (mRegMap->VMAJ == 1 && mRegMap->VMIN == 0 && this->getVendorId() != 0xFFFF)
@@ -154,22 +148,27 @@ bool IntelHDA::initialize()
         UInt16 device = this->getDeviceId();
         UInt32 subsystem = this->getSubsystemId();
 
-        AlwaysLog("....Codec Address: %d\n", mCodecAddress);
-        AlwaysLog("....Output Streams: %d\n", mRegMap->GCAP_OSS);
-        AlwaysLog("....Input Streams: %d\n", mRegMap->GCAP_ISS);
-        AlwaysLog("....Bidi Streams: %d\n", mRegMap->GCAP_BSS);
-        AlwaysLog("....Serial Data: %d\n", mRegMap->GCAP_NSDO);
-        AlwaysLog("....x64 Support: %d\n", mRegMap->GCAP_64OK);
-        AlwaysLog("....Codec Version: %d.%d\n", mRegMap->VMAJ, mRegMap->VMIN);
-        AlwaysLog("....Vendor Id: 0x%04x\n", vendor);
-        AlwaysLog("....Device Id: 0x%04x\n", device);
-        AlwaysLog("....Subsystem Id: 0x%08x\n", subsystem);
-        AlwaysLog("....PCI Sub Id: 0x%08x\n", getPCISubId());
-
         if (mCodecVendorId == (UInt32)-1)
             mCodecVendorId = (UInt32)vendor << 16 | device;
 
-        AlwaysLog("....CodecVendor Id: 0x%08x\n", mCodecVendorId);
+        // avoid logging HDMI audio (except in DEBUG build) as it is disabled anyway
+#ifndef DEBUG
+        if (vendor != 0x8086)
+#endif
+        {
+            AlwaysLog("....CodecVendor Id: 0x%08x\n", mCodecVendorId);
+            AlwaysLog("....Codec Address: %d\n", mCodecAddress);
+            AlwaysLog("....Subsystem Id: 0x%08x\n", subsystem);
+            AlwaysLog("....PCI Sub Id: 0x%08x\n", getPCISubId());
+            DebugLog("....Output Streams: %d\n", mRegMap->GCAP_OSS);
+            DebugLog("....Input Streams: %d\n", mRegMap->GCAP_ISS);
+            DebugLog("....Bidi Streams: %d\n", mRegMap->GCAP_BSS);
+            DebugLog("....Serial Data: %d\n", mRegMap->GCAP_NSDO);
+            DebugLog("....x64 Support: %d\n", mRegMap->GCAP_64OK);
+            DebugLog("....Codec Version: %d.%d\n", mRegMap->VMAJ, mRegMap->VMIN);
+            DebugLog("....Vendor Id: 0x%04x\n", vendor);
+            DebugLog("....Device Id: 0x%04x\n", device);
+        }
     
         return true;
     }
@@ -219,18 +218,18 @@ void IntelHDA::applyIntelTCSEL()
 
 UInt16 IntelHDA::getVendorId()
 {
-    if (mVendor == -1)
-        mVendor = this->sendCommand(0, HDA_VERB_GET_PARAM, HDA_PARM_VENDOR);
+    if (mCodecVendorId == -1)
+        mCodecVendorId = this->sendCommand(0, HDA_VERB_GET_PARAM, HDA_PARM_VENDOR);
     
-    return mVendor >> 16;
+    return mCodecVendorId >> 16;
 }
 
 UInt16 IntelHDA::getDeviceId()
 {
-    if (mVendor == -1)
-        mVendor = this->sendCommand(0, HDA_VERB_GET_PARAM, HDA_PARM_VENDOR);
+    if (mCodecVendorId == -1)
+        mCodecVendorId = this->sendCommand(0, HDA_VERB_GET_PARAM, HDA_PARM_VENDOR);
     
-    return mVendor & 0xFFFF;
+    return mCodecVendorId & 0xFFFF;
 }
 
 //REVIEW_REHABMAN: getTotalNodes/getStartingNode/getSubsystemId should actually determine

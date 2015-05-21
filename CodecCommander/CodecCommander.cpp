@@ -140,7 +140,7 @@ bool CodecCommander::start(IOService *provider)
 	setNumberProperty(this, kCodecAddress, mIntelHDA->getCodecAddress());
 	setNumberProperty(this, kCodecFuncGroupType, mIntelHDA->getCodecGroupType());
 	
-	mConfiguration = new Configuration(this->getProperty(kCodecProfile), mIntelHDA->getCodecVendorId(), mIntelHDA->getSubsystemId(), mIntelHDA->getPCISubId());
+	mConfiguration = new Configuration(this->getProperty(kCodecProfile), mIntelHDA->getCodecVendorId(), mIntelHDA->getSubsystemId());
 	if (!mConfiguration || mConfiguration->getDisable())
 	{
 		stop(provider);
@@ -410,18 +410,11 @@ void CodecCommander::performCodecReset()
 IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker)
 {
 	DebugLog("setPowerState %ld\n", powerStateOrdinal);
-#if 0
-	if (mPrevPowerStateOrdinal == powerStateOrdinal)
-	{
-		DebugLog("setPowerState same power state\n");
-		return IOPMAckImplied;
-	}
-	mPrevPowerStateOrdinal = powerStateOrdinal;
-#endif
+
 	switch (powerStateOrdinal)
 	{
 		case kPowerStateSleep:
-			AlwaysLog("--> asleep(%d)\n", (int)powerStateOrdinal);
+			DebugLog("--> asleep(%d)\n", (int)powerStateOrdinal);
 			if (!mEAPDPoweredDown)
 				// set EAPD logic level 0 to cause EAPD to power off properly
 				handleStateChange(kIOAudioDeviceSleep);
@@ -429,7 +422,7 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 
 		case kPowerStateDoze:	// note kPowerStateDoze never happens
 		case kPowerStateNormal:
-			AlwaysLog("--> awake(%d)\n", (int)powerStateOrdinal);
+			DebugLog("--> awake(%d)\n", (int)powerStateOrdinal);
 			if (mConfiguration->getPerformReset())
 				// issue codec reset at wake and cold boot
 				performCodecReset();
@@ -462,18 +455,11 @@ IOReturn CodecCommander::setPowerState(unsigned long powerStateOrdinal, IOServic
 IOReturn CodecCommander::setPowerStateExternal(unsigned long powerStateOrdinal, IOService *policyMaker)
 {
 	DebugLog("setPowerStateExternal %ld\n", powerStateOrdinal);
-#if 0
-	if (mPrevPowerStateOrdinal == powerStateOrdinal)
-	{
-		DebugLog("setPowerStateExternal same power state\n");
-		return IOPMAckImplied;
-	}
-	mPrevPowerStateOrdinal = powerStateOrdinal;
-#endif
+
 	switch (powerStateOrdinal)
 	{
 		case kPowerStateSleep:
-			AlwaysLog("--> asleep(%d)\n", (int)powerStateOrdinal);
+			DebugLog("--> asleep(%d)\n", (int)powerStateOrdinal);
 			if (!mEAPDPoweredDown)
 				// set EAPD logic level 0 to cause EAPD to power off properly
 				handleStateChange(kIOAudioDeviceSleep);
@@ -481,7 +467,7 @@ IOReturn CodecCommander::setPowerStateExternal(unsigned long powerStateOrdinal, 
 
 		case kPowerStateDoze:	// note kPowerStateDoze never happens
 		case kPowerStateNormal:
-			AlwaysLog("--> awake(%d)\n", (int)powerStateOrdinal);
+			DebugLog("--> awake(%d)\n", (int)powerStateOrdinal);
 			if (mEAPDPoweredDown && mConfiguration->getPerformResetOnExternalWake())
 				// issue codec reset at wake and cold boot
 				performCodecReset();

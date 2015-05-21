@@ -51,12 +51,6 @@
 					<key>Sleep Nodes</key>
 					<true/>
 				</dict>
-				<key>8086</key>
-				<string>Disabled HDMI</string>
-				<key>10de</key>
-				<string>Disabled HDMI</string>
-				<key>1002</key>
-				<string>Disabled HDMI</string>
 				<key>Disabled HDMI</key>
 				<dict>
 					<key>Disable</key>
@@ -68,8 +62,12 @@
 					<key>Sleep Nodes</key>
 					<false/>
 				</dict>
-				<key>10ec_0269</key>
-				<string>Realtek ALC269</string>
+				<key>8086</key>
+				<string>Disabled HDMI</string>
+				<key>10de</key>
+				<string>Disabled HDMI</string>
+				<key>1002</key>
+				<string>Disabled HDMI</string>
 				<key>Realtek ALC269</key>
 				<dict>
 					<key>Custom Commands</key>
@@ -88,8 +86,8 @@
 						</dict>
 					</array>
 				</dict>
-				<key>10ec_0269_pci_1028_04d9</key>
-				<string>Realtek ALC269VB</string>
+				<key>10ec_0269</key>
+				<string>Realtek ALC269</string>
 				<key>Realtek ALC269VB</key>
 				<dict>
 					<key>Custom Commands</key>
@@ -112,14 +110,8 @@
 					<key>Sleep Nodes</key>
 					<false/>
 				</dict>
-				<key>10ec_0233</key>
-				<string>Realtek ALC283,etc</string>
-				<key>10ec_0282</key>
-				<string>Realtek ALC283,etc</string>
-				<key>10ec_0283</key>
-				<string>Realtek ALC283,etc</string>
-				<key>10ec_0255</key>
-				<string>Realtek ALC283,etc</string>
+				<key>10ec_0269_HDA_1028_04d9</key>
+				<string>Realtek ALC269VB</string>
 				<key>Realtek ALC283,etc</key>
 				<dict>
 					<key>Custom Commands</key>
@@ -156,8 +148,14 @@
 					<key>Sleep Nodes</key>
 					<false/>
 				</dict>
-				<key>10ec_0292</key>
-				<string>Realtek ALC292</string>
+				<key>10ec_0233</key>
+				<string>Realtek ALC283,etc</string>
+				<key>10ec_0282</key>
+				<string>Realtek ALC283,etc</string>
+				<key>10ec_0283</key>
+				<string>Realtek ALC283,etc</string>
+				<key>10ec_0255</key>
+				<string>Realtek ALC283,etc</string>
 				<key>Realtek ALC292</key>
 				<dict>
 					<key>Custom Commands</key>
@@ -178,8 +176,8 @@
 					<key>Perform Reset</key>
 					<false/>
 				</dict>
-				<key>10ec_0668</key>
-				<string>Realtek ALC668</string>
+				<key>10ec_0292</key>
+				<string>Realtek ALC292</string>
 				<key>Realtek ALC668</key>
 				<dict>
 					<key>Custom Commands</key>
@@ -200,10 +198,8 @@
 					<key>Perform Reset</key>
 					<false/>
 				</dict>
-				<key>10ec_0892_pci_1458</key>
-				<string>Realtek ALC892 desktop</string>
-				<key>10ec_0892_pci_8086</key>
-				<string>Realtek ALC892 desktop</string>
+				<key>10ec_0668</key>
+				<string>Realtek ALC668</string>
 				<key>Realtek ALC892 desktop</key>
 				<dict>
 					<key>Update Nodes</key>
@@ -211,6 +207,10 @@
 					<key>Sleep Nodes</key>
 					<false/>
 				</dict>
+				<key>10ec_0892_HDA_1458</key>
+				<string>Realtek ALC892 desktop</string>
+				<key>10ec_0892_HDA_8086</key>
+				<string>Realtek ALC892 desktop</string>
 			</dict>
 			<key>IOClass</key>
 			<string>CodecCommander</string>
@@ -263,7 +263,7 @@
 			<key>IOMatchCategory</key>
 			<string>CodecCommander</string>
 			<key>IOProviderClass</key>
-			<string>VoodooHDADriver</string>
+			<string>VoodooHDADevice</string>
 			<key>IOUserClientClass</key>
 			<string>CodecCommanderClient</string>
 			<key>RM,Build</key>

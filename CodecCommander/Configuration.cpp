@@ -110,45 +110,33 @@ UInt32 Configuration::getIntegerValue(OSObject *obj, UInt32 defValue)
     return result;
 }
 
-OSDictionary* Configuration::locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId, UInt32 subsystemId, UInt32 pciSubId)
+OSDictionary* Configuration::locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId, UInt32 subsystemId)
 {
     UInt16 vendor = codecVendorId >> 16;
     UInt16 codec = codecVendorId & 0xFFFF;
     OSObject* obj;
 
-    // check vendor_codec_hda_full-subsystem first
-    char codecLookup[sizeof("vvvv_cccc_pci_xxxx_dddd")]; // can also be vvvv_cccc_hda_xxxx_dddd
-    snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x_hda_%04x_%04x", vendor, codec, subsystemId >> 16, subsystemId & 0xFFFF);
+    // check vendor_codec_HDA_full-subsystem first
+    char codecLookup[sizeof("vvvv_cccc_HDA_xxxx_dddd")];
+    snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x_HDA_%04x_%04x", vendor, codec, subsystemId >> 16, subsystemId & 0xFFFF);
     obj = profiles->getObject(codecLookup);
     if (!obj)
     {
-        // check vendor_codec_hda_vendorsubid next
-        snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x_hda_%04x", vendor, codec, subsystemId >> 16);
+        // check vendor_codec_HDA_vendorsubid next
+        snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x_HDA_%04x", vendor, codec, subsystemId >> 16);
         obj = profiles->getObject(codecLookup);
-    }
-    if (!obj)
-    {
-        // check vendor_codec_pci_full-subid next
-        snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x_pci_%04x_%04x", vendor, codec, pciSubId >> 16, pciSubId & 0xFFFF);
-        obj = profiles->getObject(codecLookup);
-    }
-    if (!obj)
-    {
-        // check vendor_codec_pci_subvendorid next
-        snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x_pci_%04x", vendor, codec, pciSubId >> 16);
-        obj = profiles->getObject(codecLookup);
-    }
-    if (!obj)
-    {
-        // check vendor_codec next
-        snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x", vendor, codec);
-        obj = profiles->getObject(codecLookup);
-    }
-    if (!obj)
-    {
-        // not found, check for vendor override (used for Intel HDMI)
-        snprintf(codecLookup, sizeof(codecLookup), "%04x", vendor);
-        obj = profiles->getObject(codecLookup);
+        if (!obj)
+        {
+            // check vendor_codec next
+            snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x", vendor, codec);
+            obj = profiles->getObject(codecLookup);
+            if (!obj)
+            {
+                // not found, check for vendor override (used for Intel HDMI)
+                snprintf(codecLookup, sizeof(codecLookup), "%04x", vendor);
+                obj = profiles->getObject(codecLookup);
+            }
+        }
     }
 
     // look up actual dictionary (can be string redirect)
@@ -161,14 +149,14 @@ OSDictionary* Configuration::locateConfiguration(OSDictionary* profiles, UInt32 
     return dict;
 }
 
-OSDictionary* Configuration::loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId, UInt32 subsystemId, UInt32 pciSubId)
+OSDictionary* Configuration::loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId, UInt32 subsystemId)
 {
     OSDictionary* defaultProfile = NULL;
     OSDictionary* codecProfile = NULL;
     if (profiles)
     {
         defaultProfile = OSDynamicCast(OSDictionary, profiles->getObject(kDefault));
-        codecProfile = locateConfiguration(profiles, codecVendorId, subsystemId, pciSubId);
+        codecProfile = locateConfiguration(profiles, codecVendorId, subsystemId);
     }
     OSDictionary* result = NULL;
 
@@ -193,12 +181,12 @@ OSDictionary* Configuration::loadConfiguration(OSDictionary* profiles, UInt32 co
     return result;
 }
 
-Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId, UInt32 hdaSubsystemId, UInt32 pciSubId)
+Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId, UInt32 hdaSubsystemId)
 {
     OSDictionary* list = OSDynamicCast(OSDictionary, codecProfiles);
 
     // Retrieve platform profile configuration
-    OSDictionary* config = loadConfiguration(list, codecVendorId, hdaSubsystemId, pciSubId);
+    OSDictionary* config = loadConfiguration(list, codecVendorId, hdaSubsystemId);
 #ifdef DEBUG
     mMergedConfig = config;
     if (mMergedConfig)
@@ -221,7 +209,7 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId, UInt
     }
 
     // Get delay for sending the verb
-    mSendDelay = getIntegerValue(config, kSendDelay, 3000);
+    mSendDelay = getIntegerValue(config, kSendDelay, 300);
 
     // Determine if perform reset is requested (Defaults to true)
     mPerformReset = getBoolValue(config, kPerformReset, true);

@@ -45,8 +45,8 @@ class Configuration
     bool mDisable;
 
     static UInt32 parseInteger(const char* str);
-    static OSDictionary* locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId, UInt32 hdaSubsystemId, UInt32 pciSubId);
-    static OSDictionary* loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId, UInt32 hdaSubsystemId, UInt32 pciSubId);
+    static OSDictionary* locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId, UInt32 hdaSubsystemId);
+    static OSDictionary* loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId, UInt32 hdaSubsystemId);
     static bool getBoolValue(OSDictionary* dict, const char* key, bool defValue);
     static UInt32 getIntegerValue(OSDictionary* dict, const char* key, UInt32 defValue);
     static UInt32 getIntegerValue(OSObject* obj, UInt32 defValue);
@@ -64,7 +64,7 @@ public:
     inline bool getDisable() { return mDisable; }
 
     // Constructor
-    Configuration(OSObject* codecProfiles, UInt32 codecVendorId, UInt32 hdaSubsystemId, UInt32 pciSubId);
+    Configuration(OSObject* codecProfiles, UInt32 codecVendorId, UInt32 hdaSubsystemId);
     ~Configuration();
 
 #ifdef DEBUG

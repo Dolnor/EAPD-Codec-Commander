@@ -245,7 +245,6 @@ class IntelHDA
 	UInt8 mCodecAddress;
 
 	// Read-once parameters
-	UInt32 mVendor = -1;
 	UInt32 mNodes = -1;
 	
 public:
