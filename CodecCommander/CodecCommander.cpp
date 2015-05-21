@@ -143,6 +143,7 @@ bool CodecCommander::start(IOService *provider)
 	mConfiguration = new Configuration(this->getProperty(kCodecProfile), mIntelHDA->getCodecVendorId(), mIntelHDA->getSubsystemId());
 	if (!mConfiguration || mConfiguration->getDisable())
 	{
+		AlwaysLog("stopping due to codec profile Disable flag\n");
 		stop(provider);
 		return false;
 	}
