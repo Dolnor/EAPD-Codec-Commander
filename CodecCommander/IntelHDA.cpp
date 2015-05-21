@@ -58,12 +58,7 @@ IntelHDA::IntelHDA(IOService* provider, HDACommandMode commandMode)
     mCodecVendorId = getPropertyValue(provider, kCodecVendorID);
     mCodecGroupType = getPropertyValue(provider, kCodecFuncGroupType);
     mCodecAddress = getPropertyValue(provider, kCodecAddress);
-    DebugLog("mCodecVendorId = 0x%08x\n", mCodecVendorId);
-    DebugLog("mCodecGroupType = 0x%04x\n", mCodecGroupType);
-    DebugLog("mCodecAddress = 0x%04x\n", mCodecAddress);
     mCodecSubsystemId = getPropertyValue(provider, kCodecSubsystemID);
-    DebugLog("mCodecSubsystemId = 0x%04x\n", mCodecSubsystemId);
-    //mCodecSubsystemId = -1;
 
     // defaults for VoodooHDA...
     if (0xFF == mCodecGroupType) mCodecGroupType = 1;
@@ -72,7 +67,7 @@ IntelHDA::IntelHDA(IOService* provider, HDACommandMode commandMode)
 
 IntelHDA::~IntelHDA()
 {
-    OSSafeReleaseNULL(mMemoryMap);
+    OSSafeRelease(mMemoryMap);
 }
 
 bool IntelHDA::initialize()

@@ -541,10 +541,13 @@ bool CodecCommanderPowerHook::start(IOService *provider)
 		return false;
 	}
 
-	//REVIEW_REHABMAN: hack alert!
-	// We don't want to start capturing a CodecCommander node if it is going to
-	//	disable itself shortly...  So wait a bit at start to let things stabilize.
-	IOSleep(50);
+	// don't attempt to AppleHDADriver for vendor 0x8086
+	IntelHDA intelHDA(provider, PIO);
+	if (0x8086 == (intelHDA.getCodecVendorId() >> 16))
+	{
+		DebugLog("no attempt to hook vendor 0x8086\n");
+		return false;
+	}
 
 	// walk up tree to find associated IOHDACodecFunction
 	IORegistryEntry* entry = provider;
