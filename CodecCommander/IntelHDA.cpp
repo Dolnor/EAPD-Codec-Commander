@@ -24,45 +24,41 @@
 
 static IOPCIDevice* getPCIDevice(IORegistryEntry* registryEntry)
 {
+    IOPCIDevice* result = NULL;
     while (registryEntry)
     {
-        IOPCIDevice* pciDevice = OSDynamicCast(IOPCIDevice, registryEntry);
-        
-        if (pciDevice)
-            return pciDevice;
-
+        result = OSDynamicCast(IOPCIDevice, registryEntry);
+        if (result)
+            break;
         registryEntry = registryEntry->getParentEntry(gIOServicePlane);
     }
- 
-    return NULL;
+    return result;
 }
 
 static UInt32 getPropertyValue(IORegistryEntry* registryEntry, const char* propertyName)
 {
+    UInt32 result = -1;
     while (registryEntry)
     {
-        OSNumber* value = OSDynamicCast(OSNumber, registryEntry->getProperty(propertyName));
-    
-        if (value)
-            return value->unsigned32BitValue();
-        
+        if (OSNumber* value = OSDynamicCast(OSNumber, registryEntry->getProperty(propertyName)))
+        {
+            result = value->unsigned32BitValue();
+            break;
+        }
         registryEntry = registryEntry->getParentEntry(gIOServicePlane);
     }
-    
-    return 0xFFFFFFFF;
+    return result;
 }
 
-IntelHDA::IntelHDA(IOAudioDevice *audioDevice, HDACommandMode commandMode)
+IntelHDA::IntelHDA(IOService* provider, HDACommandMode commandMode)
 {
     mCommandMode = commandMode;
-    mDevice = getPCIDevice(audioDevice);
+    mDevice = getPCIDevice(provider);
 
-    //REVIEW_REHABMAN: specific to AppleHDA.
-    //  Should get from codec directly to work with VoodooHDA
-
-    mCodecVendorId = getPropertyValue(audioDevice, kCodecVendorID);
-    mCodecGroupType = getPropertyValue(audioDevice, kCodecFuncGroupType);
-    mCodecAddress = getPropertyValue(audioDevice, kCodecAddress);
+    mCodecVendorId = getPropertyValue(provider, kCodecVendorID);
+    mCodecGroupType = getPropertyValue(provider, kCodecFuncGroupType);
+    mCodecAddress = getPropertyValue(provider, kCodecAddress);
+    mCodecSubsystemId = getPropertyValue(provider, kCodecSubsystemID);
 
     // defaults for VoodooHDA...
     if (0xFF == mCodecGroupType) mCodecGroupType = 1;
@@ -71,7 +67,7 @@ IntelHDA::IntelHDA(IOAudioDevice *audioDevice, HDACommandMode commandMode)
 
 IntelHDA::~IntelHDA()
 {
-    OSSafeReleaseNULL(mMemoryMap);
+    OSSafeRelease(mMemoryMap);
 }
 
 bool IntelHDA::initialize()
@@ -91,6 +87,11 @@ bool IntelHDA::initialize()
     if (mCodecAddress == 0xFF)
     {
         AlwaysLog("mCodecAddress is 0xFF in IntelHDA::initialize\n");
+        return false;
+    }
+    if (mCodecGroupType != HDA_TYPE_AFG)
+    {
+        DebugLog("mCodecGroupType is %d (must be 1) in IntelHDA::initialize\n", mCodecGroupType);
         return false;
     }
 
@@ -127,35 +128,42 @@ bool IntelHDA::initialize()
     if (mDevice->getPath(devicePath, &pathLen, gIOServicePlane))
         AlwaysLog("Evaluating device \"%s\" [%04x:%04x].\n",
                   devicePath,
-                  deviceInfo >> 16,
-                  deviceInfo & 0x0000FFFF);
+                  deviceInfo & 0xFFFF,
+                  deviceInfo >> 16);
 
     // Note: Must reset the codec here for getVendorId to work.
     //  If the computer is restarted when the codec is in fugue state (D3cold),
     //  it will not respond without the Double Function Group Reset.
-    this->resetCodec();
+    if (mCodecVendorId == -1 && this->getVendorId() == 0xFFFF)
+        this->resetCodec();
 
-    if (mRegMap->VMAJ == 1 &&
-        mRegMap->VMIN == 0 &&
-        this->getVendorId() != 0xFFFF)
+    if (mRegMap->VMAJ == 1 && mRegMap->VMIN == 0 && this->getVendorId() != 0xFFFF)
     {
         UInt16 vendor = this->getVendorId();
         UInt16 device = this->getDeviceId();
+        UInt32 subsystem = this->getSubsystemId();
 
-        AlwaysLog("....Codec Address: %d\n", mCodecAddress);
-        AlwaysLog("....Output Streams: %d\n", mRegMap->GCAP_OSS);
-        AlwaysLog("....Input Streams: %d\n", mRegMap->GCAP_ISS);
-        AlwaysLog("....Bidi Streams: %d\n", mRegMap->GCAP_BSS);
-        AlwaysLog("....Serial Data: %d\n", mRegMap->GCAP_NSDO);
-        AlwaysLog("....x64 Support: %d\n", mRegMap->GCAP_64OK);
-        AlwaysLog("....Codec Version: %d.%d\n", mRegMap->VMAJ, mRegMap->VMIN);
-        AlwaysLog("....Vendor Id: 0x%04x\n", vendor);
-        AlwaysLog("....Device Id: 0x%04x\n", device);
-
-        if (mCodecVendorId == 0xFFFFFFFF)
+        if (mCodecVendorId == (UInt32)-1)
             mCodecVendorId = (UInt32)vendor << 16 | device;
 
-        AlwaysLog("....CodecVendor Id: 0x%08x\n", mCodecVendorId);
+        // avoid logging HDMI audio (except in DEBUG build) as it is disabled anyway
+#ifndef DEBUG
+        if (vendor != 0x8086)
+#endif
+        {
+            AlwaysLog("....CodecVendor Id: 0x%08x\n", mCodecVendorId);
+            AlwaysLog("....Codec Address: %d\n", mCodecAddress);
+            AlwaysLog("....Subsystem Id: 0x%08x\n", subsystem);
+            AlwaysLog("....PCI Sub Id: 0x%08x\n", getPCISubId());
+            DebugLog("....Output Streams: %d\n", mRegMap->GCAP_OSS);
+            DebugLog("....Input Streams: %d\n", mRegMap->GCAP_ISS);
+            DebugLog("....Bidi Streams: %d\n", mRegMap->GCAP_BSS);
+            DebugLog("....Serial Data: %d\n", mRegMap->GCAP_NSDO);
+            DebugLog("....x64 Support: %d\n", mRegMap->GCAP_64OK);
+            DebugLog("....Codec Version: %d.%d\n", mRegMap->VMAJ, mRegMap->VMIN);
+            DebugLog("....Vendor Id: 0x%04x\n", vendor);
+            DebugLog("....Device Id: 0x%04x\n", device);
+        }
     
         return true;
     }
@@ -173,13 +181,15 @@ void IntelHDA::resetCodec()
      */
 
     DebugLog("--> resetting codec\n");
-    this->sendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
-    IOSleep(10);
-    this->sendCommand(1, HDA_VERB_RESET, HDA_PARM_NULL);
-    IOSleep(250); // per-HDA spec, device must respond (D0) within 200ms
+
+    UInt16 audioRoot = getAudioRoot();
+    this->sendCommand(audioRoot, HDA_VERB_RESET, HDA_PARM_NULL);
+    IOSleep(1);
+    this->sendCommand(audioRoot, HDA_VERB_RESET, HDA_PARM_NULL);
+    IOSleep(220); // per-HDA spec, device must respond (D0) within 200ms
 
     // forcefully set power state to D3
-    this->sendCommand(1, HDA_VERB_SET_PSTATE, HDA_PARM_PS_D3_HOT);
+    this->sendCommand(audioRoot, HDA_VERB_SET_PSTATE, HDA_PARM_PS_D3_HOT);
     DebugLog("--> hda codec power restored\n");
 }
 
@@ -205,34 +215,90 @@ void IntelHDA::applyIntelTCSEL()
 
 UInt16 IntelHDA::getVendorId()
 {
-    if (mVendor == -1)
-        mVendor = this->sendCommand(0, HDA_VERB_GET_PARAM, HDA_PARM_VENDOR);
+    if (mCodecVendorId == -1)
+        mCodecVendorId = this->sendCommand(0, HDA_VERB_GET_PARAM, HDA_PARM_VENDOR);
     
-    return mVendor >> 16;
+    return mCodecVendorId >> 16;
 }
 
 UInt16 IntelHDA::getDeviceId()
 {
-    if (mVendor == -1)
-        mVendor = this->sendCommand(0, HDA_VERB_GET_PARAM, HDA_PARM_VENDOR);
+    if (mCodecVendorId == -1)
+        mCodecVendorId = this->sendCommand(0, HDA_VERB_GET_PARAM, HDA_PARM_VENDOR);
     
-    return mVendor & 0xFFFF;
+    return mCodecVendorId & 0xFFFF;
+}
+
+UInt16 IntelHDA::getAudioRoot()
+{
+    if (mAudioRoot == (UInt16)-1)
+    {
+        UInt32 nodes = this->sendCommand(0, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
+        if (nodes != -1)
+        {
+            UInt16 start = nodes & 0xFF;
+            UInt16 end = start + ((nodes & 0xFF0000) >> 16);
+            for (UInt16 node = start; node < end; node++)
+            {
+                UInt32 type = this->sendCommand(node, HDA_VERB_GET_PARAM, HDA_PARM_FUNCGRP);
+                if ((type & 0xFF) == HDA_TYPE_AFG)
+                {
+                    DebugLog("getAudioRoot found audio root = 0x%02x\n", node);
+                    mAudioRoot = node;
+                    break;
+                }
+            }
+        }
+        if (mAudioRoot == (UInt16)-1)
+        {
+            DebugLog("getAudioRoot failed to find audio root... using default root of 1\n");
+            mAudioRoot = 1;
+        }
+    }
+    return mAudioRoot;
 }
 
 UInt8 IntelHDA::getTotalNodes()
 {
     if (mNodes == -1)
-        mNodes = this->sendCommand(1, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
-    
-    return ((mNodes & 0x0000FF) >>  0) + 1;
+    {
+        UInt16 audioRoot = getAudioRoot();
+        mNodes = this->sendCommand(audioRoot, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
+        // in the case of an invalid response, use zero
+        if (mNodes == -1) mNodes = 0;
+    }
+    return mNodes & 0x0000FF;
 }
 
 UInt8 IntelHDA::getStartingNode()
 {
     if (mNodes == -1)
-        mNodes = this->sendCommand(1, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
-    
+    {
+        UInt16 audioRoot = getAudioRoot();
+        mNodes = this->sendCommand(audioRoot, HDA_VERB_GET_PARAM, HDA_PARM_NODECOUNT);
+        // in the case of an invalid response, use zero
+        if (mNodes == -1) mNodes = 0;
+    }
     return (mNodes & 0xFF0000) >> 16;
+}
+
+UInt32 IntelHDA::getSubsystemId()
+{
+    if (mCodecSubsystemId == -1)
+    {
+        UInt16 audioRoot = getAudioRoot();
+        mCodecSubsystemId = this->sendCommand(audioRoot, HDA_VERB_GET_SUBSYSTEM_ID, HDA_PARM_NULL);
+        // in the case of an invalid response, use zero
+        if (mCodecSubsystemId == -1) mCodecSubsystemId = 0;
+    }
+    return mCodecSubsystemId;
+}
+
+UInt32 IntelHDA::getPCISubId()
+{
+    UInt32 result = mDevice->configRead32(kIOPCIConfigSubSystemVendorID);
+    // flip words to be consistent with other 32-bit identifiers
+    return ((result & 0xFFFF) << 16) | result >> 16;
 }
 
 UInt32 IntelHDA::sendCommand(UInt8 nodeId, UInt16 verb, UInt8 payload)

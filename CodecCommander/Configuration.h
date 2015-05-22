@@ -36,31 +36,40 @@ class Configuration
     OSArray* mCustomCommands;
     
     bool mCheckInfinite;
+    UInt16 mCheckInterval;
     bool mPerformReset;
+    bool mPerformResetOnExternalWake;
     bool mPerformResetOnEAPDFail;
     bool mUpdateNodes, mSleepNodes;
-    UInt16 mSendDelay, mUpdateInterval;
+    UInt16 mSendDelay;
+    bool mDisable;
 
     static UInt32 parseInteger(const char* str);
-    static OSDictionary* locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId);
-    static OSDictionary* loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId);
+    static OSDictionary* locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId, UInt32 hdaSubsystemId);
+    static OSDictionary* loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId, UInt32 hdaSubsystemId);
     static bool getBoolValue(OSDictionary* dict, const char* key, bool defValue);
     static UInt32 getIntegerValue(OSDictionary* dict, const char* key, UInt32 defValue);
     static UInt32 getIntegerValue(OSObject* obj, UInt32 defValue);
 
 public:
-    inline bool getUpdateNodes() { return mUpdateInterval; };
+    inline bool getUpdateNodes() { return mUpdateNodes; };
     inline bool getSleepNodes() { return mSleepNodes; }
     inline bool getPerformReset() { return mPerformReset; };
+    inline bool getPerformResetOnExternalWake() { return mPerformResetOnExternalWake; }
     inline bool getPerformResetOnEAPDFail() { return mPerformResetOnEAPDFail; }
     inline UInt16 getSendDelay() { return mSendDelay; };
     inline bool getCheckInfinite() { return mCheckInfinite; };
-    inline UInt16 getInterval() { return mUpdateInterval; };
+    inline UInt16 getCheckInterval() { return mCheckInterval; };
     inline OSArray* getCustomCommands() { return mCustomCommands; };
+    inline bool getDisable() { return mDisable; }
 
     // Constructor
-    Configuration(OSObject* codecProfiles, UInt32 codecVendorId);
+    Configuration(OSObject* codecProfiles, UInt32 codecVendorId, UInt32 hdaSubsystemId);
     ~Configuration();
+
+#ifdef DEBUG
+    OSDictionary* mMergedConfig;
+#endif
 };
 
 #endif

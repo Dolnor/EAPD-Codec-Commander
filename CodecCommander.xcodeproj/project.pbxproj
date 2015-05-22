@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0ABE527B189976190069716A /* PIOReadme in Resources */ = {isa = PBXBuildFile; fileRef = 0ABE527A189976190069716A /* PIOReadme */; };
 		849921901600F4FC00CCDF3B /* CodecCommander.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8499218E1600F4FC00CCDF3B /* CodecCommander.cpp */; };
 		849921911600F4FC00CCDF3B /* CodecCommander.h in Headers */ = {isa = PBXBuildFile; fileRef = 8499218F1600F4FC00CCDF3B /* CodecCommander.h */; };
 		D404F1D61A124D5E008E6BFD /* Client.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D404F1D51A124D5E008E6BFD /* Client.cpp */; };
@@ -228,7 +227,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0ABE527B189976190069716A /* PIOReadme in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -274,8 +272,9 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
-				MODULE_VERSION = 2.3.1;
+				MODULE_VERSION = 2.4.0;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx10.6;
 				SYMROOT = build/Products;
@@ -285,8 +284,9 @@
 		0C4B238F14598AD20080D960 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
-				MODULE_VERSION = 2.3.1;
+				MODULE_VERSION = 2.4.0;
 				SDKROOT = macosx10.6;
 				SYMROOT = build/Products;
 			};
