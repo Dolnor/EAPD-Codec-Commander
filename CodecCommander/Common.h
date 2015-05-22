@@ -40,5 +40,6 @@
 #define kCodecVendorID              "IOHDACodecVendorID"
 #define kCodecAddress               "IOHDACodecAddress"
 #define kCodecFuncGroupType         "IOHDACodecFunctionGroupType"
+#define kCodecSubsystemID           "IOHDACodecFunctionSubsystemID"
 
 #endif

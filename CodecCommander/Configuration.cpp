@@ -22,8 +22,10 @@
 // Constants for Configuration
 #define kDefault                    "Default"
 #define kPerformReset               "Perform Reset"
+#define kPerformResetOnExternalWake "Perform Reset on External Wake"
 #define kPerformResetOnEAPDFail     "Perform Reset on EAPD Fail"
 #define kCodecId                    "Codec Id"
+#define kDisable                    "Disable"
 
 // Constants for EAPD command verb sending
 #define kUpdateNodes                "Update Nodes"
@@ -108,61 +110,60 @@ UInt32 Configuration::getIntegerValue(OSObject *obj, UInt32 defValue)
     return result;
 }
 
-OSDictionary* Configuration::locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
+OSDictionary* Configuration::locateConfiguration(OSDictionary* profiles, UInt32 codecVendorId, UInt32 subsystemId)
 {
-    OSCollectionIterator* iterateProfiles = OSCollectionIterator::withCollection(profiles);
-    if (!iterateProfiles)
-        return NULL;
-    
-    while (OSSymbol* profileKey = OSDynamicCast(OSSymbol, iterateProfiles->getNextObject()))
-    {
-        if (OSDictionary* profile = OSDynamicCast(OSDictionary, profiles->getObject(profileKey)))
-        {
-            if (OSArray* codecIds = OSDynamicCast(OSArray, profile->getObject(kCodecId)))
-            {
-                OSCollectionIterator* iterateCodecs = OSCollectionIterator::withCollection(codecIds);
-                if (!iterateCodecs)
-                {
-                    iterateProfiles->release();
-                    return NULL;
-                }
-                while (OSObject* id = iterateCodecs->getNextObject())
-                {
-                    UInt32 codec = getIntegerValue(id, 0);
-                    if (codec == codecVendorId)
-                    {
-                        DebugLog("Located configuration for codec: %s (0x%08x).\n", profileKey->getCStringNoCopy(), codecVendorId);
+    UInt16 vendor = codecVendorId >> 16;
+    UInt16 codec = codecVendorId & 0xFFFF;
+    OSObject* obj;
 
-                        iterateCodecs->release();
-                        iterateProfiles->release();
-                        
-                        return profile;
-                    }
-                }
-                iterateCodecs->release();
+    // check vendor_codec_HDA_full-subsystem first
+    char codecLookup[sizeof("vvvv_cccc_HDA_xxxx_dddd")];
+    snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x_HDA_%04x_%04x", vendor, codec, subsystemId >> 16, subsystemId & 0xFFFF);
+    obj = profiles->getObject(codecLookup);
+    if (!obj)
+    {
+        // check vendor_codec_HDA_vendorsubid next
+        snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x_HDA_%04x", vendor, codec, subsystemId >> 16);
+        obj = profiles->getObject(codecLookup);
+        if (!obj)
+        {
+            // check vendor_codec next
+            snprintf(codecLookup, sizeof(codecLookup), "%04x_%04x", vendor, codec);
+            obj = profiles->getObject(codecLookup);
+            if (!obj)
+            {
+                // not found, check for vendor override (used for Intel HDMI)
+                snprintf(codecLookup, sizeof(codecLookup), "%04x", vendor);
+                obj = profiles->getObject(codecLookup);
             }
         }
     }
-    iterateProfiles->release();
 
-    return NULL;
+    // look up actual dictionary (can be string redirect)
+    OSDictionary* dict;
+    if (OSString* str = OSDynamicCast(OSString, obj))
+        dict = OSDynamicCast(OSDictionary, profiles->getObject(str));
+    else
+        dict = OSDynamicCast(OSDictionary, obj);
+    
+    return dict;
 }
 
-OSDictionary* Configuration::loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId)
+OSDictionary* Configuration::loadConfiguration(OSDictionary* profiles, UInt32 codecVendorId, UInt32 subsystemId)
 {
     OSDictionary* defaultProfile = NULL;
     OSDictionary* codecProfile = NULL;
     if (profiles)
     {
         defaultProfile = OSDynamicCast(OSDictionary, profiles->getObject(kDefault));
-        codecProfile = locateConfiguration(profiles, codecVendorId);
+        codecProfile = locateConfiguration(profiles, codecVendorId, subsystemId);
     }
     OSDictionary* result = NULL;
 
     if (defaultProfile)
     {
         // have default node, result is merged with platform node
-        OSDictionary* result = OSDictionary::withDictionary(defaultProfile);
+        result = OSDictionary::withDictionary(defaultProfile);
         if (result && codecProfile)
             result->merge(codecProfile);
     }
@@ -180,18 +181,39 @@ OSDictionary* Configuration::loadConfiguration(OSDictionary* profiles, UInt32 co
     return result;
 }
 
-Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
+Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId, UInt32 hdaSubsystemId)
 {
     OSDictionary* list = OSDynamicCast(OSDictionary, codecProfiles);
 
     // Retrieve platform profile configuration
-    OSDictionary* config = loadConfiguration(list, codecVendorId);
+    OSDictionary* config = loadConfiguration(list, codecVendorId, hdaSubsystemId);
+#ifdef DEBUG
+    mMergedConfig = config;
+    if (mMergedConfig)
+        mMergedConfig->retain();
+#endif
+
+    mCustomCommands = OSArray::withCapacity(0);
+    if (!mCustomCommands)
+    {
+        OSSafeRelease(config);
+        return;
+    }
+
+    // if Disable is set in the profile, no more config is gathered, start will fail
+    mDisable = getBoolValue(config, kDisable, false);
+    if (mDisable)
+    {
+        OSSafeRelease(config);
+        return;
+    }
 
     // Get delay for sending the verb
-    mSendDelay = getIntegerValue(config, kSendDelay, 3000);
+    mSendDelay = getIntegerValue(config, kSendDelay, 300);
 
     // Determine if perform reset is requested (Defaults to true)
     mPerformReset = getBoolValue(config, kPerformReset, true);
+    mPerformResetOnExternalWake = getBoolValue(config, kPerformResetOnExternalWake, true);
 
     // Determine if perform reset is requested (Defaults to true)
     mPerformResetOnEAPDFail = getBoolValue(config, kPerformResetOnEAPDFail, true);
@@ -202,12 +224,9 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
 
     // Determine if infinite check is needed (for 10.9 and up)
     mCheckInfinite = getBoolValue(config, kCheckInfinitely, false);
-    mUpdateInterval = getIntegerValue(config, kCheckInterval, 1000);
+    mCheckInterval = getIntegerValue(config, kCheckInterval, 1000);
 
     // Parse custom commands
-    mCustomCommands = OSArray::withCapacity(0);
-    if (!mCustomCommands) return;
-
     if (OSArray* list = OSDynamicCast(OSArray, config->getObject(kCustomCommands)))
     {
         OSCollectionIterator* iterator = OSCollectionIterator::withCollection(list);
@@ -258,10 +277,11 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
     // Dump parsed configuration
     DebugLog("Configuration\n");
     DebugLog("...Check Infinite: %s\n", mCheckInfinite ? "true" : "false");
+    DebugLog("...Check Interval: %d\n", mCheckInterval);
     DebugLog("...Perform Reset: %s\n", mPerformReset ? "true" : "false");
+    DebugLog("...Perform Reset on External Wake: %s\n", mPerformResetOnExternalWake ? "true" : "false");
     DebugLog("...Perform Reset on EAPD Fail: %s\n", mPerformResetOnEAPDFail ? "true" : "false");
     DebugLog("...Send Delay: %d\n", mSendDelay);
-    DebugLog("...Update Interval: %d\n", mUpdateInterval);
     DebugLog("...Update Nodes: %s\n", mUpdateNodes ? "true" : "false");
     DebugLog("...Sleep Nodes: %s\n", mSleepNodes ? "true" : "false");
 
@@ -291,6 +311,9 @@ Configuration::Configuration(OSObject* codecProfiles, UInt32 codecVendorId)
 
 Configuration::~Configuration()
 {
-    OSSafeReleaseNULL(mCustomCommands);
+#ifdef DEBUG
+    OSSafeRelease(mMergedConfig);
+#endif
+    OSSafeRelease(mCustomCommands);
 }
 

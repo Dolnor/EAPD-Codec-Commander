@@ -33,13 +33,15 @@
 				<key>Default</key>
 				<dict>
 					<key>Check Infinitely</key>
-					<true/>
+					<false/>
 					<key>Check Interval</key>
 					<integer>3000</integer>
 					<key>Custom Commands</key>
 					<array/>
 					<key>Perform Reset</key>
-					<false/>
+					<true/>
+					<key>Perform Reset on External Wake</key>
+					<true/>
 					<key>Perform Reset on EAPD Fail</key>
 					<false/>
 					<key>Send Delay</key>
@@ -49,14 +51,25 @@
 					<key>Sleep Nodes</key>
 					<true/>
 				</dict>
-				<key>Realtek ALC269</key>
+				<key>Disabled HDMI</key>
 				<dict>
+					<key>Disable</key>
+					<true/>
 					<key>Check Infinitely</key>
 					<false/>
-					<key>Codec Id</key>
-					<array>
-						<string>0x10ec0269</string>
-					</array>
+					<key>Update Nodes</key>
+					<false/>
+					<key>Sleep Nodes</key>
+					<false/>
+				</dict>
+				<key>8086</key>
+				<string>Disabled HDMI</string>
+				<key>10de</key>
+				<string>Disabled HDMI</string>
+				<key>1002</key>
+				<string>Disabled HDMI</string>
+				<key>Realtek ALC269</key>
+				<dict>
 					<key>Custom Commands</key>
 					<array>
 						<dict>
@@ -73,16 +86,34 @@
 						</dict>
 					</array>
 				</dict>
-				<key>Realtek ALC283, ALC255, ALC233</key>
+				<key>10ec_0269</key>
+				<string>Realtek ALC269</string>
+				<key>Realtek ALC269VB</key>
 				<dict>
-					<key>Check Infinitely</key>
-					<false/>
-					<key>Codec Id</key>
+					<key>Custom Commands</key>
 					<array>
-						<string>0x10ec0283</string>
-						<string>0x10ec0255</string>
-						<string>0x10ec0233</string>
+						<dict>
+							<key>Command</key>
+							<data>AhcIgw==</data>
+							<key>Comment</key>
+							<string>0x21 SET_UNSOLICITED_ENABLE 0x83</string>
+							<key>On Init</key>
+							<true/>
+							<key>On Sleep</key>
+							<false/>
+							<key>On Wake</key>
+							<true/>
+						</dict>
 					</array>
+					<key>Send Delay</key>
+					<integer>20</integer>
+					<key>Sleep Nodes</key>
+					<false/>
+				</dict>
+				<key>10ec_0269_HDA_1028_04d9</key>
+				<string>Realtek ALC269VB</string>
+				<key>Realtek ALC283,etc</key>
+				<dict>
 					<key>Custom Commands</key>
 					<array>
 						<dict>
@@ -111,20 +142,22 @@
 						</dict>
 					</array>
 					<key>Perform Reset</key>
-					<true/>
+					<false/>
 					<key>Send Delay</key>
 					<integer>10</integer>
 					<key>Sleep Nodes</key>
 					<false/>
 				</dict>
+				<key>10ec_0233</key>
+				<string>Realtek ALC283,etc</string>
+				<key>10ec_0282</key>
+				<string>Realtek ALC283,etc</string>
+				<key>10ec_0283</key>
+				<string>Realtek ALC283,etc</string>
+				<key>10ec_0255</key>
+				<string>Realtek ALC283,etc</string>
 				<key>Realtek ALC292</key>
 				<dict>
-					<key>Check Infinitely</key>
-					<false/>
-					<key>Codec Id</key>
-					<array>
-						<string>0x10ec0292</string>
-					</array>
 					<key>Custom Commands</key>
 					<array>
 						<dict>
@@ -140,20 +173,30 @@
 							<true/>
 						</dict>
 					</array>
+					<key>Perform Reset</key>
+					<false/>
 				</dict>
+				<key>10ec_0292</key>
+				<string>Realtek ALC292</string>
 				<key>Realtek ALC668</key>
 				<dict>
-					<key>Check Infinitely</key>
-					<false/>
-					<key>Codec Id</key>
-					<array>
-						<string>0x10ec0668</string>
-					</array>
 					<key>Custom Commands</key>
 					<array>
 						<dict>
 							<key>Command</key>
-							<string>0x01b70720</string>
+							<data>AVcIgw==</data>
+							<key>Comment</key>
+							<string>0x15 SET_UNSOLICITED_ENABLE 0x83</string>
+							<key>On Init</key>
+							<true/>
+							<key>On Sleep</key>
+							<false/>
+							<key>On Wake</key>
+							<true/>
+						</dict>
+						<dict>
+							<key>Command</key>
+							<data>AbcHIA==</data>
 							<key>Comment</key>
 							<string>Node 0x1b - Pin Control (In Enable)</string>
 							<key>On Init</key>
@@ -164,6 +207,67 @@
 							<true/>
 						</dict>
 					</array>
+					<key>Perform Reset</key>
+					<false/>
+				</dict>
+				<key>10ec_0668</key>
+				<string>Realtek ALC668</string>
+				<key>Realtek ALC892 desktop</key>
+				<dict>
+					<key>Update Nodes</key>
+					<false/>
+					<key>Sleep Nodes</key>
+					<false/>
+				</dict>
+				<key>10ec_0892_HDA_1458</key>
+				<string>Realtek ALC892 desktop</string>
+				<key>10ec_0892_HDA_8086</key>
+				<string>Realtek ALC892 desktop</string>
+			</dict>
+			<key>IOClass</key>
+			<string>CodecCommander</string>
+			<key>IOMatchCategory</key>
+			<string>CodecCommander</string>
+			<key>IOProviderClass</key>
+			<string>IOHDACodecFunction</string>
+			<key>IOUserClientClass</key>
+			<string>CodecCommanderClient</string>
+			<key>RM,Build</key>
+			<string>${CONFIGURATION}-${LOGNAME}</string>
+			<key>RM,Version</key>
+			<string>${PRODUCT_NAME} ${MODULE_VERSION}</string>
+		</dict>
+		<key>CodecCommander PowerHook</key>
+		<dict>
+			<key>CFBundleIdentifier</key>
+			<string>${MODULE_NAME}</string>
+			<key>IOClass</key>
+			<string>CodecCommanderPowerHook</string>
+			<key>IOMatchCategory</key>
+			<string>CodecCommanderPowerHook</string>
+			<key>IOProviderClass</key>
+			<string>AppleHDADriver</string>
+		</dict>
+		<key>CodecCommander VoodooHDA</key>
+		<dict>
+			<key>CFBundleIdentifier</key>
+			<string>${MODULE_NAME}</string>
+			<key>Codec Profile</key>
+			<dict>
+				<key>Default</key>
+				<dict>
+					<key>Check Infinitely</key>
+					<false/>
+					<key>Perform Reset</key>
+					<false/>
+					<key>Perform Reset on External Wake</key>
+					<false/>
+					<key>Perform Reset on EAPD Fail</key>
+					<false/>
+					<key>Update Nodes</key>
+					<false/>
+					<key>Sleep Nodes</key>
+					<false/>
 				</dict>
 			</dict>
 			<key>IOClass</key>
@@ -171,7 +275,7 @@
 			<key>IOMatchCategory</key>
 			<string>CodecCommander</string>
 			<key>IOProviderClass</key>
-			<string>IOAudioDevice</string>
+			<string>VoodooHDADevice</string>
 			<key>IOUserClientClass</key>
 			<string>CodecCommanderClient</string>
 			<key>RM,Build</key>

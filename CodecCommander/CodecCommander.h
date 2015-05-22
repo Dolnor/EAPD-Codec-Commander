@@ -65,16 +65,19 @@ public:
 	virtual void stop(IOService *provider);
 	
     // workloop parameters
-    bool startWorkLoop(IOService *provider);
     void onTimerAction();
     
     // power management event
     virtual IOReturn setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker);
+	IOReturn setPowerStateExternal(unsigned long powerStateOrdinal, IOService *policyMaker);
 	
 	UInt32 executeCommand(UInt32 command);
+
 private:
+	IOService* mProvider = NULL;
 	IOAudioDevice* mAudioDevice = NULL;
 	IOAudioDevicePowerState mHDAPrevPowerState;
+	unsigned long mPrevPowerStateOrdinal = -1;
 	
 	Configuration *mConfiguration = NULL;
 	IntelHDA *mIntelHDA = NULL;
@@ -100,9 +103,31 @@ private:
 	
 	// execute configured custom commands
 	void customCommands(CodecCommanderState newState);
+
+	IOAudioDevice* getAudioDevice();
 	
 	static const char* getPowerState(IOAudioDevicePowerState powerState);
 };
+
+class CodecCommanderPowerHook : public IOService
+{
+	typedef IOService super;
+	OSDeclareDefaultStructors(CodecCommanderPowerHook)
+
+public:
+	// standard IOKit methods
+	virtual bool init(OSDictionary *dictionary = 0);
+	virtual IOService* probe (IOService* provider, SInt32* score);
+	virtual bool start(IOService *provider);
+	virtual void stop(IOService* provider);
+
+	// power management event
+	virtual IOReturn setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker);
+
+private:
+	CodecCommander* mCodecCommander = NULL;
+};
+
 
 class CodecCommanderClient : public IOUserClient
 {
@@ -112,26 +137,27 @@ class CodecCommanderClient : public IOUserClient
 	 */
 	OSDeclareDefaultStructors(CodecCommanderClient);
 	
-	private:
-		CodecCommander* mDriver;
-		task_t mTask;
-		SInt32 mOpenCount;
-	
-		static const IOExternalMethodDispatch sMethods[kClientNumMethods];
-	public:
-		/* IOService overrides */
-		virtual bool start(IOService* provider);
-		virtual void stop(IOService* provider);
-	
-		/* IOUserClient overrides */
-		virtual bool initWithTask(task_t owningTask, void * securityID, UInt32 type, OSDictionary* properties);
-		virtual IOReturn clientClose(void);
-	
-		virtual IOReturn externalMethod(uint32_t selector, IOExternalMethodArguments *arguments, IOExternalMethodDispatch* dispatch = 0,
-										OSObject* target = 0, void* reference = 0);
-	
-	
-		/* External methods */
-		static IOReturn executeVerb(CodecCommander* target, void* reference, IOExternalMethodArguments* arguments);
+private:
+	CodecCommander* mDriver;
+	task_t mTask;
+	SInt32 mOpenCount;
+
+	static const IOExternalMethodDispatch sMethods[kClientNumMethods];
+
+public:
+	/* IOService overrides */
+	virtual bool start(IOService* provider);
+	virtual void stop(IOService* provider);
+
+	/* IOUserClient overrides */
+	virtual bool initWithTask(task_t owningTask, void * securityID, UInt32 type, OSDictionary* properties);
+	virtual IOReturn clientClose(void);
+
+	virtual IOReturn externalMethod(uint32_t selector, IOExternalMethodArguments *arguments, IOExternalMethodDispatch* dispatch = 0,
+									OSObject* target = 0, void* reference = 0);
+
+
+	/* External methods */
+	static IOReturn executeVerb(CodecCommander* target, void* reference, IOExternalMethodArguments* arguments);
 };
 #endif // __CodecCommander__
