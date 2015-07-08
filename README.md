@@ -15,78 +15,188 @@ People used to rely on custom IOAudioFamily - Apple's open source files were alt
 No more waiting for sources, no need to be searching for a kext that matches your node layout and no need to have different kexts for different OS X versions (generations, if you will). 
 
 ### How do I enable it?
-You have to edit settings inside Info.plist. There are multiple Default settings defined which have values of:
+
+You have to edit settings inside Info.plist - see Profiles sections as well. There are multiple Default settings defined which have values of:
 
 				<key>Default</key>
 				<dict>
-					<key>HDEF Device Location</key>
-					<string>1B</string>
-					<key>Codec Address Number</key>
-					<integer>0</integer>
-					<key>Check Interval</key>
-					<integer>5000</integer>
 					<key>Check Infinitely</key>
+					<false/>
+					<key>Check Interval</key>
+					<integer>3000</integer>
+					<key>Custom Commands</key>
+					<array/>
+					<key>Perform Reset</key>
+					<true/>
+					<key>Perform Reset on External Wake</key>
+					<true/>
+					<key>Perform Reset on EAPD Fail</key>
+					<false/>
+					<key>Send Delay</key>
+					<integer>300</integer>
+					<key>Update Nodes</key>
+					<true/>
+					<key>Sleep Nodes</key>
 					<true/>
 				</dict>
+				
+About these in more details:
 
-To determine configuration use a simple Terminal command (laptops generally will have just one output if Headphones and Speakers are paired in auto-detect):
+* Check Infinitely - CC will keep monitoring the codec power state transitions, *as of today this is useless* as CodecCommanderPowerHook attached to AppleHDADriver to detect power state changes on demand.
 
-					ioreg | grep EngineOutput
+* Check Interval - the time in ms for above setting to check the codec power state, again, *as of today this is useless*.
 
-The output will look similar to this:
-					 +-o AppleHDAEngineOutput@1B,0,1,1  <class AppleHDAEngineOutput, id 0x100000355, registered, matched, active, busy 0 (0 ms), retain 31>
+* Perform Reset - whether to perform complete codec reset (returns codec in cold-boot state) at wake from sleep if codec behaves weird after sleep.
 
-Here:
+* Perform Reset on External Wake - same as above, but for fugue-sleep, when you break the machine entering sleep prematurely.
 
-1B - HDEF Device Location (which is defaulted to this in configuration, but on MCP7A chipset can be @8 for example),
+* Perform Reset on EAPD Fail - self explanatory - if EAPD update fails at wake then CC will perform complete codec reset in an attempt to recover the codec.
 
-0 - Codec Address Number (you will have to set this in config too),
+* Send Delay - the time in ms that CC needs to wait before sending commands to the codec, otherwise it may not respond, if sent too early (depends on PC computing power).
 
-1 - Function Group Number (will usually be 1, no setting present), 
+* Update Nodes - codec can report EAPD capability for certain nodes, but EAPD may not actually physically be there. You want this enabled to update EAPD nodes.
 
-1 - Engine Output Number.
+* Sleep Nodes - according to Intel's EAPD handing specifications, EAPD capable nodes have to be suspended properly when machine transitions to sleep .. it's up to you to follow the spec, no harm if it's not done.
 
-Since codec can report EAPD capability for certain nodes, but EAPD may not actually physically be there (common case for most of desktop codecs) and your codec only needs to be reset, you can specify:
+### Upon resuming from semi-sleep I loose audio
 
-					<key>Update Nodes</key>
-					<false/>
-
-in order to only cause codec reset at wake and prevent the kext from sending invalid verbs to nodes that don't really do anything useful. 
-
-### Upon resuming from semi-sleep I lose audio
-
-Settings below help for fugue sleep introduced in 10.9, which you could break during 25 second delay and end up with disabled EAPD. Enable this setting if you find yourself interrupting fugue sleeps frequently :D 
-
-					<key>Update Interval</key>
-					<integer>5000</integer>
-					<key>Check Infinitely</key>
-					<true/>
-
-Codec Commander will keep monitoring the codec power state transitions. If it’s determined that power to the codec was lost and then restored a verb will be sent to codec to enable EAPD. Enabling this for 10.8.5 and lower is totally useless.
+The only scenario when this can happens is when you have audio playing and suddenly decided you want to put the machine to sleep. If you break out of the it entering sleep you will loose audio until you stop whatever was left playing and allow codec to enter idle. 
 
 ## Custom Commands & Commander Client 
 
-You can send the codec your custom commands during boot, upon sleep or at wake. This functionality is part of the customizations coded in by @darkvoid to mimic automated hda-verb scripts. CommanderClient (which technically is hda-verb osx clone) is a more adequte tool for experimenting, though. The structure of the commands is as follows:
+You can send the codec your custom commands during boot, upon sleep or at wake. This functionality is part of the customizations coded in by @the-darkvoid to mimic automated hda-verb scripts. CommanderClient (which technically is hda-verb osx clone) is a more adequate tool for experimenting, though - once you polish the command and know it works you can add it to the custom commands section.
 
-                    <key>Custom Commands</key>
-                    <array>
-                        <dict>
-                            <key>Command</key>
-                            <integer>983040</integer>
-                            <key>Comment</key>
-                            <string>Test command (Vendor Info)</string>
-                            <key>On Init</key>
-                            <true/>
-                            <key>On Sleep</key>
-                            <false/>
-                            <key>On Wake</key>
-                            <false/>
-                        </dict>
-                    </array>
+The structure of the commands is as follows:
 
-Command itself has to be specified in decimal. In the example above command 0xf00000 is going to be sent on boot.
+
+				<key>Custom Commands</key>
+				<array>
+					<dict>
+						<key>Command</key>
+						<data>AhcIgw==</data>
+						<key>Comment</key>
+						<string>0x21 SET_UNSOLICITED_ENABLE 0x83</string>
+						<key>On Init</key>
+						<true/>
+						<key>On Sleep</key>
+						<false/>
+						<key>On Wake</key>
+						<true/>
+					</dict>
+				</array>
+
+The actual command is specified in any of the plist editors (don't try deciphering base64 as is), be it Xcode or PlistEdit. You can opt to execute the command on cold boot, on sleep and on wake by setting respective flags. 
+
+## Profiles
+
+The easiest way to create profiles, again, is via a proper plist editing tool, opposed to notepad or similar.
+			
+You have to define a new profile, which is vendorid_deviceid, followed by profile Name
+
+				<key>10ec_0269</key>
+				<string>Realtek ALC269</string>
+
+If there's already a profile for your codec, but you have a different variant and that config doesn't suite you, then you can use extended profile definition like this 
+
+				<key>10ec_0269_HDA_1028_04d9</key>
+				<string>Realtek ALC269</string>
+
+which uses the subvendor id of your board as well. To know your subvendor you can look in IORegistry or log in Console for the log of CC:
+
+				CodecCommander: Version 2.4.0 starting.
+				CodecCommander: ....CodecVendor Id: 0x10ec0269
+				CodecCommander: ....Codec Address: 0
+				CodecCommander: ....Subsystem Id: 0x102804d9
+				CodecCommander: ....PCI Sub Id: 0x102804d9
+				
+Then, to set up a profile you need to create a dictionary referencing the name you just assigned. 
+
+Default profile is merged with your custom profile, so all you have to do is override the setting that you don't feel like suite your codec with default values configured. 
+
+				<key>Realtek ALC269VB</key>
+				<dict>
+					<key>Custom Commands</key>
+					<array>
+						<dict>
+							<key>Command</key>
+							<data>AhcIgw==</data>
+							<key>Comment</key>
+							<string>0x21 SET_UNSOLICITED_ENABLE 0x83</string>
+							<key>On Init</key>
+							<true/>
+							<key>On Sleep</key>
+							<false/>
+							<key>On Wake</key>
+							<true/>
+						</dict>
+					</array>
+					<key>Send Delay</key>
+					<integer>20</integer>
+					<key>Sleep Nodes</key>
+					<false/>
+				</dict>
+
+## HDMI codecs
+
+By default HDMI codecs re disabled in order to prevent CC attaching on them. If for some reason you feel the need to tamper with HDMI, feel free to remove this restriction.
+
+				<key>8086</key>
+				<string>Disabled HDMI</string>
+				<key>10de</key>
+				<string>Disabled HDMI</string>
+				<key>1002</key>
+				<string>Disabled HDMI</string>				
 
 ### Changelog
+
+May 22, 2015 v2.4.0
+
+- CodecCommander PowerHook to monitor codec power state transitions opposed to doing it from Infinite Loop
+
+- Change of providers, again.. using IOHDACodecFunction
+
+- Codec profile lookup rewritten, extended wit subvendor id matching, profile merging with Default corrected
+
+- Not attaching to HDMI codecs by default 
+
+- getUpdateNodes used to return an integer due to typo .. corrected
+
+- Not starting the timer when it's not needed
+
+- Perform Reset on External Wake option added 
+
+- EAPD node updates disabled by default for Gigabyte and Intel desktop boards and ALC892 codec
+
+
+April 26, 2015 v2.3.4
+
+- Compatibility with Mavericks, needs IOAudioFamily 1.1
+
+- Couple of specifics for ALC269/283 profiles
+
+
+April 11, 2015 v2.3.2
+
+- Code re-factoring and logging cleanups
+
+- Shell scripts for dumping info for codec nodes
+
+- Fix for Sleep Nodes functionality
+
+
+April 5, 2015 v2.2.2
+
+- Codec Commander Client introduced (hda-verb analog for OSX) 
+
+- Complete code refactoring by @the-darkvoid
+
+- Support for memory mapped IO and TCSEL update for IntelHDA
+
+- Change of providers to IOAudioDevice and implements IOKit matching
+
+- Using CodecProfile instead of Platform Profile specific to EOMs
+
+- Perform Reset and Sleep Nodes toggles added
 
 September 22, 2014 v2.2.1
 
@@ -179,16 +289,10 @@ Oct 15, 2013 v1.0.1:
 
 - Initial release 
 
-
-### To-Do
-
-- Automatically detect HDEF device location and codec number (regex? ioreg iterator?) thus simplifying the configuration even more
-
-
 ### Credits
 
 - EAPD fix (resumable-mutable-sound-v1 for IOAudioFamily): km9
 
-- Codec Function Group reset at wake idea: EMlyDinEsHMG
+- Revamp of the project: RehabMan, the-darkvoid
 
-- Configuration parsing methods: RehabMan
+- Codec Function Group reset at wake idea: EMlyDinEsHMG
